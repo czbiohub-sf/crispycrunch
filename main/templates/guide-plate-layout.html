@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% load customfilters %}
+
+{% block optional_content %}
+<table class="table table-bordered">
+  <tr>
+    <th scope="col">#</th>
+    {% for col in plate_layout.ints %}
+    <th scope="col">{{ col }}</th>
+    {% endfor %}
+  </tr>
+  {% for row in plate_layout.chars %}
+  <tr>
+    <th scope="row">{{ row }}</th>
+    {% for col in plate_layout.ints %}
+    <td>{% return_item plate_layout.well_names row col %}</td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}
