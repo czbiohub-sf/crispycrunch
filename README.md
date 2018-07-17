@@ -11,7 +11,7 @@ Clone the repo. You must have czbiohub github access.
 
 ```git clone git@github.com:czbiohub/crispycrunch.git```
 
-Crispycrunch is packaged in a docker container. 
+Build and run the app. Crispycrunch is packaged in a docker container. 
 
 ```cd crispycrunch && docker-compose up --build```
 
