@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div>
+  <h2>experiment</h2>
+  <pre>{{ experiment }}</pre>
+</div>
+
+<div>
+  <h2>guide_design</h2>
+  <pre>{{ guide_design }}</pre>
+</div>
+
+<div>
+  <h2>guide_selection</h2>
+  <pre>{{ guide_selection }}</pre>
+</div>
+
+<div>
+  <h2>guide_plate_layout</h2>
+  <a target="_blank" href="/main/guide-plate-layout/{{ guide_plate_layout.id }}/order-form">
+    Order Form
+  </a>
+  <pre>{{ guide_plate_layout }}</pre>
+</div>
+
+<div>
+  <h2>primer_design</h2>
+  <pre>{{ primer_design }}</pre>
+</div>
+
+<div>
+  <h2>primer_selection</h2>
+  <pre>{{ primer_selection }}</pre>
+</div>
+
+<div>
+  <h2>primer_plate_layout</h2>
+  <a target="_blank" href="/main/primer-plate-layout/{{ primer_plate_layout.id }}/order-form">
+    Order Form
+  </a>
+  <pre>{{ primer_plate_layout }}</pre>
+</div>
+
+<p>
+  <a href="/main/">Home</a>
+</p>
+{% endblock %}

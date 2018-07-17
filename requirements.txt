@@ -1,0 +1,6 @@
+Django>=2
+psycopg2-binary
+requests
+beautifulsoup4
+django-bootstrap4
+openpyxl

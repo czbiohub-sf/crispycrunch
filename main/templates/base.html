@@ -1,0 +1,39 @@
+{% load bootstrap4 %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>{% block title %}{{request.resolver_match.url_name}}{% endblock %}</title>
+  {% bootstrap_css %}
+  {% bootstrap_javascript jquery='slim' %}
+</head>
+
+<body style="padding: 2em;">
+
+  <h1>
+    {{request.resolver_match.url_name}}
+  </h1>
+
+  <!-- TODO: messages on success and failure -->
+  {% bootstrap_messages %}
+
+  {% block intro_content %}
+
+  {% endblock intro_content %}
+
+  {% block content %}
+  <form method="post" class="form">
+    {% csrf_token %}
+    {% bootstrap_form form %}
+    {% buttons %}
+      <button type="submit" class="btn btn-primary">
+        Save & Continue
+      </button>
+    {% endbuttons %}
+  </form>
+  {% endblock %}
+
+  {% block optional_content %}
+  {% endblock %}
+</body>
+</html>
