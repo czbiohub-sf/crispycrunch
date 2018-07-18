@@ -1,3 +1,5 @@
+# TODO (gdingle): use non-jsonb JSONField so we preserve key order
+# see https://github.com/dmkoch/django-jsonfield
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 
@@ -104,22 +106,15 @@ class GuidePlateLayout(models.Model):
 class PrimerDesign(models.Model):
     guide_selection = models.ForeignKey(
         GuideSelection, on_delete=models.PROTECT)
-    # TODO: Should this always be same as pam of GuideSelection?
-    pam = models.CharField(max_length=80, choices=[
-        ('NGG', '20bp-NGG - Sp Cas9, SpCas9-HF1, eSpCas9 1.1'),
-        ('todo', 'TODO: more pams'),
-    ], default='NGG')
-    # TODO (gdingle): Addgene plasmid type, primers_per_guide
+    # TODO (gdingle): Addgene plasmid type
     # TODO (gdingle): define range better
     primer_temp = models.IntegerField(default=60)
     maximum_amplicon_length = models.IntegerField(default=400)
-    # TODO (gdingle): this should actually be many pam_ids from the set of selected_guides
-    pam_id = models.CharField(max_length=40, blank=True, null=True)
     # TODO (gdingle): extract data into own model?
     primer_data = JSONField(null=True, default={}, blank=True)
 
     def __str__(self):
-        return 'PrimerDesign({}, {}, ...)'.format(self.pam, self.pam_id)
+        return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.maximum_amplicon_length)
 
 
 class PrimerSelection(models.Model):
