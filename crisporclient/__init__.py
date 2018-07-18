@@ -51,7 +51,6 @@ class CrisporGuideRequest(AbstractCrisporRequest):
 
     def run(self, retries: int=1) -> Dict[str, Any]:
         try:
-            # TODO (gdingle): put retry here because crispor is flaky
             response = requests.post(self.endpoint, data=self.data)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -68,6 +67,9 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         if title and 'not present in the selected genome' in title.get_text():
             raise ValueError('Crispor: ' + title.get_text())
 
+        if 'This page will refresh every 10 seconds' in soup.find(class_='contentcentral').get_text():
+            raise RuntimeError('Crispor job queue')
+
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
             raise RuntimeError('No Crispor output rows in: {}'.format(soup.find('body')))
@@ -77,7 +79,11 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         url = self.endpoint + '?batchId=' + batch_id
         primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
 
+        # TODO (gdingle): keeping only top three for now... what is best?
+        guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows[0:3])
         return dict(
+            # TODO (gdingle): get seq from crispor output to handle actual raw seq and always return chr loc
+            seq=self.data['seq'],
             url=url,
             batch_id=batch_id,
             title=soup.title.string,
@@ -85,7 +91,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             .find('option', {'selected': 'selected'})
             .get_text(),
             min_freq=float(soup.find('input', {'name': 'minFreq'})['value']),
-            guide_seqs=OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows),
+            guide_seqs=guide_seqs,
             primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, quote(t['id']))) for t in rows),
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
@@ -132,15 +138,25 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
     True
     """
 
-    def __init__(self, batch_id: str, pam_id: str, amp_len: int = 400, tm: int = 60, pam: str = 'NGG') -> None:
+    def __init__(
+            self,
+            batch_id: str,
+            pam_id: str,
+            amp_len: int = 400,
+            tm: int = 60,
+            pam: str = 'NGG',
+            seq: str ='') -> None:
+
         pam_id = quote(pam_id)  # percent encode the '+' symbol
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
             '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={pam_id}&pam={pam}'.format(**locals())
+        self.seq = seq  # just for metadata
 
     def __repr__(self):
         return 'CrisporPrimerRequest({})'.format(self.endpoint)
 
-    def run(self, retries: int=1) -> Dict[str, Any]:
+    def run(self,
+            retries: int=1) -> Dict[str, Any]:
         try:
             response = requests.get(self.endpoint)
             response.raise_for_status()
@@ -159,6 +175,7 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
             raise RuntimeError('Crispor exceptions.ValueError')
 
         return dict(
+            seq=self.seq,
             url=self.endpoint,
             amplicon_length=soup
             .find('select', {'name': 'ampLen'})
@@ -209,9 +226,9 @@ class TagInRequest(AbstractCrisporRequest):
     The sessionid is also needed, for unknown reasons.
 
     >>> data = TagInRequest('ENST00000330949').run()
-    >>> len(data['guide_seqs']) > 3
+    >>> len(data['guide_seqs']) >= 1
     True
-    >>> len(data['donor_seqs']) > 3
+    >>> len(data['donor_seqs']) >= 1
     True
     >>> all(s in data['guide_seqs'].values() for s in data['donor_seqs'].keys())
     True

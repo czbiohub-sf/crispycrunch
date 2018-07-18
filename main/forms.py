@@ -1,6 +1,7 @@
 import json
 
-from django.forms import ModelForm, widgets
+from django.contrib.postgres.forms import SimpleArrayField
+from django.forms import CharField, ModelForm, widgets
 from main.models import *
 
 
@@ -27,11 +28,19 @@ class ExperimentForm(ModelForm):
 
 
 class GuideDesignForm(ModelForm):
+
+    targets = SimpleArrayField(
+        CharField(),
+        delimiter='\n',
+        widget=widgets.Textarea(attrs={'rows': 10}))
+
     class Meta:
         model = GuideDesign
         fields = '__all__'
         exclude = ['experiment', 'guide_data']
-        widgets = {'guide_data': PrettyJsonWidget(attrs={'rows': 20})}
+        widgets = {
+            'guide_data': PrettyJsonWidget(attrs={'rows': 20}),
+        }
 
 
 class GuideSelectionForm(ModelForm):
@@ -61,7 +70,7 @@ class PrimerSelectionForm(ModelForm):
         model = PrimerSelection
         fields = '__all__'
         exclude = ['primer_design']
-        widgets = {'selected_primers': PrettyJsonWidget(attrs={'rows': 60})}
+        widgets = {'selected_primers': PrettyJsonWidget(attrs={'rows': 20})}
 
 
 class PrimerPlateLayoutForm(ModelForm):

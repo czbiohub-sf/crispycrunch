@@ -1,5 +1,6 @@
 # TODO (gdingle): use non-jsonb JSONField so we preserve key order
 # see https://github.com/dmkoch/django-jsonfield
+from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 
@@ -46,17 +47,13 @@ class GuideDesign(models.Model):
         ('NGG', '20bp-NGG - Sp Cas9, SpCas9-HF1, eSpCas9 1.1'),
         ('todo', 'TODO: more pams'),
     ], default='NGG')
-    targets = models.CharField(max_length=65536, validators=[validate_chr_or_seq])
+    targets = fields.ArrayField(
+        models.CharField(max_length=65536, validators=[validate_chr_or_seq]),
+        help_text='Chr location or seq, one per line'
+    )
     # TODO (gdingle): should hdr be one or many per targets?
     # Homology Directed Repair
     hdr_seq = models.CharField(max_length=65536, validators=[validate_chr_or_seq], blank=True, null=True)
-
-    # TODO (gdingle): put in HDR here as well?
-
-    # TODO (gdingle): postgres array... what about relational queries?
-    # from django.contrib.postgres import fields
-    # targets = fields.ArrayField(
-    #     models.CharField(max_length=65536, validators=[validate_seq, validate_chr]))
 
     # TODO (gdingle): extract guide into own model?
     guide_data = JSONField(null=True, default={}, blank=True)
