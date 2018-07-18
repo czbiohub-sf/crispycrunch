@@ -57,6 +57,7 @@ class CreatePlusView(CreateView):
 class ExperimentView(CreateView):
     template_name = 'experiment.html'
     form_class = ExperimentForm
+    # TODO (gdingle): refactor success_urls to models for reuse
     success_url = '/main/experiment/{id}/guide-design/'
 
 
@@ -91,6 +92,10 @@ class GuideSelectionView(CreatePlusView):
         obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         return obj
 
+    def get_context_data(self, **kwargs):
+        kwargs['crispor_url'] = GuideDesign.objects.get(id=self.kwargs['id']).guide_data['url']
+        return super().get_context_data(**kwargs)
+
 
 class GuidePlateLayoutView(CreatePlusView):
     template_name = 'guide-plate-layout.html'
@@ -112,24 +117,25 @@ class PrimerDesignView(CreatePlusView):
     form_class = PrimerDesignForm
     success_url = '/main/primer-design/{id}/primer-selection/'
 
-    def get_initial(self):
-        guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
-        return {
-            'pam': guide_selection.guide_design.pam,
-            # TODO (gdingle): this should be pam_ids... all selected guides must
-            # have primers
-            'pam_id': guide_selection.selected_guides.popitem()[0],
-        }
-
     def plus(self, obj):
         obj.guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
         batch_id = obj.guide_selection.guide_design.guide_data['batch_id']
-        obj.primer_data = crisporclient.CrisporPrimerRequest(
-            batch_id=batch_id,
-            amp_len=obj.maximum_amplicon_length,
-            tm=obj.primer_temp,
-            pam=obj.pam,
-            pam_id=obj.pam_id).run()
+
+        def request_primers(pam_id):
+            return crisporclient.CrisporPrimerRequest(
+                batch_id=batch_id,
+                amp_len=obj.maximum_amplicon_length,
+                tm=obj.primer_temp,
+                pam=obj.guide_selection.guide_design.pam,
+                pam_id=pam_id).run()
+
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(4) as ex:
+            pam_ids = obj.guide_selection.selected_guides.keys()
+            obj.primer_data = list(ex.map(request_primers, pam_ids))
+
+        # TODO (gdingle): run crispr-primer if HDR experiment
+        # https://github.com/chanzuckerberg/crispr-primer
         return obj
 
 
@@ -139,8 +145,12 @@ class PrimerSelectionView(CreatePlusView):
     success_url = '/main/primer-selection/{id}/primer-plate-layout/'
 
     def get_initial(self):
+        primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
         return {
-            'selected_primers': PrimerDesign.objects.get(id=self.kwargs['id']).primer_data['primer_seqs']
+            # Andy's group is only interested in ontarget primer pairs, two per well
+            # TODO (gdingle): is this true of other groups?
+            # TODO (gdingle): put both primers in one well
+            'selected_primers': [p['ontarget_primers'] for p in primer_data]
         }
 
     def plus(self, obj):
@@ -148,7 +158,8 @@ class PrimerSelectionView(CreatePlusView):
         return obj
 
     def get_context_data(self, **kwargs):
-        kwargs['crispor_url'] = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data['url']
+        kwargs['crispor_url'] = PrimerDesign.objects.get(
+            id=self.kwargs['id']).guide_selection.guide_design.guide_data['url']
         return super().get_context_data(**kwargs)
 
 
@@ -163,7 +174,9 @@ class PrimerPlateLayoutView(CreatePlusView):
 
     def get_context_data(self, **kwargs):
         primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
-        kwargs['plate_layout'] = Plate384Layout(primer_selection.selected_primers)
+        primer_pairs = dict((tuple(p.keys()), tuple(p.values()))
+                            for p in primer_selection.selected_primers)
+        kwargs['plate_layout'] = Plate96Layout(primer_pairs)
         return super().get_context_data(**kwargs)
 
 #

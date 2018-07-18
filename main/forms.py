@@ -61,7 +61,7 @@ class PrimerSelectionForm(ModelForm):
         model = PrimerSelection
         fields = '__all__'
         exclude = ['primer_design']
-        widgets = {'selected_primers': PrettyJsonWidget(attrs={'rows': 40})}
+        widgets = {'selected_primers': PrettyJsonWidget(attrs={'rows': 60})}
 
 
 class PrimerPlateLayoutForm(ModelForm):
