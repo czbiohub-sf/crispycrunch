@@ -1,7 +1,7 @@
 import json
 
 from django.contrib.postgres.forms import SimpleArrayField
-from django.forms import CharField, ModelForm, widgets
+from django.forms import ModelForm, widgets
 from main.models import *
 
 
@@ -13,6 +13,18 @@ class PrettyJsonWidget(widgets.Textarea):
     def format_value(self, value):
         # Incredibly, there is no easier way to pretty format JSON in Django.
         return json.dumps(json.loads(value), indent=2)
+    # TODO (gdingle): can we strip trailing commas here as well?
+    # see https://stackoverflow.com/questions/23705304/can-json-loads-ignore-trailing-commas
+
+
+class NewlineArrayField(SimpleArrayField):
+
+    def __init__(self, *args, **kwargs):
+        kwargs['widget'] = widgets.Textarea(attrs={'rows': 10})
+        kwargs['delimiter'] = '\n'
+        kwargs['max_length'] = 10
+        kwargs['min_length'] = 1
+        super().__init__(*args, **kwargs)
 
 
 class ResearcherForm(ModelForm):
@@ -29,15 +41,13 @@ class ExperimentForm(ModelForm):
 
 class GuideDesignForm(ModelForm):
 
-    targets = SimpleArrayField(
-        CharField(),
-        delimiter='\n',
-        widget=widgets.Textarea(attrs={'rows': 10}))
-
     class Meta:
         model = GuideDesign
         fields = '__all__'
         exclude = ['experiment', 'guide_data']
+        field_classes = {
+            'targets': NewlineArrayField,
+        }
         widgets = {
             'guide_data': PrettyJsonWidget(attrs={'rows': 20}),
         }

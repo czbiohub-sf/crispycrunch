@@ -118,7 +118,10 @@ class GuidePlateLayoutView(CreatePlusView):
     def get_context_data(self, **kwargs):
         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
         # TODO (gdingle): show targets in plate or sgRNA?
-        kwargs['plate_layout'] = Plate96Layout(guide_selection.selected_guides)
+        layout_map = dict((list(guides.values())[0], target)
+                          for target, guides
+                          in guide_selection.selected_guides.items())
+        kwargs['plate_layout'] = Plate96Layout(layout_map)
         return super().get_context_data(**kwargs)
 
 

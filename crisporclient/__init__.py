@@ -7,6 +7,7 @@ an official public web API. You've been warned!
 import requests
 
 import json
+import time
 
 from abc import abstractmethod
 from bs4 import BeautifulSoup
@@ -57,6 +58,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             return self._extract_data(soup)
         except RuntimeError:
             if retries:
+                time.sleep(2)  # determined by experience
                 return self.run(retries - 1)
             else:
                 raise

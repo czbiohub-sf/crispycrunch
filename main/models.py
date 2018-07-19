@@ -29,6 +29,7 @@ class Experiment(models.Model):
     # TODO (gdingle): help_text and naming convention
     name = models.CharField(max_length=40)
     researcher = models.ForeignKey(Researcher, on_delete=models.PROTECT)
+    description = models.CharField(max_length=65536, blank=True, null=True)
     # TODO (gdingle): status field
 
     def __str__(self):
@@ -49,7 +50,9 @@ class GuideDesign(models.Model):
     ], default='NGG')
     targets = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq]),
-        help_text='Chr location or seq, one per line'
+        help_text='Chr location or seq, one per line',
+        # TODO (gdingle): temp default for testing
+        default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
     )
     # TODO (gdingle): should hdr be one or many per targets?
     # Homology Directed Repair
