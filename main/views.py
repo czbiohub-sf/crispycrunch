@@ -20,9 +20,11 @@ from openpyxl import Workbook, writer  # noqa
 
 import crisporclient
 
+from main.conversions import convert_chr_to_fasta
 from main.forms import *
 from main.models import *
 from main.platelayout import *
+from main.validators import is_chr
 
 # TODO (gdingle): create useful index
 
@@ -67,8 +69,19 @@ class GuideDesignView(CreatePlusView):
     success_url = '/main/guide-design/{id}/guide-selection/'
 
     def plus(self, obj):
+        """
+        If an HDR tag-in experiment, get donor DNA then get guides. If not, just
+        get guides.
+        """
 
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
+
+        def tagin_request(target):
+            return crisporclient.TagInRequest(
+                target,
+                tag=obj.tag_in,
+                # species # TODO (gdingle): translate from crispor
+            ).run()
 
         def guide_request(target):
             return crisporclient.CrisporGuideRequest(
@@ -79,7 +92,18 @@ class GuideDesignView(CreatePlusView):
                 pam=obj.pam).run()
 
         with ThreadPoolExecutor() as ex:
-            obj.guide_data = list(ex.map(guide_request, obj.targets))
+            if obj.tag_in:
+                obj.donor_data = list(ex.map(tagin_request, obj.targets))
+                # Crispor does not accept Ensembl transcript IDs
+                # and use guide_chr_range to avoid 2000 bp limit
+                # TODO (gdingle): is this wise?
+                crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
+            else:
+                crispor_targets = obj.targets
+
+            obj.guide_data = list(ex.map(guide_request, crispor_targets))
+            # TODO (gdingle): is this even useful?
+            # obj.target_fastas = list(ex.map(convert_chr_to_fasta, filter(is_chr, obj.targets)))
 
         return obj
 
@@ -94,6 +118,11 @@ class GuideSelectionView(CreatePlusView):
         return {
             'selected_guides': dict((g['seq'], g['guide_seqs'])
                                     for g in guide_design.guide_data),
+            'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
+                                    for g in guide_design.donor_data),
+            # TODO (gdingle): temp for debuggin
+            'selected_guides_tagin': dict((g['metadata']['chr_loc'], g['guide_seqs'])
+                                    for g in guide_design.donor_data),
         }
 
     def plus(self, obj):
@@ -219,6 +248,15 @@ class ExperimentSummaryView(View):
         guide_plate_layout = GuidePlateLayout.objects.filter(guide_selection=guide_selection)[0]
         guide_design = guide_selection.guide_design
         experiment = guide_design.experiment
+
+        # TODO (gdingle): summary table
+        # # TODO (gdingle): get well location
+        # rows = []  # type: List[List]
+        # for target1, primers in primer_selection.selected_primers.items():
+        #     for target2, guides in guide_selection.selected_guides.items():
+        #         if target1 == target2:
+        #             primer_left, primer_right = primers.values()
+        #             rows.append([target1, list(guides.values())[0], primer_left, primer_right])
 
         return render(request, self.template_name, locals())
 

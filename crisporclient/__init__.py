@@ -34,7 +34,8 @@ class CrisporGuideRequest(AbstractCrisporRequest):
     Given a sequence or chromosome location, gets candidate Crispr guides from
     Crispor service.
 
-    >>> data = CrisporGuideRequest(name='test-crispr-guides', seq='chr1:11,130,540-11,130,751').run()
+    >>> seq = 'chr1:11,130,540-11,130,751'
+    >>> data = CrisporGuideRequest(name='test-crispr-guides', seq=seq).run()
     >>> len(data['primer_urls']) > 3
     True
     """
@@ -56,9 +57,9 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)
-        except RuntimeError:
+        except TimeoutError:
             if retries:
-                time.sleep(2)  # determined by experience
+                time.sleep(8)  # determined by experience
                 return self.run(retries - 1)
             else:
                 raise
@@ -69,8 +70,11 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         if title and 'not present in the selected genome' in title.get_text():
             raise ValueError('Crispor: ' + title.get_text())
 
+        if 'retry with a sequence range shorter than 2000 bp' in soup.find(class_='contentcentral').get_text():
+            raise ValueError('Crispor: retry with a sequence range shorter than 2000 bp')
+
         if 'This page will refresh every 10 seconds' in soup.find(class_='contentcentral').get_text():
-            raise RuntimeError('Crispor job queue')
+            raise TimeoutError('Stuck in Crispor job queue. Please retry.')
 
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
@@ -84,8 +88,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         # TODO (gdingle): keeping only top three for now... what is best?
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows[0:3])
         return dict(
-            # TODO (gdingle): get seq from crispor output to handle actual raw seq and always return chr loc
-            seq=self.data['seq'],
+            seq=soup.find(class_='title').find('a').get_text(), # TODO (gdingle): why is off by one from input?
             url=url,
             batch_id=batch_id,
             title=soup.title.string,
@@ -236,6 +239,12 @@ class TagInRequest(AbstractCrisporRequest):
     True
     """
 
+    # TODO (gdingle): convert __init__ from acc_number to seq and compute stop codon position
+    # https://www.genscript.com/tools/codon-frequency-table
+    # TAG
+    # TAA
+    # TGA
+
     def __init__(self, acc_number: str, tag: str='FLAG', species: str='GRCh38') -> None:
         self.data = {
             'acc_number': acc_number,
@@ -286,18 +295,26 @@ class TagInRequest(AbstractCrisporRequest):
         data_user = [json.loads(s.attrs['data-user'])
                      for s in soup.findAll('div')
                      if s.has_attr('data-user')]
-        # TODO (gdingle): replace id with chr location?
-        guide_seqs = OrderedDict((d['id'], d['sgRNA']) for d in data_user[1])
+        # TODO (gdingle): keeping only top three for now... what is best?
+        top_guides = sorted(data_user[1], key=lambda d: d['sgRNA_score'], reverse=True)[:3]
+        # TODO (gdingle): remap to offset position key used by Crispor
+        guide_seqs = OrderedDict((round(d['sgRNA_score'], 2), d['sgRNA']) for d in top_guides)
 
         rows = [row.findAll('td') for row in soup.find(id='table_id3').findAll('tr')]
         donor_seqs = OrderedDict(
             (row[0].get_text(), row[1].get_text())
             for row in rows
             if len(row) and row[0] and row[1] and row[1].get_text().strip() != 'sgRNA too far from stop codon'
+            and row[0].get_text() in guide_seqs.values()
         )
 
         metadata = data_user[0][0]
         metadata['chr_loc'] = 'chr{}:{}-{}'.format(metadata['chrm'], metadata['tx_start'], metadata['tx_stop'])
+        # This is the narrower range that contains all sgRNA guides.
+        metadata['guide_chr_range'] = 'chr{}:{}-{}'.format(
+            metadata['chrm'],
+            min(g['sgRNA_start'] for g in data_user[1]),
+            max(g['sgRNA_stop'] for g in data_user[1]))
 
         return {
             'guide_seqs': guide_seqs,

@@ -26,10 +26,14 @@ class Migration(migrations.Migration):
             name='GuideDesign',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('genome', models.CharField(choices=[('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'), ('todo', 'TODO: more genomes')], default='hg19', max_length=80)),
-                ('pam', models.CharField(choices=[('NGG', '20bp-NGG - Sp Cas9, SpCas9-HF1, eSpCas9 1.1'), ('todo', 'TODO: more pams')], default='NGG', max_length=80)),
-                ('targets', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[main.validators.validate_chr_or_seq]), help_text='Chr location or seq, one per line', size=None)),
-                ('hdr_seq', models.CharField(blank=True, max_length=65536, null=True, validators=[main.validators.validate_chr_or_seq])),
+                ('genome', models.CharField(choices=[
+                 ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'), ('todo', 'TODO: more genomes')], default='hg19', max_length=80)),
+                ('pam', models.CharField(choices=[
+                 ('NGG', '20bp-NGG - Sp Cas9, SpCas9-HF1, eSpCas9 1.1'), ('todo', 'TODO: more pams')], default='NGG', max_length=80)),
+                ('targets', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[
+                 main.validators.validate_chr_or_seq_or_enst]), help_text='Chr location or seq, one per line', size=None)),
+                ('hdr_seq', models.CharField(blank=True, max_length=65536, null=True,
+                                             validators=[main.validators.validate_chr_or_seq_or_enst])),
                 ('guide_data', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default={}, null=True)),
                 ('experiment', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='main.Experiment')),
             ],
@@ -38,8 +42,10 @@ class Migration(migrations.Migration):
             name='GuidePlateLayout',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('group_by', models.CharField(choices=[('cell_type', 'Cell Type'), ('random', 'Random'), ('todo', 'TODO: more plate groupings')], default='cell_type', max_length=40)),
-                ('order_by', models.CharField(choices=[('alphabetical', 'Alphabetical'), ('todo', 'TODO: more plate orderings')], default='alphabetical', max_length=40)),
+                ('group_by', models.CharField(choices=[('cell_type', 'Cell Type'), ('random', 'Random'),
+                                                       ('todo', 'TODO: more plate groupings')], default='cell_type', max_length=40)),
+                ('order_by', models.CharField(choices=[
+                 ('alphabetical', 'Alphabetical'), ('todo', 'TODO: more plate orderings')], default='alphabetical', max_length=40)),
             ],
         ),
         migrations.CreateModel(
@@ -64,8 +70,10 @@ class Migration(migrations.Migration):
             name='PrimerPlateLayout',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('group_by', models.CharField(choices=[('cell_type', 'Cell Type'), ('random', 'Random'), ('todo', 'TODO: more plate groupings')], default='cell_type', max_length=40)),
-                ('order_by', models.CharField(choices=[('alphabetical', 'Alphabetical'), ('todo', 'TODO: more plate orderings')], default='alphabetical', max_length=40)),
+                ('group_by', models.CharField(choices=[('cell_type', 'Cell Type'), ('random', 'Random'),
+                                                       ('todo', 'TODO: more plate groupings')], default='cell_type', max_length=40)),
+                ('order_by', models.CharField(choices=[
+                 ('alphabetical', 'Alphabetical'), ('todo', 'TODO: more plate orderings')], default='alphabetical', max_length=40)),
             ],
         ),
         migrations.CreateModel(

@@ -8,6 +8,8 @@ from main.models import *
 # TODO (gdingle): set placeholders or helptext
 
 
+# TODO (gdingle): consider YAML instead for easier editing
+# See https://pyyaml.org/wiki/PyYAMLDocumentation
 class PrettyJsonWidget(widgets.Textarea):
 
     def format_value(self, value):
@@ -22,7 +24,7 @@ class NewlineArrayField(SimpleArrayField):
     def __init__(self, *args, **kwargs):
         kwargs['widget'] = widgets.Textarea(attrs={'rows': 10})
         kwargs['delimiter'] = '\n'
-        kwargs['max_length'] = 10
+        kwargs['max_length'] = 96  # same a standard plate size
         kwargs['min_length'] = 1
         super().__init__(*args, **kwargs)
 
@@ -44,12 +46,10 @@ class GuideDesignForm(ModelForm):
     class Meta:
         model = GuideDesign
         fields = '__all__'
-        exclude = ['experiment', 'guide_data']
+        exclude = ['experiment', 'guide_data', 'donor_data']
         field_classes = {
             'targets': NewlineArrayField,
-        }
-        widgets = {
-            'guide_data': PrettyJsonWidget(attrs={'rows': 20}),
+            'target_fastas': NewlineArrayField,
         }
 
 
@@ -58,7 +58,11 @@ class GuideSelectionForm(ModelForm):
         model = GuideSelection
         fields = '__all__'
         exclude = ['guide_design']
-        widgets = {'selected_guides': PrettyJsonWidget(attrs={'rows': 20})}
+        widgets = {
+            'selected_guides': PrettyJsonWidget(attrs={'rows': 20}),
+            'selected_guides_tagin': PrettyJsonWidget(attrs={'rows': 20}),
+            'selected_donors': PrettyJsonWidget(attrs={'rows': 20}),
+        }
 
 
 class GuidePlateLayoutForm(ModelForm):
