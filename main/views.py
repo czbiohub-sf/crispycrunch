@@ -212,8 +212,8 @@ class PrimerSelectionView(CreatePlusView):
 
     def get_context_data(self, **kwargs):
         # TODO (gdingle): make multi guide
-        kwargs['crispor_url'] = PrimerDesign.objects.get(
-            id=self.kwargs['id']).guide_selection.guide_design.guide_data[0]['url']
+        primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
+        kwargs['crispor_url'] = primer_data[0]['url']
         return super().get_context_data(**kwargs)
 
 
