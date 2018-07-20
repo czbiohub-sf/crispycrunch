@@ -54,8 +54,8 @@ class GuideDesign(models.Model):
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
         help_text='Chr location or seq or ENST, one per line',
         # TODO (gdingle): temp default for testing
-        # default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
-        default=['ENST00000330949'],
+        default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
+        # default=['ENST00000330949'],
     )
     # TODO (gdingle): do we even want to convert now?
     # target_fastas = fields.ArrayField(
@@ -70,9 +70,7 @@ class GuideDesign(models.Model):
         ('HA', 'HA'),
         ('MYC', 'MYC'),
         ('TODO', 'TODO: tag used by Manu group'),
-    ),
-    # TODO (gdingle): temp for testing
-    default='FLAG')
+    ))
 
     # TODO (gdingle): extract guide into own model?
     guide_data = JSONField(null=True, default={}, blank=True)
