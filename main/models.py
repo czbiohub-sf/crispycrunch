@@ -40,6 +40,7 @@ class GuideDesign(models.Model):
     # TODO (gdingle): review guide to experiment cardinality
     experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
 
+    # TODO (gdingle): make sure this works for TagIn as well
     genome = models.CharField(max_length=80, choices=[
         ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'),
         ('todo', 'TODO: more genomes'),
@@ -49,17 +50,33 @@ class GuideDesign(models.Model):
         ('todo', 'TODO: more pams'),
     ], default='NGG')
     targets = fields.ArrayField(
-        models.CharField(max_length=65536, validators=[validate_chr_or_seq]),
-        help_text='Chr location or seq, one per line',
+        # TODO (gdingle): crispor has a max length of 2000 bp... is that a problem?
+        models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
+        help_text='Chr location or seq or ENST, one per line',
         # TODO (gdingle): temp default for testing
-        default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
+        # default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
+        default=['ENST00000330949'],
     )
-    # TODO (gdingle): should hdr be one or many per targets?
-    # Homology Directed Repair
-    hdr_seq = models.CharField(max_length=65536, validators=[validate_chr_or_seq], blank=True, null=True)
+    # TODO (gdingle): do we even want to convert now?
+    # target_fastas = fields.ArrayField(
+    #     models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
+    # )
+    # Homology Directed Repair # TODO (gdingle): custom seqence?
+    # hdr_seq = models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst], blank=True, null=True)
+    tag_in = models.CharField(max_length=40, blank=True, null=True, choices=(
+        ('FLAG', 'FLAG'),
+        ('3XFLAG', '3XFLAG'),
+        ('V5', 'V5'),
+        ('HA', 'HA'),
+        ('MYC', 'MYC'),
+        ('TODO', 'TODO: tag used by Manu group'),
+    ),
+    # TODO (gdingle): temp for testing
+    default='FLAG')
 
     # TODO (gdingle): extract guide into own model?
     guide_data = JSONField(null=True, default={}, blank=True)
+    donor_data = JSONField(null=True, default={}, blank=True)
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
@@ -68,8 +85,10 @@ class GuideDesign(models.Model):
 
 class GuideSelection(models.Model):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
-    # TODO (gdingle): migrate
     selected_guides = JSONField(null=True, default={}, blank=True)
+    selected_guides_tagin = JSONField(null=True, default={}, blank=True)
+    selected_donors = JSONField(null=True, default={}, blank=True)
+    # TODO (gdingle): temp for debuggin
 
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
