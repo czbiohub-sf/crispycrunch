@@ -85,11 +85,12 @@ class GuideDesign(models.Model):
 
 class GuideSelection(models.Model):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
-    selected_guides = JSONField(null=True, default={}, blank=True,
-        help_text='sgRNAs from tagin.stembio.org')
     selected_guides_tagin = JSONField(null=True, default={}, blank=True,
         help_text='sgRNAs from tagin.stembio.org')
-    selected_donors = JSONField(null=True, default={}, blank=True)
+    selected_donors = JSONField(null=True, default={}, blank=True,
+        help_text='ssDNAs from tagin.stembio.org')
+    selected_guides = JSONField(null=True, default={}, blank=True,
+        help_text='sgRNAs from crispor.tefor.net')
     # TODO (gdingle): temp for debuggin
 
     def __str__(self):
@@ -141,7 +142,8 @@ class PrimerDesign(models.Model):
 class PrimerSelection(models.Model):
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
     # TODO (gdingle): extract primer into own model
-    selected_primers = JSONField(null=True, default={}, blank=True)
+    selected_primers = JSONField(null=True, default={}, blank=True,
+        help_text='Primers from crispor.tefor.net')
 
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)

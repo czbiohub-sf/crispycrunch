@@ -64,6 +64,15 @@ class GuideSelectionForm(ModelForm):
             'selected_donors': PrettyJsonWidget(attrs={'rows': 10}),
         }
 
+    # TODO (gdingle): HACK ALERT! Disabling selected_guides when tagin
+    # Need to figure out how to get correct guides from Crispor from Tagin
+    # while avoiding 2000 bp limit, or else use Primer3 myself
+    def __init__(self, *args, **kwargs):
+        from django.forms.widgets import HiddenInput
+        super().__init__(*args, **kwargs)
+        if kwargs['initial']['selected_guides_tagin']:
+            self.fields['selected_guides'].widget = HiddenInput()
+
 
 class GuidePlateLayoutForm(ModelForm):
     class Meta:
