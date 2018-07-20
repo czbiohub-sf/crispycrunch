@@ -131,7 +131,9 @@ class GuideSelectionView(CreatePlusView):
 
     def get_context_data(self, **kwargs):
         # TODO (gdingle): make multi guide
-        kwargs['crispor_url'] = GuideDesign.objects.get(id=self.kwargs['id']).guide_data[0]['url']
+        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        kwargs['crispor_url'] = guide_design.guide_data[0]['url']
+        kwargs['tagin_url'] = guide_design.donor_data[0]['url']
         return super().get_context_data(**kwargs)
 
 

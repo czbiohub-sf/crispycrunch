@@ -63,6 +63,9 @@ class GuideSelectionForm(ModelForm):
             'selected_guides_tagin': PrettyJsonWidget(attrs={'rows': 10}),
             'selected_donors': PrettyJsonWidget(attrs={'rows': 10}),
         }
+        labels = {
+            "selected_guides_tagin": 'Selected guides',
+        }
 
     # TODO (gdingle): HACK ALERT! Disabling selected_guides when tagin
     # Need to figure out how to get correct guides from Crispor from Tagin
@@ -72,6 +75,8 @@ class GuideSelectionForm(ModelForm):
         super().__init__(*args, **kwargs)
         if kwargs['initial']['selected_guides_tagin']:
             self.fields['selected_guides'].widget = HiddenInput()
+        else:
+            self.fields['selected_guides_tagin'].widget = HiddenInput()
 
 
 class GuidePlateLayoutForm(ModelForm):

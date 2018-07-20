@@ -4,6 +4,8 @@
 {# TODO: refactor with primer-selection? #}
 {% block intro_content %}
 
+{# TODO: remove this hack #}
+{% if form.selected_guides_tagin.is_hidden %}
 <ol>
   <li>Open
       <a target="_blank" href={{ crispor_url }}>
@@ -17,6 +19,25 @@
     Modify sets of guides below until there is only one per target
   </li>
 </ol>
+{% else %}
+<ol>
+  <li>Open
+      <a target="_blank" href={{ tagin_url }}>
+        {# TODO: not working because Tagin requires session ID :O #}
+        Tagin Guides and Donors Page
+      </a>
+  </li>
+  <li>
+    Decide which guides and donors to use (they must be paired)
+  </li>
+  <li>
+    Modify sets of guides and donors below until there is only one each per target
+  </li>
+</ol>
+{% endif %}
+
+
+
 
 {% endblock intro_content %}
 
