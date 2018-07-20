@@ -51,7 +51,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
 
-    def run(self, retries: int=1) -> Dict[str, Any]:
+    def run(self, retries: int=2) -> Dict[str, Any]:
         try:
             response = requests.post(self.endpoint, data=self.data)
             response.raise_for_status()

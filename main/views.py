@@ -133,7 +133,8 @@ class GuideSelectionView(CreatePlusView):
         # TODO (gdingle): make multi guide
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         kwargs['crispor_url'] = guide_design.guide_data[0]['url']
-        kwargs['tagin_url'] = guide_design.donor_data[0]['url']
+        if guide_design.donor_data:
+            kwargs['tagin_url'] = guide_design.donor_data[0]['url']
         return super().get_context_data(**kwargs)
 
 
