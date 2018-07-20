@@ -85,8 +85,10 @@ class GuideDesign(models.Model):
 
 class GuideSelection(models.Model):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
-    selected_guides = JSONField(null=True, default={}, blank=True)
-    selected_guides_tagin = JSONField(null=True, default={}, blank=True)
+    selected_guides = JSONField(null=True, default={}, blank=True,
+        help_text='sgRNAs from tagin.stembio.org')
+    selected_guides_tagin = JSONField(null=True, default={}, blank=True,
+        help_text='sgRNAs from tagin.stembio.org')
     selected_donors = JSONField(null=True, default={}, blank=True)
     # TODO (gdingle): temp for debuggin
 
