@@ -16,6 +16,7 @@ from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView
 from django.views.generic.edit import CreateView
+from itertools import islice
 from openpyxl import Workbook, writer  # noqa
 
 import crisporclient
@@ -127,6 +128,9 @@ class GuideSelectionView(CreatePlusView):
 
     def plus(self, obj):
         obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        # TODO (gdingle): this is awkward
+        obj.selected_guides = dict((target, dict(islice(guides.items(), 1)))
+            for target, guides in obj.selected_guides.items())
         return obj
 
     def get_context_data(self, **kwargs):
@@ -171,7 +175,7 @@ class PrimerDesignView(CreatePlusView):
             seq, pam_id, batch_id = args
             return crisporclient.CrisporPrimerRequest(
                 batch_id=batch_id,
-                amp_len=obj.maximum_amplicon_length,
+                amp_len=obj.max_amplicon_length,
                 tm=obj.primer_temp,
                 pam=guide_selection.guide_design.pam,
                 pam_id=pam_id,
@@ -252,16 +256,23 @@ class ExperimentSummaryView(View):
         guide_design = guide_selection.guide_design
         experiment = guide_design.experiment
 
-        # TODO (gdingle): summary table
-        # # TODO (gdingle): get well location
-        # rows = []  # type: List[List]
-        # for target1, primers in primer_selection.selected_primers.items():
-        #     for target2, guides in guide_selection.selected_guides.items():
-        #         if target1 == target2:
-        #             primer_left, primer_right = primers.values()
-        #             rows.append([target1, list(guides.values())[0], primer_left, primer_right])
+        rows = self._get_rows(guide_plate_layout, primer_plate_layout)
 
         return render(request, self.template_name, locals())
+
+    def _get_rows(self, guide_plate_layout, primer_plate_layout) -> List[tuple]:
+        rows = []
+        for pos, guide in guide_plate_layout.layout.well_names.items():
+            if guide is None:
+                break
+            rows.append((
+                pos,
+                guide,
+                guide_plate_layout.layout.well_seqs[pos],
+                primer_plate_layout.layout.well_seqs[pos],
+            ))
+        return rows
+
 
 
 class OrderFormView(DetailView):
