@@ -2,46 +2,68 @@
 
 {% block content %}
 
-<div>
-  <h2>experiment</h2>
-  <pre>{{ experiment }}</pre>
-</div>
+<dl class="row">
+  <dt class="col-sm-3">Name</dt>
+  <dd class="col-sm-9">{{ experiment.name }}</dd>
+  <dt class="col-sm-3">Description</dt>
+  <dd class="col-sm-9">{{ experiment.description }}</dd>
+  <dt class="col-sm-3">Researcher</dt>
+  <dd class="col-sm-9">{{ experiment.researcher.first_name }} {{ experiment.researcher.last_name }}</dd>
+  <dt class="col-sm-3">Genome</dt>
+  <dd class="col-sm-9">{{ guide_design.genome }}</dd>
+  <dt class="col-sm-3">PAM</dt>
+  <dd class="col-sm-9">{{ guide_design.pam }}</dd>
+  {% if guide_design.tag_in %}
+  <dt class="col-sm-3">Tag</dt>
+  <dd class="col-sm-9">{{ guide_design.tag_in }}</dd>
+  {% endif %}
+  <dt class="col-sm-3">Primer Temp</dt>
+  <dd class="col-sm-9">{{ primer_design.primer_temp }}</dd>
+  <dt class="col-sm-3">Max Amplicon Length</dt>
+  <dd class="col-sm-9">{{ primer_design.max_amplicon_length }}</dd>
 
-<div>
-  <h2>guide_design</h2>
-  <pre>{{ guide_design }}</pre>
-</div>
+</dl>
 
-<div>
-  <h2>guide_selection</h2>
-  <pre>{{ guide_selection }}</pre>
-</div>
+<table class="table">
+  <thead>
+    <tr><th>Well position</th><th>Target</th><th>Guide</th><th>Primer</th></tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td>{{ row.0 }}</td><td>{{ row.1 }}</td><td>{{ row.2 }}</td><td>{{ row.3 }}</td>
 
-<div>
-  <h2>guide_plate_layout</h2>
-  <a target="_blank" href="/main/guide-plate-layout/{{ guide_plate_layout.id }}/order-form">
-    Order Form
-  </a>
-  <pre>{{ guide_plate_layout }}</pre>
-</div>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
 
-<div>
-  <h2>primer_design</h2>
-  <pre>{{ primer_design }}</pre>
-</div>
+{# TODO: link to upload page #}
+<h2>Ordering</h2>
+<dl class="row">
+  <dt class="col-sm-2">
+    <a target="_blank" href="/main/guide-plate-layout/{{ guide_plate_layout.id }}/order-form">
+      Guide order form
+    </a>
+  </dt>
+  <dd class="col-sm-10">
+    <a target="_blank" href="/main/guide-plate-layout/{{ guide_plate_layout.id }}/order-form">
+      &rarr; Upload page
+    </a>
+  </dd>
+  <dt class="col-sm-2">
+    <a target="_blank" href="/main/primer-plate-layout/{{ primer_plate_layout.id }}/order-form">
+      Primer order form
+    </a>
+  </dt>
+  <dd class="col-sm-10">
+    <a target="_blank" href="/main/primer-plate-layout/{{ primer_plate_layout.id }}/order-form">
+      &rarr; Upload page
+    </a>
+  </dd>
+</dl>
 
-<div>
-  <h2>primer_selection</h2>
-  <pre>{{ primer_selection }}</pre>
-</div>
-
-<div>
-  <h2>primer_plate_layout</h2>
-  <a target="_blank" href="/main/primer-plate-layout/{{ primer_plate_layout.id }}/order-form">
-    Order Form
-  </a>
-  <pre>{{ primer_plate_layout }}</pre>
-</div>
+<hr></hr>
 
 <p>
   <a href="/main/experiment">New experiment</a>

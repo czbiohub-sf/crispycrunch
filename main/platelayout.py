@@ -1,7 +1,7 @@
 from abc import abstractproperty
 from collections import OrderedDict
+from functools import lru_cache; cache = lru_cache()
 from typing import List
-
 
 class AbstractPlateLayout:
     """
@@ -31,6 +31,7 @@ class AbstractPlateLayout:
         self.contents = contents
 
     @property
+    @cache
     def well_positions(self) -> List[str]:
         """
         >>> pp = Plate96Layout({}).well_positions
@@ -44,7 +45,8 @@ class AbstractPlateLayout:
         return [c + str(i) for c in self.chars for i in self.ints]
 
     @property
-    def well_names(self):
+    @cache
+    def well_names(self) -> OrderedDict:
         """
         >>> pc = Plate96Layout({'xc': 'TCTACCTCTGTTGCACAGGC TGG'}).well_names
         >>> pc['A1'] == 'xc'
@@ -59,6 +61,7 @@ class AbstractPlateLayout:
                            for i, pos in enumerate(self.well_positions))
 
     @property
+    @cache
     def well_seqs(self):
         """
         >>> pc = Plate96Layout({'xc': 'TCTACCTCTGTTGCACAGGC TGG'}).well_seqs

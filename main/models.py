@@ -54,7 +54,7 @@ class GuideDesign(models.Model):
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
         help_text='Chr location or seq or ENST, one per line',
         # TODO (gdingle): temp default for testing
-        default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
+        default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
     )
     # TODO (gdingle): do we even want to convert now?
@@ -129,12 +129,12 @@ class PrimerDesign(models.Model):
     # TODO (gdingle): Addgene plasmid type
     # TODO (gdingle): define range better
     primer_temp = models.IntegerField(default=60)
-    maximum_amplicon_length = models.IntegerField(default=400)
+    max_amplicon_length = models.IntegerField(default=400)
     # TODO (gdingle): extract data into own model?
     primer_data = JSONField(null=True, default={}, blank=True)
 
     def __str__(self):
-        return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.maximum_amplicon_length)
+        return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
 
 
 class PrimerSelection(models.Model):
