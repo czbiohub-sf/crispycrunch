@@ -180,7 +180,8 @@ class Analysis(models.Model):
     researcher = models.ForeignKey(
         Researcher, on_delete=models.PROTECT)
     name = models.CharField(max_length=40)
-    pcr_file = models.FileField()  # TODO (gdingle): how to upload? Or refer to s3? validate file type?
+    # TODO (gdingle): how to upload? Or refer to s3? validate file type?
+    pcr_file = models.FileField(blank=True, null=True)
     read_length = models.IntegerField(default=250,
                                       help_text='What is the read length used in the experiment?')
     fragment_length = models.IntegerField(default=300,
