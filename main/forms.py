@@ -71,7 +71,7 @@ class GuideSelectionForm(ModelForm):
     # Need to figure out how to get correct guides from Crispor from Tagin
     # while avoiding 2000 bp limit, or else use Primer3 myself
     def __init__(self, *args, **kwargs):
-        from django.forms.widgets import HiddenInput
+        from django.forms.widgets import HiddenInput  # noqa
         super().__init__(*args, **kwargs)
         if kwargs['initial']['selected_guides_tagin']:
             self.fields['selected_guides'].widget = HiddenInput()
@@ -107,3 +107,9 @@ class PrimerPlateLayoutForm(ModelForm):
         model = PrimerPlateLayout
         fields = '__all__'
         exclude = ['primer_selection']
+
+
+class AnalysisForm(ModelForm):
+    class Meta:
+        model = Analysis
+        fields = '__all__'

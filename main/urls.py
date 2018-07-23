@@ -19,6 +19,7 @@ urlpatterns = [
     path(r'primer-design/<int:id>/primer-selection/', views.PrimerSelectionView.as_view(), name='Primer Selection'),
     path(r'primer-selection/<int:id>/primer-plate-layout/',
          views.PrimerPlateLayoutView.as_view(), name='Primer Plate Layout'),
+    path(r'analysis/', views.AnalysisView.as_view(), name='Analysis'),
     # END EXPERIMENT CREATION URLS
 
     path(r'primer-plate-layout/<int:id>/experiment-summary/',

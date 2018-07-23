@@ -10,6 +10,8 @@ exception is PrimerDesign which depends on GuideSelection, two steps back in the
 sequence.
 """
 
+from typing import no_type_check
+
 from concurrent.futures import ThreadPoolExecutor
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
@@ -238,6 +240,11 @@ class PrimerPlateLayoutView(CreatePlusView):
         kwargs['plate_layout'] = Plate96Layout(primer_pairs)
         return super().get_context_data(**kwargs)
 
+
+class AnalysisView(CreatePlusView):
+    template_name = 'analysis.html'
+    form_class = AnalysisForm
+
 #
 # END EXPERIMENT CREATION VIEWS
 #
@@ -260,6 +267,7 @@ class ExperimentSummaryView(View):
 
         return render(request, self.template_name, locals())
 
+    @no_type_check  # TODO (gdingle): why cant work with variable tuple?
     def _get_rows(self, guide_plate_layout, primer_plate_layout) -> List[tuple]:
         rows = []
         for pos, guide in guide_plate_layout.layout.well_names.items():
