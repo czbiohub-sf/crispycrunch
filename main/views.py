@@ -244,12 +244,19 @@ class PrimerPlateLayoutView(CreatePlusView):
 class AnalysisView(CreateView):
     template_name = 'analysis.html'
     form_class = AnalysisForm
+    success_url = '/main/analysis/{id}/results/'
 
-# TODO (gdingle): results
 
 #
 # END EXPERIMENT CREATION VIEWS
 #
+
+class ResultsView(View):
+    template_name = 'results.html'
+
+    def get(self, request, *args, **kwargs):
+        analysis = Analysis.objects.get(id=self.kwargs['id'])
+        return render(request, self.template_name, locals())
 
 
 class ExperimentSummaryView(View):
