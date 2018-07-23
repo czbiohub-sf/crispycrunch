@@ -4,7 +4,7 @@ from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 
-from main.platelayout import Plate384Layout, Plate96Layout
+from main.platelayout import Plate96Layout
 from main.validators import *
 
 
@@ -57,7 +57,7 @@ class GuideDesign(models.Model):
     targets = fields.ArrayField(
         # TODO (gdingle): crispor has a max length of 2000 bp... is that a problem?
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
-        help_text='Chr location or seq or ENST, one per line',
+        help_text='Chr location or seq or ENST, one per line. Tag-in experiments require ENST.',
         # TODO (gdingle): temp default for testing
         default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],

@@ -27,7 +27,7 @@ from main.conversions import convert_chr_to_fasta
 from main.forms import *
 from main.models import *
 from main.platelayout import *
-from main.validators import is_chr
+from main.validators import is_ensemble_transcript
 
 # TODO (gdingle): create useful index
 
@@ -96,6 +96,8 @@ class GuideDesignView(CreatePlusView):
 
         with ThreadPoolExecutor() as ex:
             if obj.tag_in:
+                # TODO (gdingle): put in form validation somehow
+                assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
                 obj.donor_data = list(ex.map(tagin_request, obj.targets))
                 # Crispor does not accept Ensembl transcript IDs
                 # and use guide_chr_range to avoid 2000 bp limit
