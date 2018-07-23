@@ -88,7 +88,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         # TODO (gdingle): keeping only top three for now... what is best?
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows[0:3])
         return dict(
-            seq=soup.find(class_='title').find('a').get_text(), # TODO (gdingle): why is off by one from input?
+            seq=soup.find(class_='title').find('a').get_text(),  # TODO (gdingle): why is off by one from input?
             url=url,
             batch_id=batch_id,
             title=soup.title.string,
@@ -301,11 +301,15 @@ class TagInRequest(AbstractCrisporRequest):
         guide_seqs = OrderedDict((round(d['sgRNA_score'], 2), d['sgRNA']) for d in top_guides)
 
         rows = [row.findAll('td') for row in soup.find(id='table_id3').findAll('tr')]
+
+        def valid_row(row) -> bool:
+            return bool(len(row) and row[0] and row[1] and
+                        row[1].get_text().strip() != 'sgRNA too far from stop codon')
+
         donor_seqs = OrderedDict(
             (row[0].get_text(), row[1].get_text())
             for row in rows
-            if len(row) and row[0] and row[1] and row[1].get_text().strip() != 'sgRNA too far from stop codon'
-            and row[0].get_text() in guide_seqs.values()
+            if valid_row(row) and row[0].get_text() in guide_seqs.values()
         )
 
         metadata = data_user[0][0]

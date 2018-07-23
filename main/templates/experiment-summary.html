@@ -3,24 +3,24 @@
 {% block content %}
 
 <dl class="row">
-  <dt class="col-sm-3">Name</dt>
-  <dd class="col-sm-9">{{ experiment.name }}</dd>
-  <dt class="col-sm-3">Description</dt>
-  <dd class="col-sm-9">{{ experiment.description }}</dd>
-  <dt class="col-sm-3">Researcher</dt>
-  <dd class="col-sm-9">{{ experiment.researcher.first_name }} {{ experiment.researcher.last_name }}</dd>
-  <dt class="col-sm-3">Genome</dt>
-  <dd class="col-sm-9">{{ guide_design.genome }}</dd>
-  <dt class="col-sm-3">PAM</dt>
-  <dd class="col-sm-9">{{ guide_design.pam }}</dd>
+  <dt class="col-sm-2">Name</dt>
+  <dd class="col-sm-10">{{ experiment.name }}</dd>
+  <dt class="col-sm-2">Description</dt>
+  <dd class="col-sm-10">{{ experiment.description }}</dd>
+  <dt class="col-sm-2">Researcher</dt>
+  <dd class="col-sm-10">{{ experiment.researcher.first_name }} {{ experiment.researcher.last_name }}</dd>
+  <dt class="col-sm-2">Genome</dt>
+  <dd class="col-sm-10">{{ guide_design.genome }}</dd>
+  <dt class="col-sm-2">PAM</dt>
+  <dd class="col-sm-10">{{ guide_design.pam }}</dd>
   {% if guide_design.tag_in %}
-  <dt class="col-sm-3">Tag</dt>
-  <dd class="col-sm-9">{{ guide_design.tag_in }}</dd>
+  <dt class="col-sm-2">Tag</dt>
+  <dd class="col-sm-10">{{ guide_design.tag_in }}</dd>
   {% endif %}
-  <dt class="col-sm-3">Primer Temp</dt>
-  <dd class="col-sm-9">{{ primer_design.primer_temp }}</dd>
-  <dt class="col-sm-3">Max Amplicon Length</dt>
-  <dd class="col-sm-9">{{ primer_design.max_amplicon_length }}</dd>
+  <dt class="col-sm-2">Primer Temp</dt>
+  <dd class="col-sm-10">{{ primer_design.primer_temp }}</dd>
+  <dt class="col-sm-2">Max Amplicon Length</dt>
+  <dd class="col-sm-10">{{ primer_design.max_amplicon_length }}</dd>
 
 </dl>
 

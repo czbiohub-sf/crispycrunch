@@ -1,7 +1,11 @@
+import doctest
+
 from abc import abstractproperty
 from collections import OrderedDict
-from functools import lru_cache; cache = lru_cache()
+from functools import lru_cache
 from typing import List
+cache = lru_cache()
+
 
 class AbstractPlateLayout:
     """
@@ -102,5 +106,4 @@ class Plate384Layout(AbstractPlateLayout):
 
 
 if __name__ == '__main__':
-    import doctest
     doctest.testmod()
