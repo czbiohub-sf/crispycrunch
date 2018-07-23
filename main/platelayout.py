@@ -2,9 +2,9 @@ import doctest
 
 from abc import abstractproperty
 from collections import OrderedDict
-from functools import lru_cache
 from typing import List
-cache = lru_cache()
+# TODO (gdingle): how to make lru_cache work with typing?
+# from functools import lru_cache
 
 
 class AbstractPlateLayout:
@@ -35,7 +35,6 @@ class AbstractPlateLayout:
         self.contents = contents
 
     @property
-    @cache
     def well_positions(self) -> List[str]:
         """
         >>> pp = Plate96Layout({}).well_positions
@@ -49,7 +48,6 @@ class AbstractPlateLayout:
         return [c + str(i) for c in self.chars for i in self.ints]
 
     @property
-    @cache
     def well_names(self) -> OrderedDict:
         """
         >>> pc = Plate96Layout({'xc': 'TCTACCTCTGTTGCACAGGC TGG'}).well_names
@@ -65,8 +63,7 @@ class AbstractPlateLayout:
                            for i, pos in enumerate(self.well_positions))
 
     @property
-    @cache
-    def well_seqs(self):
+    def well_seqs(self) -> OrderedDict:
         """
         >>> pc = Plate96Layout({'xc': 'TCTACCTCTGTTGCACAGGC TGG'}).well_seqs
         >>> pc['A1'] == 'TCTACCTCTGTTGCACAGGC TGG'

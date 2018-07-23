@@ -26,11 +26,16 @@ class Researcher(models.Model):
 
 
 class Experiment(models.Model):
+    class Meta:
+        ordering = ['-id']
     # TODO (gdingle): help_text and naming convention
     name = models.CharField(max_length=40)
     researcher = models.ForeignKey(Researcher, on_delete=models.PROTECT)
     description = models.CharField(max_length=65536, blank=True, null=True)
     # TODO (gdingle): status field
+    #
+    # TODO (gdingle): ordering
+    # see https://docs.djangoproject.com/en/2.0/ref/models/options/
 
     def __str__(self):
         return 'Experiment({}, ...)'.format(self.name)
@@ -169,14 +174,16 @@ class PrimerPlateLayout(models.Model):
         return Plate384Layout(self.primer_selection.selected_primers)
 
 
-# TODO (gdingle): finish me... see R script
-# TODO (gdingle): does this replace the experiment review step?
-# TODO (gdingle): is this needed if the analysis pipeline reads straight from the DB?
-class SampleSheet(models.Model):
-    # TODO (gdingle): derive
-    guide_selection = models.ForeignKey(
-        GuideSelection, on_delete=models.PROTECT)
-    primer_selection = models.ForeignKey(
-        PrimerSelection, on_delete=models.PROTECT)
-    # TODO (gdingle):
-    # check,,Redone
+class Analysis(models.Model):
+    experiment = models.ForeignKey(
+        Experiment, on_delete=models.PROTECT)
+    researcher = models.ForeignKey(
+        Researcher, on_delete=models.PROTECT)
+    name = models.CharField(max_length=40)
+    pcr_file = models.FileField()  # TODO (gdingle): how to upload? Or refer to s3? validate file type?
+    read_length = models.IntegerField(default=250,
+                                      help_text='What is the read length used in the experiment?')
+    fragment_length = models.IntegerField(default=300,
+                                          help_text='What is average fragment length (before adapters)?')
+    stdev_fragment_length = models.IntegerField(default=45,
+        help_text='What is the standard deviation of the fragment legnths? If unknown, assume 10% of the average.')  # noqa
