@@ -123,14 +123,14 @@ class GuideSelectionView(CreatePlusView):
                                     for g in guide_design.donor_data),
             # TODO (gdingle): temp for debuggin
             'selected_guides_tagin': dict((g['metadata']['chr_loc'], g['guide_seqs'])
-                                    for g in guide_design.donor_data),
+                                          for g in guide_design.donor_data),
         }
 
     def plus(self, obj):
         obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         # TODO (gdingle): this is awkward
         obj.selected_guides = dict((target, dict(islice(guides.items(), 1)))
-            for target, guides in obj.selected_guides.items())
+                                   for target, guides in obj.selected_guides.items())
         return obj
 
     def get_context_data(self, **kwargs):
@@ -270,9 +270,9 @@ class ExperimentSummaryView(View):
                 guide,
                 guide_plate_layout.layout.well_seqs[pos],
                 primer_plate_layout.layout.well_seqs[pos],
+                # TODO (gdingle): donor_seqs
             ))
         return rows
-
 
 
 class OrderFormView(DetailView):
