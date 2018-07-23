@@ -171,7 +171,7 @@ class PrimerPlateLayout(models.Model):
 
     @property
     def layout(self):
-        return Plate384Layout(self.primer_selection.selected_primers)
+        return Plate96Layout(self.primer_selection.selected_primers)
 
 
 class Analysis(models.Model):
