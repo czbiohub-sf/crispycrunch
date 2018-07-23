@@ -241,9 +241,11 @@ class PrimerPlateLayoutView(CreatePlusView):
         return super().get_context_data(**kwargs)
 
 
-class AnalysisView(CreatePlusView):
+class AnalysisView(CreateView):
     template_name = 'analysis.html'
     form_class = AnalysisForm
+
+# TODO (gdingle): results
 
 #
 # END EXPERIMENT CREATION VIEWS
@@ -305,7 +307,9 @@ class OrderFormView(DetailView):
             index = str(i + 2)
             ws['A' + index] = pos
             ws['B' + index] = plate_layout.well_names[pos]
-            ws['C' + index] = plate_layout.well_seqs[pos]
+            # TODO (gdingle): this is awkward
+            pair = plate_layout.well_seqs[pos]
+            ws['C' + index] = list(pair.values())[0] if pair is not None else None
 
         return writer.excel.save_virtual_workbook(wb)
 
