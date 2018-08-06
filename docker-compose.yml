@@ -1,6 +1,9 @@
 version: '3'
 
 services:
+  crispresso:
+    build: crispresso
+    command: echo "hllo again"
   db:
     image: postgres
   web:
