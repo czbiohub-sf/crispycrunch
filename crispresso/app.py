@@ -4,7 +4,6 @@ Minimal Flask app that does two things:
 2) executes crispresso
 """
 
-import json
 import multiprocessing
 import os
 import shutil
@@ -12,11 +11,13 @@ import sys
 
 from concurrent.futures import ProcessPoolExecutor
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 import s3
 
-app = Flask(__name__)
+OUTPUT_DIR = 'output'
+
+app = Flask(__name__, static_folder=OUTPUT_DIR)
 
 
 @app.route('/')
@@ -40,8 +41,8 @@ def crispresso():
             assert 'R1' in fwd and 'R2' in rev, 'Fastq files must be paired and sorted'
             futures.append(pool.submit(_analyze_fastq_pair, fwd, rev))
 
-    # TODO (gdingle): modify for serving as static files by flask
-    return json.dumps([f.result() for f in futures], indent=2)
+    urls = [f.result() for f in futures]
+    return jsonify(urls)
 
 
 def _analyze_fastq_pair(fwd, rev):
@@ -57,8 +58,8 @@ def _analyze_fastq_pair(fwd, rev):
         '--fastq_r2', rev,
         '--amplicon_seq', request.args['amplicon_seq'],
         '--guide_seq', request.args['guide_seq'],
-        '--expected_hdr_amplicon_seq', request.args['expected_hdr_amplicon_seq'],
-        '-o', 'output',
+        '--expected_hdr_amplicon_seq', request.args.get('expected_hdr_amplicon_seq'),
+        '-o', OUTPUT_DIR,
         '--save_also_png',
         '--trim_sequences',
         # TODO (gdingle): what is fasta adapter?
@@ -71,7 +72,7 @@ def _analyze_fastq_pair(fwd, rev):
         _import_and_execute(crispresso_args)
 
     # Remove dir prefix. See https://goo.gl/s7dzEK .
-    crispresso_results_path = 'output/CRISPResso_on_' + results_name
+    crispresso_results_path = OUTPUT_DIR + '/CRISPResso_on_' + results_name
     results_path = crispresso_results_path.replace('CRISPResso_on_', '')
     if os.path.exists(crispresso_results_path):
         shutil.rmtree(results_path)
