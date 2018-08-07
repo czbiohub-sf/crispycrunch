@@ -9,8 +9,9 @@
 </p>
 
 <h2>Crispresso command</h2>
+
 <object
-  data="{% static 'example-crispresso-results/CRISPResso_RUNNING_LOG.txt' %}"
+  data="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/CRISPResso_RUNNING_LOG.txt"
   type="text/plain"
   width="800" style="height: 600px">
 </object>
@@ -19,61 +20,61 @@
 
 {# TODO: how to know best size of PDFs in viewer? #}
 
-<object
-  data="{% static 'example-crispresso-results/1a.Indel_size_distribution_n_sequences.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/1a.Indel_size_distribution_n_sequences.png"
+  type="image/png"
   width="600" style="height: 600px">
-</object>
-<object
-  data="{% static 'example-crispresso-results/1b.Indel_size_distribution_percentage.pdf' %}"
-  type="application/pdf"
+</img>
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/1b.Indel_size_distribution_percentage.png"
+  type="image/png"
   width="600" style="height: 600px">
-</object>
+</img>
 
-<object
-  data="{% static 'example-crispresso-results/2.Unmodified_NHEJ_HDR_pie_chart.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/2.Unmodified_NHEJ_HDR_pie_chart.png"
+  type="image/png"
   width="730" style="height: 730px">
-</object>
+</img>
 
-<object
-  data="{% static 'example-crispresso-results/3.Insertion_Deletion_Substitutions_size_hist.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/3.Insertion_Deletion_Substitutions_size_hist.png"
+  type="image/png"
   width="915" style="height: 265px">
-</object>
+</img>
 
-<object
-  data="{% static 'example-crispresso-results/4a.Combined_Insertion_Deletion_Substitution_Locations.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/4a.Combined_Insertion_Deletion_Substitution_Locations.png"
+  type="image/png"
   width="775" style="height: 775px">
-</object>
+</img>
 
-<object
-  data="{% static 'example-crispresso-results/4b.Insertion_Deletion_Substitution_Locations_NHEJ.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/4b.Insertion_Deletion_Substitution_Locations_NHEJ.png"
+  type="image/png"
   width="820" style="height: 830px">
-</object>
-<object
-  data="{% static 'example-crispresso-results/4c.Insertion_Deletion_Substitution_Locations_HDR.pdf' %}"
-  type="application/pdf"
+</img>
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/4c.Insertion_Deletion_Substitution_Locations_HDR.png"
+  type="image/png"
   width="850" style="height: 830px">
-</object>
-<object
-  data="{% static 'example-crispresso-results/4d.Insertion_Deletion_Substitution_Locations_Mixed_HDR_NHEJ.pdf' %}"
-  type="application/pdf"
+</img>
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/4d.Insertion_Deletion_Substitution_Locations_Mixed_HDR_NHEJ.png"
+  type="image/png"
   width="890" style="height: 830px">
-</object>
+</img>
 
-<object
-  data="{% static 'example-crispresso-results/4e.Position_dependent_average_indel_size.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/4e.Position_dependent_average_indel_size.png"
+  type="image/png"
   width="844" style="height: 465px">
-</object>
+</img>
 
-<object
-  data="{% static 'example-crispresso-results/9.Alleles_around_cut_site_for_GAACGGATCCAGCTCAGCCA.pdf' %}"
-  type="application/pdf"
+<img
+  src="{{ crispresso_root_url }}{{ analysis.results_data.files.0 }}/9.Alleles_around_cut_site_for_{{ guide_seq }}.png"
+  type="image/png"
   width="1200" style="height: 800px">
-</object>
+</img>
 
 {% endblock content %}
