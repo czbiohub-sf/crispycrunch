@@ -1,7 +1,15 @@
+"""
+Minimal Flask app that does two things:
+1) downloads fastq files from s3 bucket
+2) executes crispresso
+"""
+
 import multiprocessing
 import sys
 
 from flask import Flask, request
+
+import s3
 
 app = Flask(__name__)
 
@@ -13,12 +21,18 @@ def hello_world():
 
 @app.route('/crispresso')
 def crispresso():
+
+    fastqs = s3.download_fastqs(
+        request.args['s3_bucket'],
+        request.args['s3_prefix'],
+        overwrite=not request.args.get('dryrun'))
+
     # TODO (gdingle): make it POST only
     crispresso_args = [
         '/opt/conda/bin/CRISPResso',
-        # TODO (gdingle): pull in fastq from other service, local file sys, or s3
-        '--fastq_r1', request.args['fastq_r1'],
-        '--fastq_r2', request.args['fastq_r2'],
+        # TODO (gdingle): group by fwd and reverse
+        '--fastq_r1', fastqs[0],
+        '--fastq_r2', fastqs[1],
         '--amplicon_seq', request.args['amplicon_seq'],
         '--guide_seq', request.args['guide_seq'],
         '--expected_hdr_amplicon_seq', request.args['expected_hdr_amplicon_seq'],
@@ -26,7 +40,7 @@ def crispresso():
         '--save_also_png',
         '--trim_sequences',
         # TODO (gdingle): what is fasta adapter?
-        '--trimmomatic_options_string', _get_trim_opt(request.args['adapterloc']),
+        '--trimmomatic_options_string', _get_trim_opt(),
         '--n_processes', str(multiprocessing.cpu_count()),
     ]
 
@@ -37,11 +51,13 @@ def crispresso():
     return ' '.join(crispresso_args)
 
 
-def _get_trim_opt(adapterloc):
-    # adapterloc = args.input_dir + "/TruSeq3-PE-2.fa"
+def _get_trim_opt(adapterloc='fastqs/TruSeq3-PE-2.fa'):
+    # TODO (gdingle): where to put adapterloc permanently? does it ever change?
+    # TODO (gdingle): these are all same as defaults... why?
     leadingqual = 3
     trailingqual = 3
     slidewindsiz = 4
+    # TODO (gdingle): these are NOT same as defaults... why?
     slidewindqual = 20
     minlength = 50
 
@@ -53,7 +69,7 @@ def _get_trim_opt(adapterloc):
 
 def _import_and_execute(crispresso_args):
     # HACK ALERT! Here we override sys.argv to run the CRISPResso script
-    # in the same process as the server, so we can better tracebacks
+    # in the same process as the server, so we can get better tracebacks
     # and more python goodness.
     sys.argv = crispresso_args
     from CRISPResso.CRISPRessoCORE import main  # noqa
@@ -65,4 +81,4 @@ def _import_and_execute(crispresso_args):
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
