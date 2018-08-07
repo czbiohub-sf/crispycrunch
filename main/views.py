@@ -305,6 +305,11 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
+        # TODO (gdingle): this implies that crispresso will have a public web server
+        # do we want to upload all files to s3 instead? copy them to local django static dir?
+        crispresso_root_url = 'http://0.0.0.0:5000/'
+        # TODO (gdingle): temp... remove me
+        guide_seq = 'AATCGGTACAAGATGGCGGA'
         return render(request, self.template_name, locals())
 
 
