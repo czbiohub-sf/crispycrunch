@@ -6,6 +6,9 @@ from main import views
 urlpatterns = [
     path('', views.index, name='index'),
 
+    # TODO (gdingle): temp: remove me
+    path('crispresso/', views.crispresso, name='crispresso'),
+
     # BEGIN EXPERIMENT CREATION URLS
     path('experiment/', views.ExperimentView.as_view(), name='Experiment'),
 

@@ -1,5 +1,4 @@
 import os
-import subprocess
 
 from flask import Flask, request
 
@@ -30,6 +29,7 @@ def crispresso():
     # TODO (gdingle): make it POST only
     crispresso_cmd = [
         '/opt/conda/bin/CRISPResso',
+        # TODO (gdingle): pull in fastq from other service, local file sys, or s3
         '--fastq_r1', request.args['fastq_r1'],
         '--fastq_r2', request.args['fastq_r2'],
         '--amplicon_seq', request.args['amplicon_seq'],
@@ -44,7 +44,10 @@ def crispresso():
     ]
 
     # TODO (gdingle): why doesn't subprocess.check_output work here?
-    os.system(' '.join(crispresso_cmd))
+    # TODO (gdingle): do we need shell=True? for PATH???
+    if not request.args.get('dryrun'):
+        # TODO (gdingle): return some useful status info
+        os.system(' '.join(crispresso_cmd))
 
     return ' '.join(crispresso_cmd)
 

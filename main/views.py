@@ -9,6 +9,7 @@ the next form. Each model has a foreign key into the preceding model. One
 exception is PrimerDesign which depends on GuideSelection, two steps back in the
 sequence.
 """
+import requests
 
 from typing import no_type_check
 
@@ -29,11 +30,31 @@ from main.models import *
 from main.platelayout import *
 from main.validators import is_ensemble_transcript
 
-# TODO (gdingle): create useful index
-
 
 def index(request):
+    # TODO (gdingle): create useful index
     return HttpResponse("Hello, world. You're at the main index.")
+
+
+def crispresso(request):
+    # TODO (gdingle): switch to s3... see https://github.com/etianen/django-s3-storage
+
+    # TODO (gdingle): rename and move
+    data = {
+        'adapterloc': 'fastqs/TruSeq3-PE-2.fa',
+        'fastq_r1': 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz',
+        'fastq_r2': 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz',
+        'amplicon_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',  # noqa
+        'guide_seq': 'AATCGGTACAAGATGGCGGA',
+        'expected_hdr_amplicon_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',  # noqa
+        'dryrun': True,
+    }
+
+    url = 'http://crispresso:5000/crispresso'  # host is name of docker service
+    # TODO (gdingle): switch to post
+    response = requests.get(url, params=data)
+    response.raise_for_status()
+    return HttpResponse(response.text)
 
 #
 # BEGIN EXPERIMENT CREATION VIEWS

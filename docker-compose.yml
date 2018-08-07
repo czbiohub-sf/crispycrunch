@@ -1,6 +1,10 @@
 version: '3'
 
 services:
+
+  db:
+    image: postgres
+
   crispresso:
     build: crispresso
     command: python app.py
@@ -8,8 +12,7 @@ services:
       - ./crispresso:/code
     ports:
       - "5000:5000"
-  db:
-    image: postgres
+
   web:
     build: .
     # TODO (gdingle): use gunicorn for prod
@@ -20,6 +23,7 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - crispresso
     # For pdb
     stdin_open: true
     tty: true
