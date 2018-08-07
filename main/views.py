@@ -53,6 +53,7 @@ def crispresso(request):
     # TODO (gdingle): switch to post
     response = requests.get(url, params=data)
     response.raise_for_status()
+
     return HttpResponse(response.text)
 
 #
@@ -263,10 +264,36 @@ class PrimerPlateLayoutView(CreatePlusView):
         return super().get_context_data(**kwargs)
 
 
-class AnalysisView(CreateView):
+class AnalysisView(CreatePlusView):
     template_name = 'analysis.html'
     form_class = AnalysisForm
     success_url = '/main/analysis/{id}/results/'
+
+    def plus(self, obj):
+        layout = GuidePlateLayout.objects.get(guide_selection__guide_design__experiment=obj.experiment).layout
+        # TODO (gdingle):  this is awkward !!!
+        # guide_seq = list(layout.well_seqs['A1'].items())[0][1].split(' ')[0]
+        guide_seq = 'AATCGGTACAAGATGGCGGA'
+        data = {
+            's3_bucket': obj.s3_bucket,
+            's3_prefix': obj.s3_prefix,
+            'amplicon_seq': obj.amplicon_seq,
+            'guide_seq': guide_seq,
+            # TODO (gdingle):
+            # 'expected_hdr_amplicon_seq':
+            'dryrun': True,
+        }
+
+        url = 'http://crispresso:5000/crispresso'  # host is name of docker service
+        # # TODO (gdingle): switch to post
+        response = requests.get(url, params=data)
+        response.raise_for_status()
+
+        obj.results_data = {
+            # TODO (gdingle): other metadata?
+            'files': response.json(),
+        }
+        return obj
 
 
 #

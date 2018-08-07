@@ -180,11 +180,23 @@ class Analysis(models.Model):
     researcher = models.ForeignKey(
         Researcher, on_delete=models.PROTECT)
     name = models.CharField(max_length=40)
-    # TODO (gdingle): how to upload? Or refer to s3? validate file type?
-    pcr_file = models.FileField(blank=True, null=True)
-    read_length = models.IntegerField(default=250,
-                                      help_text='What is the read length used in the experiment?')
-    fragment_length = models.IntegerField(default=300,
-                                          help_text='What is average fragment length (before adapters)?')
-    stdev_fragment_length = models.IntegerField(default=45,
-        help_text='What is the standard deviation of the fragment legnths? If unknown, assume 10% of the average.')  # noqa
+
+    s3_bucket = models.CharField(max_length=80,
+                                 default='jasonli-bucket')
+    s3_prefix = models.CharField(max_length=160,
+                                 default='JasonHDR/96wp1sorted-fastq/')
+    amplicon_seq = models.CharField(max_length=65536,
+        # TODO (gdingle): better default?
+        default='cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC')  # noqa
+
+    # TODO (gdingle): still useful?
+    # read_length = models.IntegerField(default=250,
+    #                                   help_text='What is the read length used in the experiment?')
+    # fragment_length = models.IntegerField(default=300,
+    #                                       help_text='What is average fragment length (before adapters)?')
+    # stdev_fragment_length = models.IntegerField(default=45,
+    #     help_text='What is the standard deviation of the fragment legnths? If unknown, assume 10% of the average.')  # noqa
+    results_data = JSONField(null=True, default={}, blank=True)
+
+    def __str__(self):
+        return 'Analysis({}, {}, {} ...)'.format(self.s3_bucket, self.s3_prefix, self.results_data)

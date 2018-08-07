@@ -1,0 +1,92 @@
+[Command used]:
+CRISPResso /opt/conda/bin/CRISPResso --fastq_r1 input/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz --fastq_r2 input/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz --amplicon_seq cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC --guide_seq AATCGGTACAAGATGGCGGA --expected_hdr_amplicon_seq cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC -o output --save_also_png --trim_sequences --trimmomatic_options_string ILLUMINACLIP:fastqs/TruSeq3-PE-2.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:20 MINLEN:50 --n_processes 4 --name A1-ATL2-N-sorted-180212
+
+[Execution log]:
+Trimming sequences with Trimmomatic...
+TrimmomaticPE: Started with arguments: -phred33 input/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz input/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/output_forward_paired.fq.gz /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/output_forward_unpaired.fq.gz /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/output_reverse_paired.fq.gz /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/output_reverse_unpaired.fq.gz ILLUMINACLIP:fastqs/TruSeq3-PE-2.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:20 MINLEN:50
+Multiple cores found: Using 4 threads
+Using PrefixPair: 'TACACTCTTTCCCTACACGACGCTCTTCCGATCT' and 'GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT'
+Using Long Clipping Sequence: 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTA'
+Using Long Clipping Sequence: 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
+Using Long Clipping Sequence: 'GTGACTGGAGTTCAGACGTGTGCTCTTCCGATCT'
+Using Long Clipping Sequence: 'TACACTCTTTCCCTACACGACGCTCTTCCGATCT'
+ILLUMINACLIP: Using 1 prefix pairs, 4 forward/reverse sequences, 0 forward only sequences, 0 reverse only sequences
+Input Read Pairs: 12022 Both Surviving: 6071 (50.50%) Forward Only Surviving: 5038 (41.91%) Reverse Only Surviving: 314 (2.61%) Dropped: 599 (4.98%)
+TrimmomaticPE: Completed successfully
+Done!
+Estimating average read length...
+Merging paired sequences with Flash...
+[FLASH] WARNING: --read-len (-r) has no effect when --max-overlap (-M) is also
+specified!
+[FLASH] WARNING: --fragment-len (-f) has no effect when --max-overlap (-M) is
+also specified!
+[FLASH] WARNING: --fragment-len-stddev (-s) has no effect when --max-overlap
+(-M) is also specified!
+[FLASH] Starting FLASH v1.2.11
+[FLASH] Fast Length Adjustment of SHort reads
+[FLASH]  
+[FLASH] Input files:
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/output_forward_paired.fq.gz
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/output_reverse_paired.fq.gz
+[FLASH]  
+[FLASH] Output files:
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/out.extendedFrags.fastq.gz
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/out.notCombined_1.fastq.gz
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/out.notCombined_2.fastq.gz
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/out.hist
+[FLASH]     /code/output/CRISPResso_on_A1-ATL2-N-sorted-180212/out.histogram
+[FLASH]  
+[FLASH] Parameters:
+[FLASH]     Min overlap:           4
+[FLASH]     Max overlap:           100
+[FLASH]     Max mismatch density:  0.250000
+[FLASH]     Allow "outie" pairs:   true
+[FLASH]     Cap mismatch quals:    false
+[FLASH]     Combiner threads:      4
+[FLASH]     Input format:          FASTQ, phred_offset=33
+[FLASH]     Output format:         FASTQ, phred_offset=33, gzip
+[FLASH]  
+[FLASH] Starting reader and writer threads
+[FLASH] Starting 4 combiner threads
+[FLASH] Processed 6071 read pairs
+[FLASH]  
+[FLASH] Read combination statistics:
+[FLASH]     Total pairs:      6071
+[FLASH]     Combined pairs:   4369
+[FLASH]         Innie pairs:   4353 (99.63% of combined)
+[FLASH]         Outie pairs:   16 (0.37% of combined)
+[FLASH]     Uncombined pairs: 1702
+[FLASH]     Percent combined: 71.97%
+[FLASH]  
+[FLASH] Writing histogram files.
+[FLASH] WARNING: An unexpectedly high proportion of combined pairs (78.23%)
+overlapped by more than 100 bp, the --max-overlap (-M) parameter.  Consider
+increasing this parameter.  (As-is, FLASH is penalizing overlaps longer than
+100 bp when considering them for possible combining!)
+[FLASH]  
+[FLASH] FLASH v1.2.11 complete!
+[FLASH] 0.185 seconds elapsed
+[FLASH] Finished with 4 warnings (see above)
+Done!
+Preparing files for the alignment...
+Done!
+Aligning sequences...
+Needleman-Wunsch global alignment of two sequences
+Needleman-Wunsch global alignment of two sequences
+Done!
+Align sequences to reverse complement of the amplicon...
+Done!
+Needleman-Wunsch global alignment of two sequences
+Needleman-Wunsch global alignment of two sequences
+Quantifying indels/substitutions...
+[CRISPResso quantification is running in parallel mode with 4 processes]
+Done!
+Calculating indel distribution based on the length of the reads...
+Done!
+Calculating alleles frequencies...
+Done!
+Making Plots...
+Done!
+Removing Intermediate files...
+Saving processed data...
+All Done!
