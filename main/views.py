@@ -41,9 +41,8 @@ def crispresso(request):
 
     # TODO (gdingle): rename and move
     data = {
-        'adapterloc': 'fastqs/TruSeq3-PE-2.fa',
-        'fastq_r1': 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz',
-        'fastq_r2': 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz',
+        's3_bucket': 'jasonli-bucket',
+        's3_prefix': 'JasonHDR/96wp1sorted-fastq/',
         'amplicon_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',  # noqa
         'guide_seq': 'AATCGGTACAAGATGGCGGA',
         'expected_hdr_amplicon_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',  # noqa
