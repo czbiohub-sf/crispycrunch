@@ -9,7 +9,7 @@ DOWNLOAD_DIR = 'input'
 FASTQ_SUFFIX = '.fastq.gz'
 
 
-def download_fastqs(bucket, prefix, overwrite=True):
+def download_fastqs(bucket, prefix, overwrite=False):
     """
     Downloads all fastq files from an s3 folder.
 
@@ -28,10 +28,10 @@ def download_fastqs(bucket, prefix, overwrite=True):
     response = s3.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=1000)
     paths = []
     with ThreadPoolExecutor() as pool:
-        for key in _get_fastqs(response):
+        for key, size in _get_fastqs(response):
             path = DOWNLOAD_DIR + '/' + key.split('/')[-1]
             paths.append(path)
-            if not overwrite and os.path.exists(path):
+            if not overwrite and os.path.exists(path) and os.path.getsize(path) == size:
                 continue
             else:
                 pool.submit(
@@ -43,7 +43,7 @@ def download_fastqs(bucket, prefix, overwrite=True):
 
 def _get_fastqs(response):
     assert response['IsTruncated'] is False
-    fastqs = [obj['Key'] for obj in response['Contents']
+    fastqs = [(obj['Key'], obj['Size']) for obj in response['Contents']
               if obj['Key'].endswith(FASTQ_SUFFIX)]
     assert len(fastqs) <= PLATE_SIZE * 2, 'Expecting reads of a 96-well plate'
     assert len(fastqs) % 2 == 0, 'Expecting paired reads'
