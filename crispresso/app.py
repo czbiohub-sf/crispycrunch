@@ -4,14 +4,14 @@ Minimal Flask app that does two things:
 2) executes crispresso
 """
 
-import multiprocessing
 import os
 import shutil
 import sys
 
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
+from multiprocessing import cpu_count
 
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 
 import s3
 
@@ -25,6 +25,7 @@ def hello_world():
     return 'HEllo world'
 
 
+# TODO (gdingle): make it POST only
 @app.route('/crispresso')
 def crispresso():
 
@@ -33,42 +34,55 @@ def crispresso():
         request.args['s3_prefix'],
         overwrite=not request.args.get('dryrun'))
 
-    with ProcessPoolExecutor() as pool:
+    with ThreadPoolExecutor(max_workers=cpu_count() * 5) as pool:
         futures = []
         for i in range(0, len(fastqs), 2):
             fwd = fastqs[i]
             rev = fastqs[i + 1]
-            assert 'R1' in fwd and 'R2' in rev, 'Fastq files must be paired and sorted'
-            futures.append(pool.submit(_analyze_fastq_pair, fwd, rev))
+            assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
+            futures.append(
+                pool.submit(
+                    _analyze_fastq_pair,
+                    fwd,
+                    rev,
+                    request.args['amplicon_seq'],
+                    request.args['guide_seq'],
+                    request.args.get('expected_hdr_amplicon_seq'),
+                    request.args.get('dryrun'),
+                ))
 
     urls = [f.result() for f in futures]
     return jsonify(urls)
 
 
-def _analyze_fastq_pair(fwd, rev):
+def _analyze_fastq_pair(fwd,
+                        rev,
+                        amplicon_seq,
+                        guide_seq,
+                        expected_hdr_amplicon_seq,
+                        dryrun):
 
     # Eliminate illumina boilerplate. See https://goo.gl/fvPLMa.
     results_name = fwd.split('/')[-1].split('_')[0]
 
-    # TODO (gdingle): make it POST only
     crispresso_args = [
         '/opt/conda/bin/CRISPResso',
         # TODO (gdingle): group by fwd and reverse
         '--fastq_r1', fwd,
         '--fastq_r2', rev,
-        '--amplicon_seq', request.args['amplicon_seq'],
-        '--guide_seq', request.args['guide_seq'],
-        '--expected_hdr_amplicon_seq', request.args.get('expected_hdr_amplicon_seq'),
+        '--amplicon_seq', amplicon_seq,
+        '--guide_seq', guide_seq,
+        '--expected_hdr_amplicon_seq', expected_hdr_amplicon_seq,
         '-o', OUTPUT_DIR,
         '--save_also_png',
         '--trim_sequences',
         # TODO (gdingle): what is fasta adapter?
         '--trimmomatic_options_string', _get_trim_opt(),
-        '--n_processes', str(multiprocessing.cpu_count()),
+        '--n_processes', str(cpu_count()),
         '--name', results_name,
     ]
 
-    if not request.args.get('dryrun'):
+    if not dryrun:
         _import_and_execute(crispresso_args)
 
     # Remove dir prefix. See https://goo.gl/s7dzEK .
