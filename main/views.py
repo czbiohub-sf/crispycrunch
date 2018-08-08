@@ -275,12 +275,10 @@ class AnalysisView(CreatePlusView):
             'selected_donors': obj.get_selected_donors(),
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
-            'dryrun': True,
+            'dryrun': False,
         }
 
-        # assert False, data
         url = 'http://crispresso:5000/crispresso'  # host is name of docker service
-        # # TODO (gdingle): switch to post
         response = requests.post(url, json=data)
         response.raise_for_status()
 
