@@ -270,24 +270,18 @@ class AnalysisView(CreatePlusView):
     success_url = '/main/analysis/{id}/results/'
 
     def plus(self, obj):
-        layout = GuidePlateLayout.objects.get(guide_selection__guide_design__experiment=obj.experiment).layout
-        # TODO (gdingle):  this is awkward !!!
-        # guide_seq = list(layout.well_seqs['A1'].items())[0][1].split(' ')[0]
-        guide_seq = 'AATCGGTACAAGATGGCGGA'
         data = {
+            'selected_guides': obj.get_selected_guides(),
+            'selected_donors': obj.get_selected_donors(),
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
-            # TODO (gdingle): these need to be multi
-            'amplicon_seq': obj.amplicon_seq,
-            'guide_seq': guide_seq,
-            # TODO (gdingle):
-            # 'expected_hdr_amplicon_seq':
             'dryrun': True,
         }
 
+        # assert False, data
         url = 'http://crispresso:5000/crispresso'  # host is name of docker service
         # # TODO (gdingle): switch to post
-        response = requests.get(url, params=data)
+        response = requests.post(url, json=data)
         response.raise_for_status()
 
         obj.results_data = {

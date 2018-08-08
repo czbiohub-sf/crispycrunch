@@ -54,6 +54,7 @@ class GuideDesign(models.Model):
         ('NGG', '20bp-NGG - Sp Cas9, SpCas9-HF1, eSpCas9 1.1'),
         ('todo', 'TODO: more pams'),
     ], default='NGG')
+    # TODO (gdingle): normalize to samtools region chr loc string
     targets = fields.ArrayField(
         # TODO (gdingle): crispor has a max length of 2000 bp... is that a problem?
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
@@ -90,6 +91,7 @@ class GuideSelection(models.Model):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
     selected_guides_tagin = JSONField(null=True, default={}, blank=True,
                                       help_text='sgRNAs from tagin.stembio.org')
+    # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(null=True, default={}, blank=True,
                                 help_text='ssDNAs from tagin.stembio.org')
     selected_guides = JSONField(null=True, default={}, blank=True,
@@ -185,9 +187,6 @@ class Analysis(models.Model):
                                  default='jasonli-bucket')
     s3_prefix = models.CharField(max_length=160,
                                  default='JasonHDR/96wp1sorted-fastq/')
-    amplicon_seq = models.CharField(max_length=65536,
-        # TODO (gdingle): better default?
-        default='cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC')  # noqa
 
     # TODO (gdingle): still useful?
     # read_length = models.IntegerField(default=250,
@@ -200,3 +199,9 @@ class Analysis(models.Model):
 
     def __str__(self):
         return 'Analysis({}, {}, {} ...)'.format(self.s3_bucket, self.s3_prefix, self.results_data)
+
+    def get_selected_guides(self):
+        return GuideSelection.objects.get(guide_design__experiment=self.experiment).selected_guides
+
+    def get_selected_donors(self):
+        return GuideSelection.objects.get(guide_design__experiment=self.experiment).selected_donors
