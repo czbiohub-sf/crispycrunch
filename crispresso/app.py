@@ -25,11 +25,10 @@ app = Flask(__name__, static_folder=OUTPUT_DIR)
 
 @app.route('/')
 def hello_world():
-    return 'HEllo world'
+    return 'Hello world'
 
 
-# TODO (gdingle): make it POST only
-@app.route('/crispresso', methods=['POST'])
+@app.route('/analyze', methods=['POST'])
 def crispresso():
     """
     `s3_bucket` and `s3_prefix` make up the location of all of the fastq files
@@ -51,24 +50,19 @@ def crispresso():
 
     Likewise, `selected_donors` are a map of target region to ssDNAs.
     """
-    posted_data = request.get_json()
+    post_data = request.get_json()
 
-    fastqs = s3.download_fastqs(
-        posted_data['s3_bucket'],
-        posted_data['s3_prefix'],
-        # overwrite=not posted_data.get('dryrun'))
-        # TODO (gdingle):
-        overwrite=False)
+    fastqs = s3.download_fastqs(post_data['s3_bucket'], post_data['s3_prefix'])
 
     # TODO (gdingle): should we do this transform on the crispycrunch side?
     # TODO (gdingle): cache get_reference_amplicon somehow... unfortunate lru_cache not python2
     amplicon_seqs = [
         (seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
-        for chr_loc, guide_seqs in posted_data['selected_guides'].items()
+        for chr_loc, guide_seqs in post_data['selected_guides'].items()
         for guide_seq in guide_seqs.values()
     ]
     # how to get hdr amplicons here?
-    # donor_guides = posted_data['donor_guides']
+    # donor_guides = post_data['donor_guides']
 
     # Although threads would be more efficient, CRISPResso is not thead-safe.
     # # TODO (gdingle): what is the optimal number of processes? CRISPResso
@@ -89,7 +83,7 @@ def crispresso():
                     amplicon_seq[0],
                     amplicon_seq[1],
                     None,  # TODO (gdingle): donor_guides
-                    posted_data.get('dryrun'),
+                    post_data.get('dryrun'),
                 ))
 
     urls = [f.result() for f in futures]

@@ -278,7 +278,7 @@ class AnalysisView(CreatePlusView):
             'dryrun': False,
         }
 
-        url = 'http://crispresso:5000/crispresso'  # host is name of docker service
+        url = 'http://crispresso:5000/analyze'  # host is name of docker service
         response = requests.post(url, json=data)
         response.raise_for_status()
 
