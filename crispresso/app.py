@@ -34,6 +34,9 @@ def crispresso():
         request.args['s3_prefix'],
         overwrite=not request.args.get('dryrun'))
 
+    # TODO (gdingle): convert target range to seq
+    # samtools faidx hg38.fa chr7:5569176-5569415
+
     # Although threads would be more efficient, CRISPResso is not thead-safe.
     # # TODO (gdingle): what is the optimal number of processes? CRISPResso
     # has its own pool internally. See n_processes.
@@ -92,7 +95,8 @@ def _analyze_fastq_pair(fwd,
     crispresso_results_path = OUTPUT_DIR + '/CRISPResso_on_' + results_name
     results_path = crispresso_results_path.replace('CRISPResso_on_', '')
     if os.path.exists(crispresso_results_path):
-        shutil.rmtree(results_path)
+        if os.path.exists(results_path):
+            shutil.rmtree(results_path)
         os.rename(crispresso_results_path, results_path)
 
     return results_path
