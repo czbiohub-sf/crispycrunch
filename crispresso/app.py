@@ -16,6 +16,8 @@ from flask import Flask, jsonify, request
 import s3
 import seqs
 
+from CRISPResso.CRISPRessoCORE import main as CRISPResso_main  # noqa
+
 OUTPUT_DIR = 'output'
 
 app = Flask(__name__, static_folder=OUTPUT_DIR)
@@ -54,13 +56,17 @@ def crispresso():
     fastqs = s3.download_fastqs(
         posted_data['s3_bucket'],
         posted_data['s3_prefix'],
-        overwrite=not posted_data.get('dryrun'))
+        # overwrite=not posted_data.get('dryrun'))
+        # TODO (gdingle):
+        overwrite=False)
 
     # TODO (gdingle): should we do this transform on the crispycrunch side?
     # TODO (gdingle): cache get_reference_amplicon somehow... unfortunate lru_cache not python2
-    amplicon_seqs = [(seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
-                     for chr_loc, guide_seqs in posted_data['selected_guides'].items()
-                     for guide_seq in guide_seqs.values()]
+    amplicon_seqs = [
+        (seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
+        for chr_loc, guide_seqs in posted_data['selected_guides'].items()
+        for guide_seq in guide_seqs.values()
+    ]
     # how to get hdr amplicons here?
     # donor_guides = posted_data['donor_guides']
 
@@ -75,11 +81,6 @@ def crispresso():
             assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
             # TODO (gdingle): how to handle missing or extra fastq files?
             # TODO (gdingle): match fastq files and selected_guides on sample names
-            app.logger.info([fwd,
-                             rev,
-                             amplicon_seq[0],
-                             amplicon_seq[1],
-                             ])
             futures.append(
                 pool.submit(
                     _analyze_fastq_pair,
@@ -157,9 +158,8 @@ def _import_and_execute(crispresso_args):
     # in the same process as the server, so we can get better tracebacks
     # and more python goodness.
     sys.argv = crispresso_args
-    from CRISPResso.CRISPRessoCORE import main  # noqa
     try:
-        main()
+        CRISPResso_main()
     except SystemExit as e:
         if e.code != 0:
             raise e
