@@ -14,6 +14,7 @@ from multiprocessing import cpu_count
 from flask import Flask, jsonify, request
 
 import s3
+import seqs
 
 OUTPUT_DIR = 'output'
 
@@ -26,35 +27,68 @@ def hello_world():
 
 
 # TODO (gdingle): make it POST only
-@app.route('/crispresso')
+@app.route('/crispresso', methods=['POST'])
 def crispresso():
+    """
+    `s3_bucket` and `s3_prefix` make up the location of all of the fastq files
+    produced by one illumina reading of a sample plate.
+
+    `selected_guides` are expected to be a JSON map of target region to gRNAs.
+    {
+      "chr1:11130541-11130751": {
+        "s180+": "TTTCTACTACTACAGTTGAG TGG",
+        "s185+": "ACTACTACAGTTGAGTGGTC TGG",
+        "s76+": "AAAAGAGTTCCAGAGTGCTC TGG"
+      },
+      "chr7:5569177-5569415": {
+        "s191+": "TTCCGGCGCGCCGAGTCCTT AGG",
+        "s207-": "TCCCCAATCTGGGCGCGCGC CGG",
+        "s225+": "CGCCGGCGCGCGCCCAGATT GGG"
+      }
+    }
+
+    Likewise, `selected_donors` are a map of target region to ssDNAs.
+    """
+    posted_data = request.get_json()
 
     fastqs = s3.download_fastqs(
-        request.args['s3_bucket'],
-        request.args['s3_prefix'],
-        overwrite=not request.args.get('dryrun'))
+        posted_data['s3_bucket'],
+        posted_data['s3_prefix'],
+        overwrite=not posted_data.get('dryrun'))
 
-    # TODO (gdingle): convert target range to seq
-    # samtools faidx hg38.fa chr7:5569176-5569415
+    # TODO (gdingle): should we do this transform on the crispycrunch side?
+    # TODO (gdingle): cache get_reference_amplicon somehow... unfortunate lru_cache not python2
+    amplicon_seqs = [(seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
+                     for chr_loc, guide_seqs in posted_data['selected_guides'].items()
+                     for guide_seq in guide_seqs.values()]
+    # how to get hdr amplicons here?
+    # donor_guides = posted_data['donor_guides']
 
     # Although threads would be more efficient, CRISPResso is not thead-safe.
     # # TODO (gdingle): what is the optimal number of processes? CRISPResso
     # has its own pool internally. See n_processes.
     with ProcessPoolExecutor(max_workers=cpu_count()) as pool:
         futures = []
-        for i in range(0, len(fastqs), 2):
-            fwd = fastqs[i]
-            rev = fastqs[i + 1]
+        for i, amplicon_seq in enumerate(amplicon_seqs):
+            fwd = fastqs[i * 2]
+            rev = fastqs[i * 2 + 1]
             assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
+            # TODO (gdingle): how to handle missing or extra fastq files?
+            # TODO (gdingle): match fastq files and selected_guides on sample names
+            app.logger.info([fwd,
+                             rev,
+                             amplicon_seq[0],
+                             amplicon_seq[1],
+                             ])
             futures.append(
                 pool.submit(
                     _analyze_fastq_pair,
                     fwd,
                     rev,
-                    request.args['amplicon_seq'],
-                    request.args['guide_seq'],
-                    request.args.get('expected_hdr_amplicon_seq'),
-                    request.args.get('dryrun'),
+                    amplicon_seq[0],
+                    amplicon_seq[1],
+                    None,  # TODO (gdingle): donor_guides
+                    posted_data.get('dryrun'),
                 ))
 
     urls = [f.result() for f in futures]
