@@ -8,7 +8,7 @@ import os
 import shutil
 import sys
 
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import cpu_count
 
 from flask import Flask, jsonify, request
@@ -34,7 +34,10 @@ def crispresso():
         request.args['s3_prefix'],
         overwrite=not request.args.get('dryrun'))
 
-    with ThreadPoolExecutor(max_workers=cpu_count() * 5) as pool:
+    # Although threads would be more efficient, CRISPResso is not thead-safe.
+    # # TODO (gdingle): what is the optimal number of processes? CRISPResso
+    # has its own pool internally. See n_processes.
+    with ProcessPoolExecutor(max_workers=cpu_count()) as pool:
         futures = []
         for i in range(0, len(fastqs), 2):
             fwd = fastqs[i]
