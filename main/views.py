@@ -277,6 +277,7 @@ class AnalysisView(CreatePlusView):
         data = {
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
+            # TODO (gdingle): these need to be multi
             'amplicon_seq': obj.amplicon_seq,
             'guide_seq': guide_seq,
             # TODO (gdingle):
