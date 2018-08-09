@@ -275,7 +275,9 @@ class AnalysisView(CreatePlusView):
             'selected_donors': obj.get_selected_donors(),
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
-            'dryrun': False,
+            # TODO (gdingle): turn back on after we have a some real end-to-end
+            # results to test
+            'dryrun': True,
         }
 
         url = 'http://crispresso:5000/analyze'  # host is name of docker service
