@@ -3,7 +3,6 @@ This represents the contents of an experiment on a per sample, per well basis,
 whereas the Django models represent contents per plate.
 """
 
-import doctest
 import pandas
 
 """
@@ -21,11 +20,8 @@ analysis_create_time
 analyst_name
 """
 
+
 def from_experiment(experiment):
-    """
-    >>> experiment = Experiment.objects.get(name='testsum3')
-    >>> samplesheet = from_experiment(experiment)
-    """
     sheet = _new_samplesheet()
     sheet['target_genome'] = 'TODO'
     return sheet
@@ -108,7 +104,3 @@ def to_illumina_sheet(samplesheet):
 def to_experiment_summary(samplesheet):
     # TODO (gdingle):
     return
-
-
-if __name__ == '__main__':
-    doctest.testmod()
