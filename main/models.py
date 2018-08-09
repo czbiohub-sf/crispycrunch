@@ -60,7 +60,7 @@ class GuideDesign(models.Model):
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
         help_text='Chr location or seq or ENST, one per line. Tag-in experiments require ENST.',
         # TODO (gdingle): temp default for testing
-        default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
+        default=lambda: ['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
     )
     # TODO (gdingle): do we even want to convert now?
@@ -79,8 +79,8 @@ class GuideDesign(models.Model):
     ))
 
     # TODO (gdingle): extract guide into own model?
-    guide_data = JSONField(null=True, default={}, blank=True)
-    donor_data = JSONField(null=True, default={}, blank=True)
+    guide_data = JSONField(null=True, default=dict, blank=True)
+    donor_data = JSONField(null=True, default=dict, blank=True)
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
@@ -89,12 +89,12 @@ class GuideDesign(models.Model):
 
 class GuideSelection(models.Model):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
-    selected_guides_tagin = JSONField(null=True, default={}, blank=True,
+    selected_guides_tagin = JSONField(null=True, default=dict, blank=True,
                                       help_text='sgRNAs from tagin.stembio.org')
     # TODO (gdingle): best name: donor or HDR?
-    selected_donors = JSONField(null=True, default={}, blank=True,
+    selected_donors = JSONField(null=True, default=dict, blank=True,
                                 help_text='ssDNAs from tagin.stembio.org')
-    selected_guides = JSONField(null=True, default={}, blank=True,
+    selected_guides = JSONField(null=True, default=dict, blank=True,
                                 help_text='sgRNAs from crispor.tefor.net')
     # TODO (gdingle): temp for debuggin
 
@@ -134,7 +134,7 @@ class PrimerDesign(models.Model):
     primer_temp = models.IntegerField(default=60)
     max_amplicon_length = models.IntegerField(default=400)
     # TODO (gdingle): extract data into own model?
-    primer_data = JSONField(null=True, default={}, blank=True)
+    primer_data = JSONField(null=True, default=dict, blank=True)
 
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
@@ -143,7 +143,7 @@ class PrimerDesign(models.Model):
 class PrimerSelection(models.Model):
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
     # TODO (gdingle): extract primer into own model
-    selected_primers = JSONField(null=True, default={}, blank=True,
+    selected_primers = JSONField(null=True, default=dict, blank=True,
                                  help_text='Primers from crispor.tefor.net')
 
     def __str__(self):
@@ -195,7 +195,7 @@ class Analysis(models.Model):
     #                                       help_text='What is average fragment length (before adapters)?')
     # stdev_fragment_length = models.IntegerField(default=45,
     #     help_text='What is the standard deviation of the fragment legnths? If unknown, assume 10% of the average.')  # noqa
-    results_data = JSONField(null=True, default={}, blank=True)
+    results_data = JSONField(null=True, default=dict, blank=True)
 
     def __str__(self):
         return 'Analysis({}, {}, {} ...)'.format(self.s3_bucket, self.s3_prefix, self.results_data)
