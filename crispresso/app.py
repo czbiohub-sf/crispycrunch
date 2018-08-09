@@ -52,6 +52,8 @@ def crispresso():
     """
     post_data = request.get_json()
 
+    # TODO (gdingle): make fastqs custom named such as
+    # CC8763_chr3:1000-2000_chr3:1200-1220__S1_L001_R1_001.fastq.gz
     fastqs = s3.download_fastqs(post_data['s3_bucket'], post_data['s3_prefix'])
 
     # TODO (gdingle): should we do this transform on the crispycrunch side?
