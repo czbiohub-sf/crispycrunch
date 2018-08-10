@@ -284,10 +284,7 @@ class AnalysisView(CreatePlusView):
         response = requests.post(url, json=data)
         response.raise_for_status()
 
-        obj.results_data = {
-            # TODO (gdingle): other metadata?
-            'files': response.json(),
-        }
+        obj.results_data = response.json()
         return obj
 
 

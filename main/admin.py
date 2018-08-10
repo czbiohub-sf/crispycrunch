@@ -10,6 +10,7 @@ admin.site.register(GuidePlateLayout)
 admin.site.register(PrimerDesign)
 admin.site.register(PrimerSelection)
 admin.site.register(PrimerPlateLayout)
+admin.site.register(Analysis)
 
 
 @admin.register(GuideDesign)

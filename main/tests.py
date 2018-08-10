@@ -28,5 +28,24 @@ class SampleSheetTestCase(TestCase):
         # TODO (gdingle): pick a more interesting experiment
         experiment = Experiment.objects.get(name='testsum3')
         sheet = from_experiment(experiment)
-        # print(sheet['target_loc'])
-        # self.assertEqual(len(sheet))
+        # TODO (gdingle): some good assertions
+        self.assertTrue(len(sheet))
+
+    def test_from_guide_selection(self):
+        # TODO (gdingle): pick more intersting
+        guide_selection = GuideSelection.objects.get(id=45)
+        sheet = from_guide_selection(guide_selection)
+        self.assertTrue(len(sheet))
+
+    def test_from_primer_selection(self):
+        primer_selection = PrimerSelection.objects.get(id=18)
+        sheet = from_primer_selection(primer_selection)
+        # print(sheet.head().loc[:, 'target_loc':'primer_melt_temp'])
+        self.assertTrue(len(sheet))
+
+    def test_from_analysis(self):
+        # TODO (gdingle): something more intereting
+        analysis = Analysis.objects.get(id=21)
+        sheet = from_analysis(analysis)
+        self.assertTrue(len(sheet))
+        print(sheet.head()[['s3_bucket', 's3_prefix']])
