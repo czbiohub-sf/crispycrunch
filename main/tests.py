@@ -45,7 +45,7 @@ class SampleSheetTestCase(TestCase):
 
     def test_from_analysis(self):
         # TODO (gdingle): something more intereting
-        analysis = Analysis.objects.get(id=21)
+        analysis = Analysis.objects.get(id=24)
         sheet = from_analysis(analysis)
         self.assertTrue(len(sheet))
-        print(sheet.head()[['s3_bucket', 's3_prefix']])
+        print(sheet.head().loc[:,'target_seq':])

@@ -4,12 +4,8 @@ whereas the Django models represent contents per plate.
 """
 import pandas
 
-# from crispresso.seqs import get_reference_amplicon
 from main.models import PrimerSelection
 from main.validators import get_guide_loc
-"""
-TODO: use it in crispresso and crispycrunch services, or maybe just JSON crispresso
-"""
 
 
 def from_experiment(experiment):
@@ -44,7 +40,6 @@ def from_guide_selection(guide_selection):
     sheet['target_genome'] = guide_design.genome
     # TODO (gdingle): this does not work because pysam fails to compile... need conda :(
     # sheet['target_seq'][lg] = (get_reference_amplicon(chr_loc) for chr_loc in targets)
-    sheet['target_seq'] = 'TODO'
     # TODO (gdingle): is this even worth having?
     sheet['target_pam'] = guide_design.pam
 
@@ -123,6 +118,10 @@ def from_analysis(analysis):
     sheet['results_success'][0:len(results)] = [r[0] for r in results]
     sheet['results_path'][0:len(results)] = [r[1] for r in results]
 
+    # Update target sequences only now because they are found by crispresso service
+    amplicon_seqs = analysis.results_data['amplicon_seqs']
+    sheet['target_seq'][0:len(amplicon_seqs)] = amplicon_seqs
+
     return sheet
 
 
@@ -140,6 +139,7 @@ def _new_samplesheet(
         # TODO (gdingle): use a MultiIndex?
         columns=[
             'target_genome',
+            'target_pam',
             'target_loc',
             'target_seq',
             'guide_loc',
@@ -147,7 +147,7 @@ def _new_samplesheet(
             'guide_seq',
             'guide_pam',
             'guide_direction',
-            # 'TODO_crispor_stats',
+            # 'TODO_crispor_stats', off targets, etc
             'donor_seq',
             'donor_target_seq',
             # TODO (gdingle): does primer_loc have any meaning?
@@ -155,12 +155,14 @@ def _new_samplesheet(
             'primer_seq_fwd',
             'primer_seq_rev',
             'primer_melt_temp',
-            'well_pos',
-            'well_num',
+            # TODO (gdingle): what's the source of truth for these?
+            # 'well_pos',
+            # 'well_num',
             's3_bucket',
             's3_prefix',
             'fastq_fwd',
             'fastq_rev',
+            'results_success',
             'results_path',
             # results_stats_TODO
         ])
