@@ -88,8 +88,12 @@ def crispresso():
                     post_data.get('dryrun'),
                 ))
 
-    urls = [f.result() for f in futures]
-    return jsonify(urls)
+    results = [f.result() for f in futures]
+    return jsonify({
+        'fastqs': fastqs,
+        'amplicon_seqs': [a[0] for a in amplicon_seqs],
+        'results': results,
+    })
 
 
 def _analyze_fastq_pair(fwd,
@@ -130,7 +134,10 @@ def _analyze_fastq_pair(fwd,
             shutil.rmtree(results_path)
         os.rename(crispresso_results_path, results_path)
 
-    return results_path
+    success = os.path.exists(
+        results_path + '/Quantification_of_editing_frequency.txt')
+
+    return success, results_path
 
 
 def _get_trim_opt(adapterloc='fastqs/TruSeq3-PE-2.fa'):

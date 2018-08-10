@@ -3,6 +3,8 @@ import re
 
 from django.core.exceptions import ValidationError
 
+CHR_REGEX = r'^chr([0-9]+):([0-9,]+)-([0-9,]+[0-9])$'
+
 
 def validate_seq(value: str) -> None:
     """
@@ -47,7 +49,7 @@ def validate_chr(value: str) -> None:
     ...
     django.core.exceptions.ValidationError: ['chrA:11,130,540-11,130,751 is not a chromosome location']
     """
-    if re.match(r'^chr[0-9]+:[0-9,-]*[0-9]$', value) is None:
+    if re.match(CHR_REGEX, value) is None:
         raise ValidationError('{} is not a chromosome location'.format(value))
 
 
@@ -95,6 +97,18 @@ def validate_chr_or_seq_or_enst(value: str) -> None:
     if not any((is_chr(value), is_seq(value), is_ensemble_transcript(value))):
         raise ValidationError(
             '{} is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID'.format(value))
+
+
+def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
+    """
+    # TODO (gdingle): is this actually correct def for guide_loc?
+    >>> get_guide_loc('chr7:5569177-5569415', 191)
+    'chr7:5569368-5569388'
+    """
+    validate_chr(target_loc)
+    matches = re.match(CHR_REGEX, target_loc)
+    start = int(matches[2]) + guide_offset
+    return 'chr{}:{}-{}'.format(matches[1], start, start + guide_len)
 
 
 if __name__ == '__main__':

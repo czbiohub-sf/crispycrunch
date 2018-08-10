@@ -20,6 +20,10 @@ class Researcher(models.Model):
     first_name = models.CharField(max_length=40)
     last_name = models.CharField(max_length=40)
 
+    @property
+    def full_name(self):
+        return self.first_name + ' ' + self.last_name
+
     def __str__(self):
         return 'Researcher({}, {}, ...)'.format(
             self.first_name, self.last_name)
@@ -179,8 +183,11 @@ class PrimerPlateLayout(models.Model):
 class Analysis(models.Model):
     experiment = models.ForeignKey(
         Experiment, on_delete=models.PROTECT)
+    # TODO (gdingle): default this to experiment
     researcher = models.ForeignKey(
-        Researcher, on_delete=models.PROTECT)
+        Researcher, on_delete=models.PROTECT,
+        help_text='The researcher doing the analysis')
+    # TODO (gdingle): remove me on next migration
     name = models.CharField(max_length=40)
 
     s3_bucket = models.CharField(max_length=80,
@@ -198,7 +205,7 @@ class Analysis(models.Model):
     results_data = JSONField(null=True, default=dict, blank=True)
 
     def __str__(self):
-        return 'Analysis({}, {}, {} ...)'.format(self.s3_bucket, self.s3_prefix, self.results_data)
+        return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
 
     def get_selected_guides(self):
         return GuideSelection.objects.get(guide_design__experiment=self.experiment).selected_guides
