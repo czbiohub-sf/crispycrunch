@@ -122,31 +122,9 @@ class GuideSelection(BaseModel):
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
 
-
-# TODO (gdingle): remove me completely
-class GuidePlateLayout(BaseModel):
-    guide_selection = models.ForeignKey(
-        GuideSelection,
-        on_delete=models.PROTECT)
-    # TODO (gdingle): add name when multiple plates
-    # name = models.CharField(max_length=40)
-    group_by = models.CharField(max_length=40, choices=[
-        ('cell_type', 'Cell Type'),
-        ('random', 'Random'),
-        ('todo', 'TODO: more plate groupings'),
-    ], default='cell_type')
-    order_by = models.CharField(max_length=40, choices=[
-        ('alphabetical', 'Alphabetical'),
-        ('todo', 'TODO: more plate orderings'),
-    ], default='alphabetical')
-
-    def __str__(self):
-        return 'GuidePlateLayout({}, {}, ...)'.format(
-            self.group_by, self.order_by)
-
     @property
     def layout(self):
-        return Plate96Layout(self.guide_selection.selected_guides)
+        return Plate96Layout(self.selected_guides)
 
 
 class PrimerDesign(BaseModel):
@@ -154,7 +132,7 @@ class PrimerDesign(BaseModel):
         GuideSelection, on_delete=models.PROTECT)
     # TODO (gdingle): Addgene plasmid type?
     # TODO (gdingle): any point in specifying temp?
-    # primer_temp = models.IntegerField(default=60)
+    primer_temp = models.IntegerField(default=60)
     # TODO (gdingle): this needs to change based on HDR
     max_amplicon_length = models.IntegerField(default=400)
     primer_data = JSONField(default=dict, blank=True, help_text='Data returned by external service')
@@ -171,33 +149,9 @@ class PrimerSelection(BaseModel):
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)
 
-# TODO (gdingle): remove me completely
-
-
-class PrimerPlateLayout(models.Model):
-    primer_selection = models.ForeignKey(
-        PrimerSelection, on_delete=models.PROTECT)
-    # TODO (gdingle): add name when multiple plates
-    # name = models.CharField(max_length=40)
-    # TODO (gdingle): plate_size
-    # plate_size = models.IntegerField()
-    group_by = models.CharField(max_length=40, choices=[
-        ('cell_type', 'Cell Type'),
-        ('random', 'Random'),
-        ('todo', 'TODO: more plate groupings'),
-    ], default='cell_type')
-    order_by = models.CharField(max_length=40, choices=[
-        ('alphabetical', 'Alphabetical'),
-        ('todo', 'TODO: more plate orderings'),
-    ], default='alphabetical')
-
-    def __str__(self):
-        return 'PrimerPlateLayout({}, {}, ...)'.format(
-            self.group_by, self.order_by)
-
     @property
     def layout(self):
-        return Plate96Layout(self.primer_selection.selected_primers)
+        return Plate96Layout(self.selected_primers)
 
 
 class Analysis(BaseModel):

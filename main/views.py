@@ -116,7 +116,8 @@ class GuideDesignView(CreatePlusView):
                 pam=obj.pam).run()
 
         with ThreadPoolExecutor() as ex:
-            if obj.tag_in:
+            # TODO (gdingle): ignore HDR for now
+            if obj.hdr_seq and False:
                 # TODO (gdingle): put in form validation somehow
                 assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
                 obj.donor_data = list(ex.map(tagin_request, obj.targets))
@@ -137,7 +138,7 @@ class GuideDesignView(CreatePlusView):
 class GuideSelectionView(CreatePlusView):
     template_name = 'guide-selection.html'
     form_class = GuideSelectionForm
-    success_url = '/main/guide-selection/{id}/guide-plate-layout/'
+    success_url = '/main/guide-selection/{id}/primer-design/'
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
@@ -167,23 +168,24 @@ class GuideSelectionView(CreatePlusView):
         return super().get_context_data(**kwargs)
 
 
-class GuidePlateLayoutView(CreatePlusView):
-    template_name = 'guide-plate-layout.html'
-    form_class = GuidePlateLayoutForm
-    success_url = '/main/guide-selection/{guide_selection_id}/primer-design/'
+# TODO (gdingle): do we still want this?
+# class GuidePlateLayoutView(CreatePlusView):
+#     template_name = 'guide-plate-layout.html'
+#     form_class = GuidePlateLayoutForm
+#     success_url = '/main/guide-selection/{guide_selection_id}/primer-design/'
 
-    def plus(self, obj):
-        obj.guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
-        return obj
+#     def plus(self, obj):
+#         obj.guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
+#         return obj
 
-    def get_context_data(self, **kwargs):
-        guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
-        # TODO (gdingle): show targets in plate or sgRNA?
-        layout_map = dict((list(guides.values())[0], target)
-                          for target, guides
-                          in guide_selection.selected_guides.items())
-        kwargs['plate_layout'] = Plate96Layout(layout_map)
-        return super().get_context_data(**kwargs)
+#     def get_context_data(self, **kwargs):
+#         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
+#         # TODO (gdingle): show targets in plate or sgRNA?
+#         layout_map = dict((list(guides.values())[0], target)
+#                           for target, guides
+#                           in guide_selection.selected_guides.items())
+#         kwargs['plate_layout'] = Plate96Layout(layout_map)
+#         return super().get_context_data(**kwargs)
 
 
 class PrimerDesignView(CreatePlusView):
@@ -225,7 +227,7 @@ class PrimerDesignView(CreatePlusView):
 class PrimerSelectionView(CreatePlusView):
     template_name = 'primer-selection.html'
     form_class = PrimerSelectionForm
-    success_url = '/main/primer-selection/{id}/primer-plate-layout/'
+    success_url = '/main/primer-selection/{id}/experiment-summary/'
 
     def get_initial(self):
         primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
@@ -247,21 +249,22 @@ class PrimerSelectionView(CreatePlusView):
         return super().get_context_data(**kwargs)
 
 
-class PrimerPlateLayoutView(CreatePlusView):
-    template_name = 'primer-plate-layout.html'
-    form_class = PrimerPlateLayoutForm
-    success_url = '/main/primer-plate-layout/{id}/experiment-summary/'
+# TODO (gdingle): do we still want this?
+# class PrimerPlateLayoutView(CreatePlusView):
+#     template_name = 'primer-plate-layout.html'
+#     form_class = PrimerPlateLayoutForm
+#     success_url = '/main/primer-plate-layout/{id}/experiment-summary/'
 
-    def plus(self, obj):
-        obj.primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
-        return obj
+#     def plus(self, obj):
+#         obj.primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
+#         return obj
 
-    def get_context_data(self, **kwargs):
-        primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
-        primer_pairs = dict((tuple(p.keys()), tuple(p.values()))
-                            for target, p in primer_selection.selected_primers.items())
-        kwargs['plate_layout'] = Plate96Layout(primer_pairs)
-        return super().get_context_data(**kwargs)
+#     def get_context_data(self, **kwargs):
+#         primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
+#         primer_pairs = dict((tuple(p.keys()), tuple(p.values()))
+#                             for target, p in primer_selection.selected_primers.items())
+#         kwargs['plate_layout'] = Plate96Layout(primer_pairs)
+#         return super().get_context_data(**kwargs)
 
 
 class AnalysisView(CreatePlusView):
@@ -310,29 +313,28 @@ class ExperimentSummaryView(View):
 
     def get(self, request, *args, **kwargs):
         # Fetch objects associated with new experiment by traversing the graph.
-        primer_plate_layout = PrimerPlateLayout.objects.get(id=kwargs['id'])
-        primer_selection = primer_plate_layout.primer_selection
+        # TODO (gdingle): no more PrimerPlateLayout object
+        primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
         primer_design = primer_selection.primer_design
         guide_selection = primer_design.guide_selection
-        guide_plate_layout = GuidePlateLayout.objects.filter(guide_selection=guide_selection)[0]
         guide_design = guide_selection.guide_design
         experiment = guide_design.experiment
 
-        rows = self._get_rows(guide_plate_layout, primer_plate_layout)
+        rows = self._get_rows(guide_selection.layout, primer_selection.layout)
 
         return render(request, self.template_name, locals())
 
     @no_type_check  # TODO (gdingle): why cant work with variable tuple?
     def _get_rows(self, guide_plate_layout, primer_plate_layout) -> List[tuple]:
         rows = []
-        for pos, guide in guide_plate_layout.layout.well_names.items():
+        for pos, guide in guide_plate_layout.well_names.items():
             if guide is None:
                 break
             rows.append((
                 pos,
                 guide,
-                guide_plate_layout.layout.well_seqs[pos],
-                primer_plate_layout.layout.well_seqs[pos],
+                guide_plate_layout.well_seqs[pos],
+                primer_plate_layout.well_seqs[pos],
                 # TODO (gdingle): donor_seqs
             ))
         return rows
@@ -381,9 +383,9 @@ class OrderFormView(DetailView):
 
 class GuideOrderFormView(OrderFormView):
 
-    model = GuidePlateLayout
+    model = GuideSelection
 
 
 class PrimerOrderFormView(OrderFormView):
 
-    model = PrimerPlateLayout
+    model = PrimerSelection

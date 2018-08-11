@@ -80,13 +80,6 @@ class GuideSelectionForm(ModelForm):
             self.fields['selected_donors'].widget = HiddenInput()
 
 
-class GuidePlateLayoutForm(ModelForm):
-    class Meta:
-        exclude = ['guide_selection']
-        model = GuidePlateLayout
-        fields = '__all__'
-
-
 class PrimerDesignForm(ModelForm):
     class Meta:
         model = PrimerDesign
@@ -100,13 +93,6 @@ class PrimerSelectionForm(ModelForm):
         fields = '__all__'
         exclude = ['primer_design']
         widgets = {'selected_primers': PrettyJsonWidget(attrs={'rows': 20})}
-
-
-class PrimerPlateLayoutForm(ModelForm):
-    class Meta:
-        model = PrimerPlateLayout
-        fields = '__all__'
-        exclude = ['primer_selection']
 
 
 class AnalysisForm(ModelForm):
