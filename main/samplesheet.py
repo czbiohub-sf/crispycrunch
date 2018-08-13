@@ -147,11 +147,11 @@ def _new_samplesheet(
             'target_pam',
             'target_loc',
             'target_seq',
-            'guide_loc',
             'guide_offset',
+            'guide_loc',
+            'guide_direction',
             'guide_seq',
             'guide_pam',
-            'guide_direction',
             '_crispor_batch_id',
             '_crispor_pam_id',
             # 'TODO_crispor_stats', off targets, etc
