@@ -126,6 +126,10 @@ class GuideSelection(BaseModel):
     def layout(self):
         return Plate96Layout(self.selected_guides)
 
+    @property
+    def order_form_url(self):
+        return '/main/guide-selection/{}/order-form'.format(self.id)
+
 
 class PrimerDesign(BaseModel):
     guide_selection = models.ForeignKey(
@@ -152,6 +156,10 @@ class PrimerSelection(BaseModel):
     @property
     def layout(self):
         return Plate96Layout(self.selected_primers)
+
+    @property
+    def order_form_url(self):
+        return '/main/primer-selection/{}/order-form'.format(self.id)
 
 
 class Analysis(BaseModel):

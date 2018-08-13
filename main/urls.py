@@ -31,8 +31,9 @@ urlpatterns = [
     path(r'primer-selection/<int:id>/experiment-summary/',
          views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
     path(r'analysis/<int:id>/results/', views.ResultsView.as_view(), name='Experiment Analysis'),
-    path(r'guide-plate-layout/<int:id>/order-form',
+
+    path(r'guide-selection/<int:id>/order-form',
          views.GuideOrderFormView.as_view()),
-    path(r'primer-plate-layout/<int:id>/order-form',
+    path(r'primer-selection/<int:id>/order-form',
          views.PrimerOrderFormView.as_view()),
 ]
