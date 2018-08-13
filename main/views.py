@@ -318,6 +318,7 @@ class ExperimentSummaryView(View):
         sheet = sheet.loc[:, 'target_loc':]
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
         sheet = sheet.dropna(axis=1, how='all')
+        sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
 
         primer_design = primer_selection.primer_design
         guide_selection = primer_design.guide_selection
