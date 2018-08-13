@@ -4,7 +4,8 @@ from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 
-from main.platelayout import Plate96Layout
+# TODO (gdingle): still needed?
+# from main.platelayout import Plate96Layout
 from main.validators import *
 
 # TODO (gdingle): mark some model fields as unique or unique_together, and some as editable=False
@@ -122,9 +123,10 @@ class GuideSelection(BaseModel):
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
 
-    @property
-    def layout(self):
-        return Plate96Layout(self.selected_guides)
+    # TODO (gdingle): still needed?
+    # @property
+    # def layout(self):
+    #     return Plate96Layout(self.selected_guides)
 
     @property
     def samplesheet(self):
@@ -159,9 +161,10 @@ class PrimerSelection(BaseModel):
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)
 
-    @property
-    def layout(self):
-        return Plate96Layout(self.selected_primers)
+    # TODO (gdingle): still needed?
+    # @property
+    # def layout(self):
+    #     return Plate96Layout(self.selected_primers)
 
     @property
     def samplesheet(self):
