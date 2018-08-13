@@ -7,9 +7,9 @@ from django.db import models
 from main.platelayout import Plate96Layout
 from main.validators import *
 
-
 # TODO (gdingle): mark some model fields as unique or unique_together, and some as editable=False
 # TODO (gdingle): review on_delete behaviors
+
 
 class BaseModel(models.Model):
 
@@ -127,6 +127,12 @@ class GuideSelection(BaseModel):
         return Plate96Layout(self.selected_guides)
 
     @property
+    def samplesheet(self):
+        # Import here to avoid circular import
+        from main.samplesheet import from_guide_selection
+        return from_guide_selection(self)
+
+    @property
     def order_form_url(self):
         return '/main/guide-selection/{}/order-form'.format(self.id)
 
@@ -156,6 +162,12 @@ class PrimerSelection(BaseModel):
     @property
     def layout(self):
         return Plate96Layout(self.selected_primers)
+
+    @property
+    def samplesheet(self):
+        # Import here to avoid circular import
+        from main.samplesheet import from_primer_selection
+        return from_primer_selection(self)
 
     @property
     def order_form_url(self):

@@ -4,11 +4,11 @@ whereas the Django models represent contents per plate.
 """
 import pandas
 
-from main.models import PrimerSelection
+from main.models import *
 from main.validators import get_guide_loc
 
 
-def from_experiment(experiment):
+def from_experiment(experiment: Experiment) -> pandas.DataFrame:
     sheet = _new_samplesheet()
 
     # Special pandas attribute for preserving metadata across transforms
@@ -26,7 +26,7 @@ def from_experiment(experiment):
     return sheet
 
 
-def from_guide_selection(guide_selection):
+def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     guide_design = guide_selection.guide_design
     sheet = from_experiment(guide_design.experiment)
 
@@ -80,20 +80,18 @@ def from_guide_selection(guide_selection):
     return sheet[lg]
 
 
-def from_primer_selection(primer_selection):
+def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame:
     sheet = from_guide_selection(primer_selection.primer_design.guide_selection)
     selected_primers = primer_selection.selected_primers
-    for target_loc, primer_pair in selected_primers.items():
+    for _crispor_pam_id, primer_pair in selected_primers.items():
         # TODO (gdingle): this is awkward AND incorrect... need all primers of all selected guides!
-        mask = sheet['target_loc'] == target_loc
+        mask = sheet['_crispor_pam_id'] == _crispor_pam_id
         sheet['primer_seq_fwd'][mask] = primer_pair[0]
         sheet['primer_seq_rev'][mask] = primer_pair[1]
-        # TODO (gdingle): primer_melt_temp
-        sheet['primer_melt_temp'][mask] = 'TODO'
     return sheet
 
 
-def from_analysis(analysis):
+def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     primer_selection = PrimerSelection.objects.get(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)
     sheet = from_primer_selection(primer_selection)
@@ -161,7 +159,7 @@ def _new_samplesheet(
             # 'primer_loc',
             'primer_seq_fwd',
             'primer_seq_rev',
-            'primer_melt_temp',
+            # 'primer_melt_temp', # TODO (gdingle): is this useful?
             # TODO (gdingle): what's the source of truth for these?
             # 'well_pos',
             # 'well_num',
@@ -178,11 +176,6 @@ def _new_samplesheet(
 def to_plate(samplesheet):
     # TODO (gdingle):
     return 'Plate96Layout'
-
-
-def to_order_form(samplesheet):
-    # TODO (gdingle):
-    return 'OrderFormView'
 
 
 def to_illumina_sheet(samplesheet):

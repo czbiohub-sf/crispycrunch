@@ -335,8 +335,9 @@ class OrderFormView(DetailView):
     """
 
     model: models.Model = None
+    seq_key: str
 
-    def _create_excel_file(self, plate_layout: AbstractPlateLayout, title: str):
+    def _create_excel_file(self, sheet: samplesheet.pandas.DataFrame, title: str):
         wb = Workbook()
         ws = wb.active
 
@@ -345,14 +346,13 @@ class OrderFormView(DetailView):
         ws['B1'] = 'Name'
         ws['C1'] = 'Sequence'
 
-        # TODO (gdingle): should print all well positions or just until end of contents?
-        for i, pos in enumerate(plate_layout.well_positions):
+        for i, well_pos in enumerate(sheet.index):
             index = str(i + 2)
-            ws['A' + index] = pos
-            ws['B' + index] = plate_layout.well_names[pos]
-            # TODO (gdingle): this is awkward
-            pair = plate_layout.well_seqs[pos]
-            ws['C' + index] = list(pair.values())[0] if pair is not None else None
+            ws['A' + index] = well_pos
+            # TODO (gdingle): what is the best name of each well for order form?
+            row = sheet.loc[well_pos]
+            ws['B' + index] = '{}{}'.format(row.guide_offset, row.guide_direction)
+            ws['C' + index] = row[self.seq_key]
 
         return writer.excel.save_virtual_workbook(wb)
 
@@ -360,7 +360,7 @@ class OrderFormView(DetailView):
         instance = self.model.objects.get(id=kwargs['id'])
         # TODO (gdingle): friendlier title?
         title = request.path.replace('/', ' ').replace('main ', '')
-        excel_file = self._create_excel_file(instance.layout, title)
+        excel_file = self._create_excel_file(instance.samplesheet, title)
 
         response = HttpResponse(
             excel_file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -372,8 +372,13 @@ class OrderFormView(DetailView):
 class GuideOrderFormView(OrderFormView):
 
     model = GuideSelection
+    # TODO: include guide_pam or not?
+    seq_key = 'guide_seq'
 
 
 class PrimerOrderFormView(OrderFormView):
 
     model = PrimerSelection
+    # TODO (gdingle): how to order fwd and reverse primer at once?
+    # TODO (gdingle): what to do about "not found" primers?
+    seq_key = 'primer_seq_fwd'
