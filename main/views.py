@@ -311,34 +311,20 @@ class ExperimentSummaryView(View):
     template_name = 'experiment-summary.html'
 
     def get(self, request, *args, **kwargs):
-        # TODO (gdingle): use samplesheet.from_primer_selection here
-
-        # Fetch objects associated with new experiment by traversing the graph.
-        # TODO (gdingle): no more PrimerPlateLayout object
         primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
+
+        # Filter sheet
+        sheet = samplesheet.from_primer_selection(primer_selection)
+        sheet = sheet.loc[:, 'target_loc':]
+        sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
+        sheet = sheet.dropna(axis=1, how='all')
+
         primer_design = primer_selection.primer_design
         guide_selection = primer_design.guide_selection
         guide_design = guide_selection.guide_design
         experiment = guide_design.experiment
 
-        rows = self._get_rows(guide_selection.layout, primer_selection.layout)
-
         return render(request, self.template_name, locals())
-
-    @no_type_check  # TODO (gdingle): why cant work with variable tuple?
-    def _get_rows(self, guide_plate_layout, primer_plate_layout) -> List[tuple]:
-        rows = []
-        for pos, guide in guide_plate_layout.well_names.items():
-            if guide is None:
-                break
-            rows.append((
-                pos,
-                guide,
-                guide_plate_layout.well_seqs[pos],
-                primer_plate_layout.well_seqs[pos],
-                # TODO (gdingle): donor_seqs
-            ))
-        return rows
 
 
 class OrderFormView(DetailView):

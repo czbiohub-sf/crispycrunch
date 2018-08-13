@@ -5,7 +5,7 @@ from django import template
 
 register = template.Library()
 
-
+# TODO (gdingle): not used... remove me?
 @register.simple_tag
 def return_item(l, row, col=''):
     """Makes it possible to return an item in a dict by variables. Django templates suck."""

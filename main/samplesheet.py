@@ -85,10 +85,9 @@ def from_primer_selection(primer_selection):
     selected_primers = primer_selection.selected_primers
     for target_loc, primer_pair in selected_primers.items():
         # TODO (gdingle): this is awkward AND incorrect... need all primers of all selected guides!
-        pair = list(primer_pair.values())
         mask = sheet['target_loc'] == target_loc
-        sheet['primer_seq_fwd'][mask] = pair[0]
-        sheet['primer_seq_rev'][mask] = pair[1]
+        sheet['primer_seq_fwd'][mask] = primer_pair[0]
+        sheet['primer_seq_rev'][mask] = primer_pair[1]
         # TODO (gdingle): primer_melt_temp
         sheet['primer_melt_temp'][mask] = 'TODO'
     return sheet
