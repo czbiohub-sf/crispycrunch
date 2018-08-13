@@ -173,16 +173,6 @@ def _new_samplesheet(
         ])
 
 
-def to_plate(samplesheet):
-    # TODO (gdingle):
-    return 'Plate96Layout'
-
-
 def to_illumina_sheet(samplesheet):
-    # TODO (gdingle):
-    return
-
-
-def to_experiment_summary(samplesheet):
     # TODO (gdingle):
     return
