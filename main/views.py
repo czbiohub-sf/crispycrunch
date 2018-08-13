@@ -24,6 +24,7 @@ from openpyxl import Workbook, writer  # noqa
 
 import crisporclient
 
+from main import samplesheet
 from main.conversions import convert_chr_to_fasta
 from main.forms import *
 from main.models import *
@@ -154,9 +155,6 @@ class GuideSelectionView(CreatePlusView):
 
     def plus(self, obj):
         obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        # TODO (gdingle): this is awkward
-        obj.selected_guides = dict((target, dict(islice(guides.items(), 1)))
-                                   for target, guides in obj.selected_guides.items())
         return obj
 
     def get_context_data(self, **kwargs):
@@ -196,6 +194,8 @@ class PrimerDesignView(CreatePlusView):
     def plus(self, obj):
         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
 
+        sheet = samplesheet.from_guide_selection(guide_selection)
+
         guide_data = guide_selection.guide_design.guide_data
 
         def request_primers(args):
@@ -209,13 +209,8 @@ class PrimerDesignView(CreatePlusView):
                 seq=seq).run()
 
         with ThreadPoolExecutor() as ex:
-            # Take first selected guide of each target only
-            # TODO (gdingle): this is awkward... keep batch_id and seq in a better way
-            args = ((target, list(pam_ids.keys())[0], g['batch_id'])
-                    for target, pam_ids
-                    in guide_selection.selected_guides.items()
-                    for g in guide_data
-                    if g['seq'] == target)
+            # TODO (gdingle): _crispor_batch_id has a lifetime... handle expired
+            args = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
             obj.primer_data = list(ex.map(request_primers, args))
 
         obj.guide_selection = guide_selection
@@ -231,11 +226,15 @@ class PrimerSelectionView(CreatePlusView):
 
     def get_initial(self):
         primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
+
+        def get_fwd_and_rev_primers(ontarget_primers):
+            values = list(ontarget_primers.values())
+            return values[0], values[1]
+
         return {
-            # Andy's group is only interested in ontarget primer pairs, two per well
-            # TODO (gdingle): is this true of other groups?
-            # TODO (gdingle): put both primers in one well
-            'selected_primers': dict((p['seq'], p['ontarget_primers']) for p in primer_data)
+            'selected_primers': dict(
+                (p['pam_id'], get_fwd_and_rev_primers(p['ontarget_primers']))
+                for p in primer_data)
         }
 
     def plus(self, obj):
@@ -243,9 +242,9 @@ class PrimerSelectionView(CreatePlusView):
         return obj
 
     def get_context_data(self, **kwargs):
-        # TODO (gdingle): make multi guide
         primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
-        kwargs['crispor_url'] = primer_data[0]['url']
+        kwargs['example_crispor_url'] = primer_data[0]['url']
+        kwargs['example_pam_id'] = primer_data[0]['pam_id']
         return super().get_context_data(**kwargs)
 
 
@@ -312,6 +311,8 @@ class ExperimentSummaryView(View):
     template_name = 'experiment-summary.html'
 
     def get(self, request, *args, **kwargs):
+        # TODO (gdingle): use samplesheet.from_primer_selection here
+
         # Fetch objects associated with new experiment by traversing the graph.
         # TODO (gdingle): no more PrimerPlateLayout object
         primer_selection = PrimerSelection.objects.get(id=kwargs['id'])

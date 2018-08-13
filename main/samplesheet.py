@@ -27,16 +27,19 @@ def from_experiment(experiment):
 
 
 def from_guide_selection(guide_selection):
-    sheet = from_experiment(guide_selection.guide_design.experiment)
+    guide_design = guide_selection.guide_design
+    sheet = from_experiment(guide_design.experiment)
 
-    guides = [(chr_loc, offset, seq)
+    # Ungroup guide data into rows
+    chr_loc_to_batch_id = dict((g['seq'], g['batch_id'])
+                               for g in guide_design.guide_data)
+    guides = [(chr_loc, offset, seq, chr_loc_to_batch_id[chr_loc])
               for chr_loc, selected in guide_selection.selected_guides.items()
               for offset, seq in selected.items()]
 
     # For assigning to subset of rows of A1 to H12
     lg = slice(0, len(guides))
 
-    guide_design = guide_selection.guide_design
     sheet['target_genome'] = guide_design.genome
     # TODO (gdingle): this does not work because pysam fails to compile... need conda :(
     # sheet['target_seq'][lg] = (get_reference_amplicon(chr_loc) for chr_loc in targets)
@@ -64,6 +67,8 @@ def from_guide_selection(guide_selection):
         axis=1,
     )
 
+    sheet['_crispor_batch_id'][lg] = [g[3] for g in guides]
+    sheet['_crispor_pam_id'][lg] = [g[1] for g in guides]
     # 'TODO_crispor_stats',
 
     # TODO (gdingle): donors
@@ -71,7 +76,8 @@ def from_guide_selection(guide_selection):
     # TODO (gdingle): how to compute this? talk to Jason Li
     # sheet['donor_target_seq'][lg] =
 
-    return sheet
+    # TODO (gdingle): is this wise to return subset?
+    return sheet[lg]
 
 
 def from_primer_selection(primer_selection):
@@ -147,6 +153,8 @@ def _new_samplesheet(
             'guide_seq',
             'guide_pam',
             'guide_direction',
+            '_crispor_batch_id',
+            '_crispor_pam_id',
             # 'TODO_crispor_stats', off targets, etc
             'donor_seq',
             'donor_target_seq',

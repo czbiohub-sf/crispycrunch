@@ -88,6 +88,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         # TODO (gdingle): keeping only top three for now... what is best?
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows[0:3])
         return dict(
+            # TODO (gdingle): crispor uses seq to denote chr_loc
             seq=soup.find(class_='title').find('a').get_text(),  # TODO (gdingle): why is off by one from input?
             url=url,
             batch_id=batch_id,
@@ -152,9 +153,10 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
             pam: str = 'NGG',
             seq: str ='') -> None:
 
-        pam_id = quote(pam_id)  # percent encode the '+' symbol
+        self.pam_id = pam_id
+        quoted_pam_id = quote(pam_id)  # percent encode the '+' symbol
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
-            '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={pam_id}&pam={pam}'.format(**locals())
+            '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(**locals())
         self.seq = seq  # just for metadata
 
     def __repr__(self):
@@ -180,6 +182,8 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
             raise RuntimeError('Crispor exceptions.ValueError')
 
         return dict(
+            pam_id=self.pam_id,
+            # TODO (gdingle): crispor uses seq to denote chr_loc
             seq=self.seq,
             url=self.endpoint,
             amplicon_length=soup
