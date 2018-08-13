@@ -183,7 +183,11 @@ class Analysis(BaseModel):
         return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
 
     def get_selected_guides(self):
-        return GuideSelection.objects.get(guide_design__experiment=self.experiment).selected_guides
+        # TODO (gdingle): this takes the latest guide selection... good idea?
+        return GuideSelection.objects.filter(
+            guide_design__experiment=self.experiment).latest('-id').selected_guides
 
     def get_selected_donors(self):
-        return GuideSelection.objects.get(guide_design__experiment=self.experiment).selected_donors
+        # TODO (gdingle): this takes the latest donor selection... good idea?
+        return GuideSelection.objects.filter(
+            guide_design__experiment=self.experiment).latest('-id').selected_donors
