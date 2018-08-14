@@ -187,6 +187,8 @@ class Analysis(BaseModel):
     # TODO (gdingle): remove me on next migration
     name = models.CharField(max_length=40)
 
+    # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
+    # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
     s3_bucket = models.CharField(max_length=80,
                                  default='jasonli-bucket')
     s3_prefix = models.CharField(max_length=160,
