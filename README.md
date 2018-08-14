@@ -3,7 +3,7 @@ Web app for CRISPR experiment setup and analysis
 
 ## Background
 
-This app was developed by Greg Dingle starting in July 2018 for Andy May's genome engineering group in the CZ Biohub. The intention is to streamline the CRISPR experimentation process of researchers in the Biohub and provide a permanent record of experiments and results. 
+This app was developed by Greg Dingle starting in July 2018 for Andy May's genome engineering group in the CZ Biohub. The intention is to streamline the CRISPR experimentation process of researchers in the Biohub and provide a permanent record of experiments and results.
 
 ## Installation
 
@@ -13,12 +13,14 @@ Clone the repo. You must have czbiohub github access.
 
 ## Technologies
 
-* Python3 
+TODO: update with crispresso
+
+* Python3
 * Django
 * Postgres
 * Bootstrap
 
-Build and run the app. Crispycrunch is packaged in a docker container. 
+Build and run the app. Crispycrunch is packaged in a docker container.
 
 ```cd crispycrunch && docker-compose up --build```
 
@@ -56,7 +58,7 @@ db_1   | 2018-07-17 16:54:13.359 UTC [1] LOG:  listening on Unix socket "/var/ru
 db_1   | 2018-07-17 16:54:13.384 UTC [23] LOG:  database system was shut down at 2018-07-17 16:08:13 UTC
 db_1   | 2018-07-17 16:54:13.409 UTC [1] LOG:  database system is ready to accept connections
 web_1  | Performing system checks...
-web_1  | 
+web_1  |
 web_1  | System check identified no issues (0 silenced).
 web_1  | July 17, 2018 - 09:54:15
 web_1  | Django version 2.0.7, using settings 'crispycrunch.settings'

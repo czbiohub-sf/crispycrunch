@@ -4,6 +4,9 @@ import re
 from django.core.exceptions import ValidationError
 
 CHR_REGEX = r'^chr([0-9]+):([0-9,]+)-([0-9,]+[0-9])$'
+# See https://www.genenames.org/about/guidelines
+# And see https://www.biostars.org/p/60118/ .
+GENE_REGEX = r'^[A-Z0-9-]+$|^C[0-9XY]+orf[0-9]+$'
 
 
 def validate_seq(value: str) -> None:
@@ -93,10 +96,14 @@ def is_ensemble_transcript(value: str) -> bool:
         return True
 
 
-def validate_chr_or_seq_or_enst(value: str) -> None:
-    if not any((is_chr(value), is_seq(value), is_ensemble_transcript(value))):
+def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
+    if not any((
+            is_chr(value),
+            is_seq(value),
+            is_ensemble_transcript(value),
+            is_gene(value))):
         raise ValidationError(
-            '{} is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID'.format(value))
+            '{} is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
 
 
 def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
@@ -109,6 +116,34 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     matches = re.match(CHR_REGEX, target_loc)
     start = int(matches[2]) + guide_offset
     return 'chr{}:{}-{}'.format(matches[1], start, start + guide_len)
+
+
+def validate_gene(value: str) -> None:
+    """
+    >>> validate_gene('ATL2') is None
+    True
+    >>> validate_gene('atl2')
+    Traceback (most recent call last):
+    ...
+    django.core.exceptions.ValidationError: ['atl2 is not a valid HGNC gene name']
+    """
+    if re.match(GENE_REGEX, value) is None:
+        raise ValidationError('{} is not a valid HGNC gene name'.format(value))
+
+
+def is_gene(value: str) -> bool:
+    """
+    >>> is_gene('ATL3')
+    True
+    >>> is_gene('ATL_3')
+    False
+    """
+    try:
+        validate_gene(value)
+    except ValidationError:
+        return False
+    else:
+        return True
 
 
 if __name__ == '__main__':

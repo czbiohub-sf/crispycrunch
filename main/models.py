@@ -72,11 +72,13 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): normalize to samtools region chr loc string
     targets = fields.ArrayField(
         # TODO (gdingle): crispor has a max length of 2000 bp... is that a problem?
-        models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
-        help_text='Chr location or seq or ENST, one per line. Tag-in experiments require ENST.',
+        models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
+        # TODO (gdingle): support FASTA with description line
+        help_text='Chr location, seq, ENST, or gene. One per line.',
         # TODO (gdingle): temp default for testing
-        default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
+        # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
+        default=['ATL2', 'ATL3'],
     )
     # TODO (gdingle): need to use pysam here
     # TODO (gdingle): do we even want to convert now?
@@ -86,7 +88,7 @@ class GuideDesign(BaseModel):
 
     hdr_seq = models.CharField(
         max_length=65536,
-        validators=[validate_chr_or_seq_or_enst],
+        validators=[validate_chr_or_seq_or_enst_or_gene],
         blank=True,
         help_text='Sequence for Homology Directed Repair',
         # TODO (gdingle): is this default correct? it was taken from Jason Li sample sheet example

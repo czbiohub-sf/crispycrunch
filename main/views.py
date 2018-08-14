@@ -25,10 +25,11 @@ from openpyxl import Workbook, writer  # noqa
 import crisporclient
 
 from main import samplesheet
-from main.conversions import convert_chr_to_fasta
+# TODO (gdingle): remove me?
+# from main.conversions import convert_chr_loc_to_fasta
+from main import conversions
 from main.forms import *
 from main.models import *
-from main.platelayout import *
 from main.validators import is_ensemble_transcript
 
 
@@ -98,8 +99,17 @@ class GuideDesignView(CreatePlusView):
         If an HDR tag-in experiment, get donor DNA then get guides. If not, just
         get guides.
         """
-
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
+
+        # TODO (gdingle): handle mix of target types
+        if all(is_gene(t) for t in obj.targets):
+            with ThreadPoolExecutor() as pool:
+                obj.targets = list(pool.map(
+                    conversions.convert_gene_to_chr_loc,
+                    obj.targets,
+                ))
+        # TODO: normalize seqs also
+        assert all(is_chr(t)for t in obj.targets)
 
         def tagin_request(target):
             return crisporclient.TagInRequest(
@@ -130,8 +140,8 @@ class GuideDesignView(CreatePlusView):
                 crispor_targets = obj.targets
 
             obj.guide_data = list(ex.map(guide_request, crispor_targets))
-            # TODO (gdingle): is this even useful?
-            # obj.target_fastas = list(ex.map(convert_chr_to_fasta, filter(is_chr, obj.targets)))
+            # TODO (gdingle): is this even useful? use this instead of pysam for WT amplicons?
+            # obj.target_fastas = list(ex.map(convert_chr_loc_to_fasta, filter(is_chr, obj.targets)))
 
         return obj
 
