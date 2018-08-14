@@ -313,12 +313,8 @@ class ExperimentSummaryView(View):
     def get(self, request, *args, **kwargs):
         primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
 
-        # Filter sheet
         sheet = samplesheet.from_primer_selection(primer_selection)
-        sheet = sheet.loc[:, 'target_loc':]
-        sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
-        sheet = sheet.dropna(axis=1, how='all')
-        sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
+        sheet = self._prepare_sheet(sheet)
 
         primer_design = primer_selection.primer_design
         guide_selection = primer_design.guide_selection
@@ -326,6 +322,15 @@ class ExperimentSummaryView(View):
         experiment = guide_design.experiment
 
         return render(request, self.template_name, locals())
+
+    def _prepare_sheet(self, sheet):
+        """Modify sheet for optimal rendering"""
+        sheet = sheet.loc[:, 'target_loc':]
+        sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
+        sheet = sheet.dropna(axis=1, how='all')
+        sheet.insert(0, 'well_pos', sheet.index)
+        sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
+        return sheet
 
 
 class OrderFormView(DetailView):
