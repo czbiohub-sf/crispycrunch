@@ -89,6 +89,9 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
         mask = sheet['_crispor_pam_id'] == _crispor_pam_id
         sheet['primer_seq_fwd'][mask] = primer_pair[0]
         sheet['primer_seq_rev'][mask] = primer_pair[1]
+    # TODO (gdingle): is this really the best way to reindex?
+    sheet = sheet.dropna(subset=['primer_seq_fwd'])
+    sheet.index = _new_index(size=len(sheet))
     return sheet
 
 
@@ -129,17 +132,18 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     return sheet
 
 
-def _new_samplesheet(
-        size=96,
-        end_char='H',
-        end_int=12):
-
+def _new_index(size=96,
+               end_char='H',
+               end_int=12):
     chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
     ints = list(range(1, end_int + 1))
-    assert len(chars) * len(ints) == size
+    assert len(chars) * len(ints) >= size
+    return [c + str(i) for c in chars for i in ints][:size]
 
+
+def _new_samplesheet():
     return pandas.DataFrame(
-        index=(c + str(i) for c in chars for i in ints),
+        index=_new_index(),
         # TODO (gdingle): use a MultiIndex?
         columns=[
             'target_genome',
