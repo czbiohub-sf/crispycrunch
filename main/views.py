@@ -152,6 +152,30 @@ class GuideDesignView(CreatePlusView):
         return obj
 
 
+class GuideDesignProgressView(View):
+
+    template_name = 'guide-design-progress.html'
+
+    def get(self, request, **kwargs):
+        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+
+        # See also guide_request above. These should match. TODO: refactor.
+        def guide_request(target):
+            return crisporclient.CrisporGuideRequest(
+                target,
+                name=guide_design.experiment.name,
+                org=guide_design.genome,
+                pam=guide_design.pam)
+
+        statuses = [
+            (target, guide_request(target).in_cache())
+            for target in guide_design.targets]
+        completed = [target for target, status in statuses if status]
+        incomplete = [target for target, status in statuses if not status]
+
+        return render(request, self.template_name, locals())
+
+
 class GuideSelectionView(CreatePlusView):
     template_name = 'guide-selection.html'
     form_class = GuideSelectionForm

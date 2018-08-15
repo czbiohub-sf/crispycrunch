@@ -16,6 +16,7 @@ urlpatterns = [
     # The parent object followed by the type of the object to-be-created.
     path(r'experiment/<int:id>/guide-design/', views.GuideDesignView.as_view(), name='Guide Design'),
     path(r'guide-design/<int:id>/guide-selection/', views.GuideSelectionView.as_view(), name='Guide Selection'),
+    path(r'guide-design/<int:id>/progress', views.GuideDesignProgressView.as_view(), name='Guide Design Progress'),
     # TODO (gdingle): do we still want this?
     # path(r'guide-selection/<int:id>/guide-plate-layout/',
     #      views.GuidePlateLayoutView.as_view(), name='Guide Plate Layout'),

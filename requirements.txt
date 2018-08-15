@@ -5,5 +5,4 @@ beautifulsoup4
 django-bootstrap4
 openpyxl
 pandas
-pysam
 requests_cache
