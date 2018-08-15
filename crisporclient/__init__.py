@@ -50,7 +50,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
     Responses are cached. Use in_cache to check status when many requests
     are in flight.
 
-    >>> req.in_cache(CACHE)
+    >>> req.in_cache()
     True
     """
 
@@ -65,9 +65,10 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
         self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()
+        self.cache_key = CACHE.create_key(self.request)
 
-    def in_cache(self, cache: requests_cache.backends.base.BaseCache) -> bool:
-        return cache.has_key(cache.create_key(self.request))
+    def in_cache(self) -> bool:
+        return CACHE.has_key(self.cache_key)
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
@@ -77,7 +78,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             return self._extract_data(soup)
         except TimeoutError:
             # IMPORTANT: Delete cache of "waiting" page
-            CACHE.delete(CACHE.create_key(response.request))
+            CACHE.delete(self.cache_key)
             if retries:
                 time.sleep(16)  # determined by experience
                 return self.run(retries - 1)
@@ -85,7 +86,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
                 raise
         except RuntimeError:
             # IMPORTANT: Delete cache of unexpected output
-            CACHE.delete(CACHE.create_key(response.request))
+            CACHE.delete(self.cache_key)
 
     # TODO (gdingle): need to also handle case of queued request
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
