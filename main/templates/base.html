@@ -6,6 +6,7 @@
   <title>{% block title %}{{request.resolver_match.url_name}}{% endblock %}</title>
   {% bootstrap_css %}
   {% bootstrap_javascript jquery='slim' %}
+  {% block head %}{% endblock head %}
 </head>
 
 <body style="padding: 2em;">

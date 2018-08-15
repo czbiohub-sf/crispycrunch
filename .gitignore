@@ -111,3 +111,6 @@ output/
 input/
 *.fa
 *.fai
+
+# requests_cache
+cache.sqlite

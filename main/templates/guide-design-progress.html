@@ -1,9 +1,17 @@
 {% extends 'base.html' %}
 
+{% block head %}
+{# Refresh the page to refetch the current status #}
+<meta http-equiv="refresh" content="1">
+{% endblock head %}
+
 {% block content %}
+<p>
+  <em>This page wil refreshes every second until all tasks are completed.</em>
+</p>
 
 <h3>
-  {{ completed|length }} out of {{ statuses|length }} targets completed
+  {{ completed|length }} out of {{ statuses|length }} tasks completed
 </h3>
 
 {% if completed %}

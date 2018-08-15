@@ -155,6 +155,7 @@ class GuideDesignView(CreatePlusView):
 class GuideDesignProgressView(View):
 
     template_name = 'guide-design-progress.html'
+    success_url = '/main/guide-design/{id}/guide-selection/'
 
     def get(self, request, **kwargs):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
@@ -172,8 +173,13 @@ class GuideDesignProgressView(View):
             for target in guide_design.targets]
         completed = [target for target, status in statuses if status]
         incomplete = [target for target, status in statuses if not status]
+        assert len(completed) + len(incomplete) == len(statuses)
 
-        return render(request, self.template_name, locals())
+        if len(incomplete):
+            return render(request, self.template_name, locals())
+        else:
+            return HttpResponseRedirect(
+                self.success_url.format(id=self.kwargs['id']))
 
 
 class GuideSelectionView(CreatePlusView):
