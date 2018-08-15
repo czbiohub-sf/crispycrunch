@@ -5,6 +5,7 @@ This module calls out to crispor.tefor.net endpoints. Crispor does not have
 an official public web API. You've been warned!
 """
 import requests
+import requests_cache
 
 import json
 import time
@@ -14,6 +15,12 @@ from bs4 import BeautifulSoup
 from collections import OrderedDict
 from typing import Any, Dict, Tuple
 from urllib.parse import quote
+
+requests_cache.install_cache(
+    expire_after=3600,
+    allowable_methods=('GET', 'POST'))
+CACHE = requests_cache.core.get_cache()
+# CACHE.clear()
 
 
 class AbstractCrisporRequest:
@@ -35,12 +42,19 @@ class CrisporGuideRequest(AbstractCrisporRequest):
     Crispor service.
 
     >>> seq = 'chr1:11,130,540-11,130,751'
-    >>> data = CrisporGuideRequest(name='test-crispr-guides', seq=seq).run()
+    >>> req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
+    >>> data = req.run()
     >>> len(data['primer_urls']) > 3
+    True
+
+    Responses are cached. Use in_cache to check status when many requests
+    are in flight.
+
+    >>> req.in_cache(CACHE)
     True
     """
 
-    def __init__(self, seq: str, name: str = '', org: str = 'hg19', pam: str = 'NGG') -> None:
+    def __init__(self, seq: str, name: str = '', org: str = 'hg18', pam: str = 'NGG') -> None:
         self.data = {
             'name': name,
             'seq': seq,
@@ -50,19 +64,28 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
+        self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()
 
-    def run(self, retries: int=2) -> Dict[str, Any]:
+    def in_cache(self, cache: requests_cache.backends.base.BaseCache) -> bool:
+        return cache.has_key(cache.create_key(self.request))
+
+    def run(self, retries: int=3) -> Dict[str, Any]:
         try:
-            response = requests.post(self.endpoint, data=self.data)
+            response = requests.Session().send(self.request)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)
         except TimeoutError:
+            # IMPORTANT: Delete cache of "waiting" page
+            CACHE.delete(CACHE.create_key(response.request))
             if retries:
                 time.sleep(16)  # determined by experience
                 return self.run(retries - 1)
             else:
                 raise
+        except RuntimeError:
+            # IMPORTANT: Delete cache of unexpected output
+            CACHE.delete(CACHE.create_key(response.request))
 
     # TODO (gdingle): need to also handle case of queued request
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
@@ -83,7 +106,20 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         if not output_table:
             if 'Found no possible guide sequence' in soup.get_text():
                 return dict(
+                    seq=self.data['seq'],
                     guide_seqs={'not found': 'not found'},
+                )
+            if 'Server error: could not run command' in soup.get_text():
+                return dict(
+                    seq=self.data['seq'],
+                    guide_seqs={'server error': 'server error'},
+                )
+            if 'are not valid in the genome' in soup.get_text():
+                return dict(
+                    seq=self.data['seq'],
+                    guide_seqs={
+                        'invalid chromosome range': 'invalid chromosome range'
+                    },
                 )
             raise RuntimeError('Crispor on {}: No output rows in: {}'.format(
                 self.data['seq'], soup.find('body')))
@@ -97,17 +133,22 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         # TODO (gdingle): keeping only top three for now... what is best?
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows[0:3])
         return dict(
-            # TODO (gdingle): crispor uses seq to denote chr_loc
-            seq=soup.find(class_='title').find('a').get_text(),  # TODO (gdingle): why is off by one from input?
+            # TODO (gdingle): crispor uses seq to denote chr_loc... rename?
+            # TODO (gdingle): why is off by one from input?
+            # seq=soup.find(class_='title').find('a').get_text(),
+            seq=self.data['seq'],
             url=url,
             batch_id=batch_id,
-            title=soup.title.string,
-            variant_database=soup.find('select', {'name': 'varDb'})
-            .find('option', {'selected': 'selected'})
-            .get_text(),
-            min_freq=float(soup.find('input', {'name': 'minFreq'})['value']),
             guide_seqs=guide_seqs,
             primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, quote(t['id']))) for t in rows),
+
+            # TODO (gdingle): remove unneeded
+            # min_freq=float(soup.find('input', {'name': 'minFreq'})['value']),
+            # title=soup.title.string,
+            # variant_database=soup.find('select', {'name': 'varDb'})
+            # .find('option', {'selected': 'selected'})
+            # .get_text(),
+
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
             # TODO (gdingle): other formats?
@@ -120,20 +161,22 @@ class CrisporGuideRequestById(CrisporGuideRequest):
     """
     Given an existing Crispor batch, gets candidate guides.
 
-    >>> batch_id = '9cJNEsbfWiSKa8wlaJMZ'
-    >>> data = CrisporGuideRequestById(batch_id).run()
-    >>> data['batch_id'] == batch_id
+    # TODO (gdingle): fix doctests
+    > batch_id = 'aev3eGeG2aIZT1hdHIJ1'
+    > data = CrisporGuideRequestById(batch_id).run()
+    > data['batch_id'] == batch_id
     True
 
-    >>> batch_id = '5JS3eHUiAeaV6eTSZ9av'
-    >>> data = CrisporGuideRequestById(batch_id).run()
+    > batch_id = '5JS3eHUiAeaV6eTSZ9av'
+    > data = CrisporGuideRequestById(batch_id).run()
     Traceback (most recent call last):
     ...
-    ValueError: Crispor: Query sequence, not present in the selected genome, Homo sapiens (hg19)
+    ValueError: Crispor on 5JS3eHUiAeaV6eTSZ9av: Query sequence, not present in the selected genome, Homo sapiens (hg19)
     """
 
     def __init__(self, batch_id) -> None:
         self.endpoint = 'http://crispor.tefor.net/crispor.py?batchId=' + batch_id
+        self.data = {'seq': batch_id, 'pam_id': batch_id}  # hack for error messages
 
     def run(self, retries: int=0) -> Dict[str, Any]:
         response = requests.get(self.endpoint)

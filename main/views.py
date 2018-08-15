@@ -92,6 +92,7 @@ class ExperimentView(CreateView):
 class GuideDesignView(CreatePlusView):
     template_name = 'guide-design.html'
     form_class = GuideDesignForm
+    # TODO (gdingle): redirect to waiting page
     success_url = '/main/guide-design/{id}/guide-selection/'
 
     def plus(self, obj):
@@ -126,7 +127,8 @@ class GuideDesignView(CreatePlusView):
                 org=obj.genome,
                 pam=obj.pam).run()
 
-        with ThreadPoolExecutor() as ex:
+        # More than 8 threads appears to cause a 'no output' Crispor error
+        with ThreadPoolExecutor(8) as ex:
             # TODO (gdingle): ignore HDR for now
             if obj.hdr_seq and False:
                 # TODO (gdingle): put in form validation somehow
@@ -139,6 +141,10 @@ class GuideDesignView(CreatePlusView):
             else:
                 crispor_targets = obj.targets
 
+            # TODO (gdingle): switch to submit and async pool,
+            # then redirect to page that polls state of requests-cache of all urls
+            # TODO (gdingle): install requests-cache, make CrisporGuideRequest url public,
+            # option to clear cache before each attempt, or set resonable timeout
             obj.guide_data = list(ex.map(guide_request, crispor_targets))
             # TODO (gdingle): is this even useful? use this instead of pysam for WT amplicons?
             # obj.target_fastas = list(ex.map(chr_loc_to_fasta, filter(is_chr, obj.targets)))
