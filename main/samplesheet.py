@@ -60,7 +60,9 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     # See http://crispor.tefor.net/manual/.
     # TODO (gdingle): recompute from guide_seq
     sheet['guide_offset'][lg] = [int(g[1][1:-1]) for g in guides]
-    sheet['guide_direction'][lg] = [g[1][-1] for g in guides]
+    sheet['guide_direction'][lg] = [
+        'fwd' if g[1][-1] == '+' else 'rev'
+        for g in guides]
 
     # TODO (gdingle): is this correct? off by one?
     sheet['guide_loc'][lg] = sheet[lg].apply(
