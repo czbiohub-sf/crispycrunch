@@ -8,12 +8,12 @@ import re
 import requests
 
 # See also CHR_REGEX in validators.py
-CHR_REGEX = r'chr([0-9]+):([0-9,]+)-([0-9,]+[0-9])'
+CHR_REGEX = r'chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])'
 
 
-def convert_chr_loc_to_fasta(chr_loc: str, genome: str = 'hg38') -> str:
+def chr_loc_to_fasta(chr_loc: str, genome: str = 'hg38') -> str:
     """
-    >>> convert_chr_loc_to_fasta('chr1:12,345-12,500')
+    >>> chr_loc_to_fasta('chr1:12,345-12,500')
     'TCAGACCAGCCGGCTGGAGGGAGGGGCTCAGCAGGTCTGGCTTTGGCCCTGGGAGAGCAGGTGGAAGATCAGGCAGGCCATCGCTGCCACAGAACCCAGTGGATTGGCCTAGGTGGGATCTCTGAGCTCAACAAGCCCTCTCTGGGTGGTAGGTGC'
     """
     url = 'http://togows.org/api/ucsc/{}/{}.fasta'.format(
@@ -35,14 +35,18 @@ def _reformat_fasta(fasta: str) -> str:
     return ''.join(fasta.split('\n')[1:])
 
 
-def convert_gene_to_chr_loc(gene: str, genome='hg38') -> str:
+def gene_to_chr_loc(gene: str, genome='hg38') -> str:
     """
+    # TODO (gdingle): we need this to return the length of the amplicon,
+    not the whole gene. The amplicon should be less than 500 bp long,
+    according to Jason Li.
+
     Takes the top result from USCS genome browser. See for example:
     https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=ATL2
 
-    >>> convert_gene_to_chr_loc('ATL2')
+    >>> gene_to_chr_loc('ATL2')
     'chr2:38294880-38377262'
-    >>> convert_gene_to_chr_loc('XXXX') is None
+    >>> gene_to_chr_loc('XXXX') is None
     True
     """
     url = 'https://genome.ucsc.edu/cgi-bin/hgTracks'

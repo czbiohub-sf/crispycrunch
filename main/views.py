@@ -26,7 +26,7 @@ import crisporclient
 
 from main import samplesheet
 # TODO (gdingle): remove me?
-# from main.conversions import convert_chr_loc_to_fasta
+# from main.conversions import chr_loc_to_fasta
 from main import conversions
 from main.forms import *
 from main.models import *
@@ -105,7 +105,7 @@ class GuideDesignView(CreatePlusView):
         if all(is_gene(t) for t in obj.targets):
             with ThreadPoolExecutor() as pool:
                 obj.targets = list(pool.map(
-                    conversions.convert_gene_to_chr_loc,
+                    conversions.gene_to_chr_loc,
                     obj.targets,
                 ))
         # TODO: normalize seqs also
@@ -141,7 +141,7 @@ class GuideDesignView(CreatePlusView):
 
             obj.guide_data = list(ex.map(guide_request, crispor_targets))
             # TODO (gdingle): is this even useful? use this instead of pysam for WT amplicons?
-            # obj.target_fastas = list(ex.map(convert_chr_loc_to_fasta, filter(is_chr, obj.targets)))
+            # obj.target_fastas = list(ex.map(chr_loc_to_fasta, filter(is_chr, obj.targets)))
 
         return obj
 

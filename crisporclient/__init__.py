@@ -59,7 +59,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             return self._extract_data(soup)
         except TimeoutError:
             if retries:
-                time.sleep(8)  # determined by experience
+                time.sleep(16)  # determined by experience
                 return self.run(retries - 1)
             else:
                 raise
@@ -68,17 +68,26 @@ class CrisporGuideRequest(AbstractCrisporRequest):
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
         title = soup.find(class_='title')
         if title and 'not present in the selected genome' in title.get_text():
-            raise ValueError('Crispor: ' + title.get_text())
+            raise ValueError('Crispor on {}: {}'.format(
+                self.data['seq'], title.get_text()))
 
         if 'retry with a sequence range shorter than 2000 bp' in soup.find(class_='contentcentral').get_text():
-            raise ValueError('Crispor: retry with a sequence range shorter than 2000 bp')
+            raise ValueError('Crispor on {}: retry with a sequence range shorter than 2000 bp'.format(
+                self.data['seq']))
 
         if 'This page will refresh every 10 seconds' in soup.find(class_='contentcentral').get_text():
-            raise TimeoutError('Stuck in Crispor job queue. Please retry.')
+            raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(
+                self.data['seq']))
 
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
-            raise RuntimeError('No Crispor output rows in: {}'.format(soup.find('body')))
+            if 'Found no possible guide sequence' in soup.get_text():
+                return dict(
+                    guide_seqs={'not found': 'not found'},
+                )
+            raise RuntimeError('Crispor on {}: No output rows in: {}'.format(
+                self.data['seq'], soup.find('body')))
+
         rows = output_table.find_all(class_='guideRow')
 
         batch_id = soup.find('input', {'name': 'batchId'})['value']
@@ -126,7 +135,7 @@ class CrisporGuideRequestById(CrisporGuideRequest):
     def __init__(self, batch_id) -> None:
         self.endpoint = 'http://crispor.tefor.net/crispor.py?batchId=' + batch_id
 
-    def run(self, retries: int = 0) -> Dict[str, Any]:
+    def run(self, retries: int=0) -> Dict[str, Any]:
         response = requests.get(self.endpoint)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -148,10 +157,10 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
             self,
             batch_id: str,
             pam_id: str,
-            amp_len: int = 400,
-            tm: int = 60,
-            pam: str = 'NGG',
-            seq: str ='') -> None:
+            amp_len: int=400,
+            tm: int=60,
+            pam: str='NGG',
+            seq: str='') -> None:
 
         self.pam_id = pam_id
         quoted_pam_id = quote(pam_id)  # percent encode the '+' symbol

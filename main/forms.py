@@ -28,6 +28,11 @@ class NewlineArrayField(SimpleArrayField):
         kwargs['min_length'] = 1
         super().__init__(*args, **kwargs)
 
+    # TODO (gdingle): how to strip empty lines?
+    # see https://docs.djangoproject.com/en/2.0/_modules/django/contrib/postgres/forms/array/#SimpleArrayField
+    # def clean(self, value):
+    #     super().__init__(value.strip())
+
 
 class ResearcherForm(ModelForm):
     class Meta:

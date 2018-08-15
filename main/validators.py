@@ -3,7 +3,8 @@ import re
 
 from django.core.exceptions import ValidationError
 
-CHR_REGEX = r'^chr([0-9]+):([0-9,]+)-([0-9,]+[0-9])$'
+# See also CHR_REGEX in conversions.py
+CHR_REGEX = r'^chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])$'
 # See https://www.genenames.org/about/guidelines
 # And see https://www.biostars.org/p/60118/ .
 GENE_REGEX = r'^[A-Z0-9-]+$|^C[0-9XY]+orf[0-9]+$'
@@ -41,6 +42,8 @@ def is_seq(value: str) -> bool:
 def validate_chr(value: str) -> None:
     """
     >>> validate_chr('chr1:11,130,540-11,130,751')
+
+    >>> validate_chr('chrX:153701031-153701090')
 
     >>> validate_chr('chr1:11,130,540-11,130,751,')
     Traceback (most recent call last):
