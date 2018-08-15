@@ -93,7 +93,7 @@ class GuideDesignView(CreatePlusView):
     template_name = 'guide-design.html'
     form_class = GuideDesignForm
     # TODO (gdingle): redirect to waiting page
-    success_url = '/main/guide-design/{id}/guide-selection/'
+    success_url = '/main/guide-design/{id}/progress/'
 
     def plus(self, obj):
         """
@@ -112,12 +112,21 @@ class GuideDesignView(CreatePlusView):
         # TODO: normalize seqs also
         assert all(is_chr(t)for t in obj.targets)
 
-        def tagin_request(target):
-            return crisporclient.TagInRequest(
-                target,
-                tag=obj.tag_in,
-                # species # TODO (gdingle): translate from crispor
-            ).run()
+        # TODO (gdingle): ignore HDR for now
+        # def tagin_request(target):
+        #     return crisporclient.TagInRequest(
+        #         target,
+        #         tag=obj.tag_in,
+        #         # species # TODO (gdingle): translate from crispor
+        #     ).run()
+        # if obj.hdr_seq:
+        #     # TODO (gdingle): put in form validation somehow
+        #     assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
+        #     obj.donor_data = list(ex.map(tagin_request, obj.targets))
+        #     # Crispor does not accept Ensembl transcript IDs
+        #     # and use guide_chr_range to avoid 2000 bp limit
+        #     # TODO (gdingle): is this wise?
+        #     crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
 
         def guide_request(target):
             return crisporclient.CrisporGuideRequest(
@@ -128,26 +137,16 @@ class GuideDesignView(CreatePlusView):
                 pam=obj.pam).run()
 
         # More than 8 threads appears to cause a 'no output' Crispor error
-        with ThreadPoolExecutor(8) as ex:
-            # TODO (gdingle): ignore HDR for now
-            if obj.hdr_seq and False:
-                # TODO (gdingle): put in form validation somehow
-                assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
-                obj.donor_data = list(ex.map(tagin_request, obj.targets))
-                # Crispor does not accept Ensembl transcript IDs
-                # and use guide_chr_range to avoid 2000 bp limit
-                # TODO (gdingle): is this wise?
-                crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
-            else:
-                crispor_targets = obj.targets
+        pool = ThreadPoolExecutor(8)
 
-            # TODO (gdingle): switch to submit and async pool,
-            # then redirect to page that polls state of requests-cache of all urls
-            # TODO (gdingle): install requests-cache, make CrisporGuideRequest url public,
-            # option to clear cache before each attempt, or set resonable timeout
-            obj.guide_data = list(ex.map(guide_request, crispor_targets))
-            # TODO (gdingle): is this even useful? use this instead of pysam for WT amplicons?
-            # obj.target_fastas = list(ex.map(chr_loc_to_fasta, filter(is_chr, obj.targets)))
+        # TODO (gdingle): is this going to mess with the order?
+        def append_guide_data(future):
+            obj.guide_data.append(future.result())
+            obj.save()
+
+        for target in obj.targets:
+            future = pool.submit(guide_request, target)
+            future.add_done_callback(append_guide_data)
 
         return obj
 

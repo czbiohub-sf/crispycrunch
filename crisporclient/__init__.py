@@ -17,6 +17,7 @@ from typing import Any, Dict, Tuple
 from urllib.parse import quote
 
 requests_cache.install_cache(
+    # TODO (gdingle): what's the best timeout?
     expire_after=3600,
     allowable_methods=('GET', 'POST'))
 CACHE = requests_cache.core.get_cache()

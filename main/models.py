@@ -204,8 +204,8 @@ class GuideDesign(BaseModel):
     #     ('TODO', 'TODO: tag used by Manu group'),
     # ))
 
-    guide_data = JSONField(default=dict, blank=True, help_text='Data returned by external service')
-    donor_data = JSONField(default=dict, blank=True, help_text='Data returned by external service')
+    guide_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
+    donor_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
@@ -249,7 +249,7 @@ class PrimerDesign(BaseModel):
     primer_temp = models.IntegerField(default=60)
     # TODO (gdingle): this needs to change based on HDR
     max_amplicon_length = models.IntegerField(default=400)
-    primer_data = JSONField(default=dict, blank=True, help_text='Data returned by external service')
+    primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
