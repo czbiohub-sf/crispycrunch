@@ -14,23 +14,23 @@
   {{ completed|length }} out of {{ statuses|length }} tasks completed
 </h3>
 
-{% if completed %}
-<h5>
-  Completed
-</h5>
-<ul>
-  {% for target in completed %}
-  <li>{{ target }}</li>
-  {% endfor %}
-</ul>
-{% endif %}
-
 {% if incomplete %}
 <h5>
   Incomplete
 </h5>
 <ul>
   {% for target in incomplete %}
+  <li>{{ target }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if completed %}
+<h5>
+  Completed
+</h5>
+<ul>
+  {% for target in completed %}
   <li>{{ target }}</li>
   {% endfor %}
 </ul>

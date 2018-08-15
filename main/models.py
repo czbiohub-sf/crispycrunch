@@ -217,6 +217,11 @@ class GuideSelection(BaseModel):
     selected_guides_tagin = JSONField(default=dict, blank=True,
                                       help_text='sgRNAs from tagin.stembio.org')
     selected_guides = JSONField(default=dict, blank=True,
+                                validators=[lambda val: [
+                                    validate_seq(seq.split(' ')[0])
+                                    for seqs in val.values()
+                                    for seq in seqs.values()
+                                ]],
                                 help_text='sgRNAs from crispor.tefor.net')
     # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(default=dict, blank=True,

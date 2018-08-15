@@ -200,6 +200,9 @@ class GuideSelectionView(CreatePlusView):
 
     def plus(self, obj):
         obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+
+        # TODO (gdingle): custom validate selected guides
+        # not found, error....all must have sequences
         return obj
 
     def get_context_data(self, **kwargs):
@@ -234,7 +237,7 @@ class GuideSelectionView(CreatePlusView):
 class PrimerDesignView(CreatePlusView):
     template_name = 'primer-design.html'
     form_class = PrimerDesignForm
-    success_url = '/main/primer-design/{id}/primer-selection/'
+    success_url = '/main/primer-design/{id}/progress/'
 
     def plus(self, obj):
         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
@@ -243,7 +246,7 @@ class PrimerDesignView(CreatePlusView):
 
         guide_data = guide_selection.guide_design.guide_data
 
-        def request_primers(args):
+        def primers_request(args):
             seq, pam_id, batch_id = args
             return crisporclient.CrisporPrimerRequest(
                 batch_id=batch_id,
@@ -256,12 +259,43 @@ class PrimerDesignView(CreatePlusView):
         with ThreadPoolExecutor() as ex:
             # TODO (gdingle): _crispor_batch_id has a lifetime... handle expired
             args = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
-            obj.primer_data = list(ex.map(request_primers, args))
+            obj.primer_data = list(ex.map(primers_request, args))
 
         obj.guide_selection = guide_selection
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
         return obj
+
+
+class PrimerDesignProgressView(View):
+    template_name = 'primer-design-progress.html'
+    success_url = '/main/primer-design/{id}/primer-selection/'
+
+    def get(self, request, **kwargs):
+        primer_design = PrimerDesign.objects.get(kwargs['id'])
+        sheet = samplesheet.from_guide_selection(primer_design.guide_selection)
+
+        # See also primers_request in PrimerDesignView. TODO: refactor
+        def primers_request(row):
+            return crisporclient.CrisporPrimerRequest(
+                batch_id=row['_crispor_batch_id'],
+                amp_len=primer_design.max_amplicon_length,
+                tm=primer_design.primer_temp,
+                pam=primer_design.guide_selection.guide_design.pam,
+                pam_id=row['_crispor_pam_id'],
+                seq=row['target_loc'])
+
+        statuses = [(row['_crispor_pam_id'], primers_request(row).in_cache())
+                    for row in sheet]
+        completed = [g for g in statuses if g[1]]
+        incomplete = [g for g in statuses if not g[1]]
+        assert len(statuses) == len(completed) + len(incomplete)
+
+        if len(incomplete):
+            return render(request, self.template_name, locals())
+        else:
+            return HttpResponseRedirect(
+                self.success_url.format(id=kwargs['id']))
 
 
 class PrimerSelectionView(CreatePlusView):

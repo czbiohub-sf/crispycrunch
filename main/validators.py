@@ -18,10 +18,10 @@ def validate_seq(value: str) -> None:
     >>> validate_seq('asdf')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['asdf is not a nucleic acid sequence']
+    django.core.exceptions.ValidationError: ['"asdf" is not a nucleic acid sequence']
     """
     if re.match(r'^[ACGTRYKMSWBDHV]+$', value.upper()) is None:
-        raise ValidationError('{} is not a nucleic acid sequence'.format(value))
+        raise ValidationError('"{}" is not a nucleic acid sequence'.format(value))
 
 
 def is_seq(value: str) -> bool:
@@ -48,15 +48,15 @@ def validate_chr(value: str) -> None:
     >>> validate_chr('chr1:11,130,540-11,130,751,')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['chr1:11,130,540-11,130,751, is not a chromosome location']
+    django.core.exceptions.ValidationError: ['"chr1:11,130,540-11,130,751," is not a chromosome location']
 
     >>> validate_chr('chrA:11,130,540-11,130,751')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['chrA:11,130,540-11,130,751 is not a chromosome location']
+    django.core.exceptions.ValidationError: ['"chrA:11,130,540-11,130,751" is not a chromosome location']
     """
     if re.match(CHR_REGEX, value) is None:
-        raise ValidationError('{} is not a chromosome location'.format(value))
+        raise ValidationError('"{}" is not a chromosome location'.format(value))
 
 
 def is_chr(value: str) -> bool:
@@ -78,10 +78,10 @@ def validate_ensemble_transcript(value: str) -> None:
     >>> validate_ensemble_transcript('EENST00000330949')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['EENST00000330949 is not a Ensembl transcript ID']
+    django.core.exceptions.ValidationError: ['"EENST00000330949" is not a Ensembl transcript ID']
     """
     if re.match(r'^ENST[0-9]+$', value) is None:
-        raise ValidationError('{} is not a Ensembl transcript ID'.format(value))
+        raise ValidationError('"{}" is not a Ensembl transcript ID'.format(value))
 
 
 def is_ensemble_transcript(value: str) -> bool:
@@ -106,7 +106,7 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
             is_ensemble_transcript(value),
             is_gene(value))):
         raise ValidationError(
-            '{} is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
+            '{}" is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
 
 
 def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
@@ -128,10 +128,10 @@ def validate_gene(value: str) -> None:
     >>> validate_gene('atl2')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['atl2 is not a valid HGNC gene name']
+    django.core.exceptions.ValidationError: ['"atl2" is not a valid HGNC gene name']
     """
     if re.match(GENE_REGEX, value) is None:
-        raise ValidationError('{} is not a valid HGNC gene name'.format(value))
+        raise ValidationError('"{}" is not a valid HGNC gene name'.format(value))
 
 
 def is_gene(value: str) -> bool:
