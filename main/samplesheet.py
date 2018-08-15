@@ -32,7 +32,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
 
     # Ungroup guide data into rows
     chr_loc_to_batch_id = dict((g['seq'], g['batch_id'])
-                               for g in guide_design.guide_data)
+                               for g in guide_design.guide_data
+                               if g.get('batch_id'))  # filter out errors
     guides = [(chr_loc, offset, seq, chr_loc_to_batch_id[chr_loc])
               for chr_loc, selected in guide_selection.selected_guides.items()
               for offset, seq in selected.items()]

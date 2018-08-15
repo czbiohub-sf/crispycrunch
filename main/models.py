@@ -216,13 +216,15 @@ class GuideSelection(BaseModel):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
     selected_guides_tagin = JSONField(default=dict, blank=True,
                                       help_text='sgRNAs from tagin.stembio.org')
-    selected_guides = JSONField(default=dict, blank=True,
-                                validators=[lambda val: [
-                                    validate_seq(seq.split(' ')[0])
-                                    for seqs in val.values()
-                                    for seq in seqs.values()
-                                ]],
-                                help_text='sgRNAs from crispor.tefor.net')
+    selected_guides = JSONField(
+        default=dict,
+        blank=True,
+        validators=[lambda val: [
+            validate_seq(seq)
+            for seqs in val.values()
+            for seq in seqs.values()
+        ], validate_num_wells],  # dense, but it works
+        help_text='sgRNAs from crispor.tefor.net')
     # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(default=dict, blank=True,
                                 help_text='ssDNAs from tagin.stembio.org')
@@ -262,8 +264,16 @@ class PrimerDesign(BaseModel):
 
 class PrimerSelection(BaseModel):
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
-    selected_primers = JSONField(default=dict, blank=True,
-                                 help_text='Primers from crispor.tefor.net')
+    selected_primers = JSONField(
+        default=dict,
+        blank=True,
+        validators=[
+            lambda val: [validate_seq(seq)
+                         for seqs in val.values()
+                         for seq in seqs],
+            # two primers per well
+            lambda val: validate_num_wells(val, 96 * 2)],
+        help_text='Primers from crispor.tefor.net')
 
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)

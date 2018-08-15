@@ -32,6 +32,13 @@ class AbstractCrisporRequest:
     def __str__(self):
         return self.__repr__()
 
+    def in_cache(self) -> bool:
+        return CACHE.has_key(self.cache_key)
+
+    @property
+    def cache_key(self):
+        return CACHE.create_key(self.request)
+
     @abstractmethod
     def run(self) -> Dict[str, Any]:
         """Requests self.endpoint and extracts relevant data from the HTML response"""
@@ -66,10 +73,6 @@ class CrisporGuideRequest(AbstractCrisporRequest):
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
         self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()
-        self.cache_key = CACHE.create_key(self.request)
-
-    def in_cache(self) -> bool:
-        return CACHE.has_key(self.cache_key)
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
@@ -193,8 +196,12 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
 
     NOTE: Crispor uses Primer3 under the covers.
 
-    >>> data = CrisporPrimerRequest('9cJNEsbfWiSKa8wlaJMZ', 's185+').run()
+    >>> req = CrisporPrimerRequest('9cJNEsbfWiSKa8wlaJMZ', 's185+')
+    >>> data = req.run()
     >>> len(data['ontarget_primers']) == 2
+    True
+
+    >>> req.in_cache()
     True
     """
 
@@ -212,6 +219,7 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
             '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(**locals())
         self.seq = seq  # just for metadata
+        self.request = requests.Request('GET', self.endpoint).prepare()
 
     def __repr__(self):
         return 'CrisporPrimerRequest({})'.format(self.endpoint)
@@ -219,7 +227,7 @@ class CrisporPrimerRequest(AbstractCrisporRequest):
     def run(self,
             retries: int=1) -> Dict[str, Any]:
         try:
-            response = requests.get(self.endpoint)
+            response = requests.Session().send(self.request)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)

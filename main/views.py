@@ -241,10 +241,7 @@ class PrimerDesignView(CreatePlusView):
 
     def plus(self, obj):
         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
-
-        sheet = samplesheet.from_guide_selection(guide_selection)
-
-        guide_data = guide_selection.guide_design.guide_data
+        obj.guide_selection = guide_selection
 
         def primers_request(args):
             seq, pam_id, batch_id = args
@@ -256,12 +253,18 @@ class PrimerDesignView(CreatePlusView):
                 pam_id=pam_id,
                 seq=seq).run()
 
-        with ThreadPoolExecutor() as ex:
-            # TODO (gdingle): _crispor_batch_id has a lifetime... handle expired
-            args = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
-            obj.primer_data = list(ex.map(primers_request, args))
+        def append_primer_data(future):
+            obj.primer_data.append(future.result())
+            obj.save()
 
-        obj.guide_selection = guide_selection
+        sheet = samplesheet.from_guide_selection(guide_selection)
+        pool = ThreadPoolExecutor()
+        # TODO (gdingle): _crispor_batch_id has a lifetime... handle expired
+        largs = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
+        for args in largs:
+            future = pool.submit(primers_request, args)
+            future.add_done_callback(append_primer_data)
+
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
         return obj
@@ -272,7 +275,7 @@ class PrimerDesignProgressView(View):
     success_url = '/main/primer-design/{id}/primer-selection/'
 
     def get(self, request, **kwargs):
-        primer_design = PrimerDesign.objects.get(kwargs['id'])
+        primer_design = PrimerDesign.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_guide_selection(primer_design.guide_selection)
 
         # See also primers_request in PrimerDesignView. TODO: refactor
@@ -285,8 +288,8 @@ class PrimerDesignProgressView(View):
                 pam_id=row['_crispor_pam_id'],
                 seq=row['target_loc'])
 
-        statuses = [(row['_crispor_pam_id'], primers_request(row).in_cache())
-                    for row in sheet]
+        statuses = [(row._crispor_pam_id, primers_request(row).in_cache())
+                    for _, row in sheet.iterrows()]
         completed = [g for g in statuses if g[1]]
         incomplete = [g for g in statuses if not g[1]]
         assert len(statuses) == len(completed) + len(incomplete)

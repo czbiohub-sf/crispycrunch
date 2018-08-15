@@ -14,13 +14,16 @@ def validate_seq(value: str) -> None:
     """
     See https://en.wikipedia.org/wiki/Nucleic_acid_sequence.
 
+    Also allows a trailing space separated PAM.
+
     >>> validate_seq('gtca')
+    >>> validate_seq('CACTGCAACCTTGGCCTCCC GGG')
     >>> validate_seq('asdf')
     Traceback (most recent call last):
     ...
     django.core.exceptions.ValidationError: ['"asdf" is not a nucleic acid sequence']
     """
-    if re.match(r'^[ACGTRYKMSWBDHV]+$', value.upper()) is None:
+    if re.match(r'^[ACGTRYKMSWBDHV]+( [ACGTRYKMSWBDHV]{3})?$', value.upper()) is None:
         raise ValidationError('"{}" is not a nucleic acid sequence'.format(value))
 
 
@@ -147,6 +150,13 @@ def is_gene(value: str) -> bool:
         return False
     else:
         return True
+
+
+def validate_num_wells(value: dict, max: int = 96) -> None:
+    total = sum(len(seqs) for seqs in value.values())
+    if total > max:
+        raise ValidationError(
+            '{} items do not fit in a 96-well plate'.format(total))
 
 
 if __name__ == '__main__':

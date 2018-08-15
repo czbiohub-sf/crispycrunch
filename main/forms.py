@@ -64,9 +64,9 @@ class GuideSelectionForm(ModelForm):
         fields = '__all__'
         exclude = ['guide_design']
         widgets = {
-            'selected_guides': PrettyJsonWidget(attrs={'rows': 24}),
-            'selected_guides_tagin': PrettyJsonWidget(attrs={'rows': 24}),
-            'selected_donors': PrettyJsonWidget(attrs={'rows': 24}),
+            'selected_guides': PrettyJsonWidget(attrs={'rows': 40}),
+            'selected_guides_tagin': PrettyJsonWidget(attrs={'rows': 40}),
+            'selected_donors': PrettyJsonWidget(attrs={'rows': 40}),
         }
         labels = {
             "selected_guides_tagin": 'Selected guides',

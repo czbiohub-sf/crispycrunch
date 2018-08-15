@@ -22,7 +22,7 @@ urlpatterns = [
     #      views.GuidePlateLayoutView.as_view(), name='Guide Plate Layout'),
 
     path('guide-selection/<int:id>/primer-design/', views.PrimerDesignView.as_view(), name='Primer Design'),
-    path('primer-design/<int:id>/progress', views.PrimerDesignProgressView.as_view(), name='Primer Design Progress'),
+    path('primer-design/<int:id>/progress/', views.PrimerDesignProgressView.as_view(), name='Primer Design Progress'),
     path('primer-design/<int:id>/primer-selection/', views.PrimerSelectionView.as_view(), name='Primer Selection'),
     # TODO (gdingle): do we still want this?
     # path('primer-selection/<int:id>/primer-plate-layout/',
