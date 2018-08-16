@@ -87,10 +87,10 @@ class GuideDesignView(CreatePlusView):
         assert all(is_chr(t)for t in normalized)
         return normalized
 
-    def _get_target_seqs(self, targets):
+    def _get_target_seqs(self, targets, genome):
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(
-                conversions.chr_loc_to_seq,
+                functools.partial(conversions.chr_loc_to_seq, genome=genome),
                 targets,
             ))
         return seqs
@@ -104,7 +104,7 @@ class GuideDesignView(CreatePlusView):
 
         obj.targets = self._normalize_targets(obj.targets)
 
-        obj.target_seqs = self._get_target_seqs(obj.targets)
+        obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
 
         # TODO (gdingle): ignore HDR for now
         # def tagin_request(target):

@@ -11,7 +11,7 @@ import requests
 CHR_REGEX = r'chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])'
 
 
-def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
+def chr_loc_to_seq(chr_loc: str, genome: str = 'hg19') -> str:
     """
     >>> chr_loc_to_seq('chr1:12,345-12,500')
     'TCAGACCAGCCGGCTGGAGGGAGGGGCTCAGCAGGTCTGGCTTTGGCCCTGGGAGAGCAGGTGGAAGATCAGGCAGGCCATCGCTGCCACAGAACCCAGTGGATTGGCCTAGGTGGGATCTCTGAGCTCAACAAGCCCTCTCTGGGTGGTAGGTGC'
