@@ -31,10 +31,13 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     sheet = from_experiment(guide_design.experiment)
 
     # Ungroup guide data into rows
-    chr_loc_to_batch_id = dict((g['seq'], g['batch_id'])
-                               for g in guide_design.guide_data
-                               if g.get('batch_id'))  # filter out errors
-    guides = [(chr_loc, offset, seq, chr_loc_to_batch_id[chr_loc])
+    target_loc_to_batch_id = dict((g['seq'], g['batch_id'])
+                                  for g in guide_design.guide_data
+                                  if g.get('batch_id'))  # filter out errors
+    target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
+    guides = [(chr_loc, offset, seq,
+               target_loc_to_batch_id[chr_loc],
+               target_loc_to_target_seq[chr_loc])
               for chr_loc, selected in guide_selection.selected_guides.items()
               for offset, seq in selected.items()]
 
@@ -42,12 +45,11 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     lg = slice(0, len(guides))
 
     sheet['target_genome'] = guide_design.genome
-    # TODO (gdingle): this does not work because pysam fails to compile... need conda :(
-    # sheet['target_seq'][lg] = (get_reference_amplicon(chr_loc) for chr_loc in targets)
     # TODO (gdingle): is this even worth having?
     sheet['target_pam'] = guide_design.pam
 
     sheet['target_loc'][lg] = [g[0] for g in guides]
+    sheet['target_seq'][lg] = [g[4] for g in guides]
 
     # TODO: good to assume always 20 bp with trailing PAM as in Crispor?
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -61,7 +63,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     # TODO (gdingle): recompute from guide_seq
     sheet['guide_offset'][lg] = [int(g[1][1:-1]) for g in guides]
     sheet['guide_direction'][lg] = [
-    # TODO (gdingle): best naming?
+        # TODO (gdingle): best naming?
         'fwd' if g[1][-1] == '+' else 'rev'
         for g in guides]
 

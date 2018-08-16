@@ -90,7 +90,7 @@ class GuideDesignView(CreatePlusView):
     def _get_target_seqs(self, targets):
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(
-                convsersions.chr_loc_to_seq,
+                conversions.chr_loc_to_seq,
                 targets,
             ))
         return seqs
@@ -104,7 +104,7 @@ class GuideDesignView(CreatePlusView):
 
         obj.targets = self._normalize_targets(obj.targets)
 
-        obj.target_seqs = self._get_target_seqs(self, targets)
+        obj.target_seqs = self._get_target_seqs(obj.targets)
 
         # TODO (gdingle): ignore HDR for now
         # def tagin_request(target):
@@ -202,7 +202,10 @@ class GuideSelectionView(CreatePlusView):
     def get_context_data(self, **kwargs):
         # TODO (gdingle): make multi guide
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        kwargs['crispor_url'] = guide_design.guide_data[0]['url']
+        kwargs['crispor_url'] = [
+            gd['url']
+            for gd in guide_design.guide_data
+            if gd.get('url')][0]
         if guide_design.donor_data:
             kwargs['tagin_url'] = guide_design.donor_data[0]['url']
         return super().get_context_data(**kwargs)
