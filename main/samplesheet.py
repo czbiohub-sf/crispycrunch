@@ -35,10 +35,10 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
                                   for g in guide_design.guide_data
                                   if g.get('batch_id'))  # filter out errors
     target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
-    guides = [(chr_loc, offset, seq,
-               target_loc_to_batch_id[chr_loc],
-               target_loc_to_target_seq[chr_loc])
-              for chr_loc, selected in guide_selection.selected_guides.items()
+    guides = [(target_loc, offset, seq,
+               target_loc_to_batch_id[target_loc],
+               target_loc_to_target_seq[target_loc])
+              for target_loc, selected in guide_selection.selected_guides.items()
               for offset, seq in selected.items()]
 
     # For assigning to subset of rows of A1 to H12

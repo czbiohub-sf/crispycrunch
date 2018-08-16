@@ -133,14 +133,15 @@ class GuideDesignView(CreatePlusView):
         # More than 8 threads appears to cause a 'no output' Crispor error
         pool = ThreadPoolExecutor(8)
 
-        # TODO (gdingle): is this going to mess with the order?
-        def append_guide_data(future):
-            obj.guide_data.append(future.result())
+        def insert_guide_data(future, index=None):
+            obj.guide_data[index] = future.result()
             obj.save()
 
-        for target in obj.targets:
+        obj.guide_data = [{}] * len(obj.targets)
+        for i, target in enumerate(obj.targets):
             future = pool.submit(guide_request, target)
-            future.add_done_callback(append_guide_data)
+            future.add_done_callback(
+                functools.partial(insert_guide_data, index=i))
 
         return obj
 
@@ -184,7 +185,7 @@ class GuideSelectionView(CreatePlusView):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         return {
             'selected_guides': dict((g['seq'], g['guide_seqs'])
-                                    for g in guide_design.guide_data),
+                                    for g in guide_design.guide_data if g),
             'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
                                     for g in guide_design.donor_data),
             # TODO (gdingle): temp for debuggin
@@ -205,6 +206,7 @@ class GuideSelectionView(CreatePlusView):
         kwargs['crispor_url'] = [
             gd['url']
             for gd in guide_design.guide_data
+            # TODO (gdingle): this line is failing sometimes
             if gd.get('url')][0]
         if guide_design.donor_data:
             kwargs['tagin_url'] = guide_design.donor_data[0]['url']
@@ -351,6 +353,8 @@ class AnalysisView(CreatePlusView):
     success_url = '/main/analysis/{id}/results/'
 
     def plus(self, obj):
+        # TODO (gdingle): replace this with sheet.to_json()
+        # which includes target_seqs
         data = {
             'selected_guides': obj.get_selected_guides(),
             'selected_donors': obj.get_selected_donors(),

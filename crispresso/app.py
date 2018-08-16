@@ -56,8 +56,7 @@ def crispresso():
     # CC8763_chr3:1000-2000_chr3:1200-1220__S1_L001_R1_001.fastq.gz
     fastqs = s3.download_fastqs(post_data['s3_bucket'], post_data['s3_prefix'])
 
-    # TODO (gdingle): should we do this transform on the crispycrunch side?
-    # TODO (gdingle): cache get_reference_amplicon somehow... unfortunate lru_cache not python2
+    # TODO (gdingle): now that we have this on crispycrunch, remove me
     amplicon_seqs = [
         (seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
         for chr_loc, guide_seqs in post_data['selected_guides'].items()
