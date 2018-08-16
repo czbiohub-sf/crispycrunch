@@ -62,7 +62,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
     True
     """
 
-    def __init__(self, seq: str, name: str = '', org: str = 'hg18', pam: str = 'NGG') -> None:
+    def __init__(self, seq: str, name: str = '', org: str = 'hg19', pam: str = 'NGG') -> None:
         self.data = {
             'name': name,
             'seq': seq,

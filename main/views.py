@@ -252,17 +252,19 @@ class PrimerDesignView(CreatePlusView):
                 pam_id=pam_id,
                 seq=seq).run()
 
-        def append_primer_data(future):
-            obj.primer_data.append(future.result())
+        def insert_primer_data(future, index=None):
+            obj.primer_data[index] = future.result()
             obj.save()
 
         sheet = samplesheet.from_guide_selection(guide_selection)
+        obj.primer_data = [{}] * len(sheet)
         pool = ThreadPoolExecutor()
         # TODO (gdingle): _crispor_batch_id has a lifetime... handle expired
         largs = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
-        for args in largs:
+        for i, args in enumerate(largs):
             future = pool.submit(primers_request, args)
-            future.add_done_callback(append_primer_data)
+            future.add_done_callback(
+                functools.partial(insert_primer_data, index=i))
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
@@ -313,6 +315,7 @@ class PrimerSelectionView(CreatePlusView):
             return values[0], values[1]
 
         return {
+            # TODO (gdingle): IMPORTANT... need a unique ID ... batch_id + pam_id, or chr_loc + pam_id, or guide_loc
             'selected_primers': dict(
                 (p['pam_id'], get_fwd_and_rev_primers(p['ontarget_primers']))
                 for p in primer_data)
