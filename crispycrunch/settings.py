@@ -25,7 +25,7 @@ SECRET_KEY = '*^$12x0l$h3qw-j!vml49=8=1*y2v9oyre5bfx()r7p6mb9au4'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []  # noqa
+ALLOWED_HOSTS = ["crispycrunch.ds.czbiohub.org"]  # noqa
 
 
 # Application definition
