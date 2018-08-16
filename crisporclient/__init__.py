@@ -84,7 +84,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
             # IMPORTANT: Delete cache of "waiting" page
             CACHE.delete(self.cache_key)
             if retries:
-                time.sleep(16)  # determined by experience
+                time.sleep(60 // (retries + 1))  # backoff
                 return self.run(retries - 1)
             else:
                 raise

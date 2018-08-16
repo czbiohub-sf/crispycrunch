@@ -26,7 +26,6 @@ import crisporclient
 
 from main import samplesheet
 # TODO (gdingle): remove me?
-# from main.conversions import chr_loc_to_fasta
 from main import conversions
 from main.forms import *
 from main.models import *
@@ -36,27 +35,6 @@ from main.validators import is_ensemble_transcript
 def index(request):
     # TODO (gdingle): create useful index
     return HttpResponse("Hello, world. You're at the main index.")
-
-
-def crispresso(request):
-    # TODO (gdingle): switch to s3... see https://github.com/etianen/django-s3-storage
-
-    # TODO (gdingle): rename and move
-    data = {
-        's3_bucket': 'jasonli-bucket',
-        's3_prefix': 'JasonHDR/96wp1sorted-fastq/',
-        'amplicon_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',  # noqa
-        'guide_seq': 'AATCGGTACAAGATGGCGGA',
-        'expected_hdr_amplicon_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',  # noqa
-        'dryrun': True,
-    }
-
-    url = 'http://crispresso:5000/crispresso'  # host is name of docker service
-    # TODO (gdingle): switch to post
-    response = requests.get(url, params=data)
-    response.raise_for_status()
-
-    return HttpResponse(response.text)
 
 #
 # BEGIN EXPERIMENT CREATION VIEWS
@@ -95,6 +73,28 @@ class GuideDesignView(CreatePlusView):
     # TODO (gdingle): redirect to waiting page
     success_url = '/main/guide-design/{id}/progress/'
 
+    def _normalize_targets(self, targets):
+        # TODO (gdingle): handle mix of target types
+        if not all(is_gene(t) for t in targets):
+            return targets
+
+        with ThreadPoolExecutor() as pool:
+            normalized = list(pool.map(
+                conversions.gene_to_chr_loc,
+                targets,
+            ))
+        # TODO: normalize seqs also
+        assert all(is_chr(t)for t in normalized)
+        return normalized
+
+    def _get_target_seqs(self, targets):
+        with ThreadPoolExecutor() as pool:
+            seqs = list(pool.map(
+                convsersions.chr_loc_to_seq,
+                targets,
+            ))
+        return seqs
+
     def plus(self, obj):
         """
         If an HDR tag-in experiment, get donor DNA then get guides. If not, just
@@ -102,15 +102,9 @@ class GuideDesignView(CreatePlusView):
         """
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
 
-        # TODO (gdingle): handle mix of target types
-        if all(is_gene(t) for t in obj.targets):
-            with ThreadPoolExecutor() as pool:
-                obj.targets = list(pool.map(
-                    conversions.gene_to_chr_loc,
-                    obj.targets,
-                ))
-        # TODO: normalize seqs also
-        assert all(is_chr(t)for t in obj.targets)
+        obj.targets = self._normalize_targets(obj.targets)
+
+        obj.target_seqs = self._get_target_seqs(self, targets)
 
         # TODO (gdingle): ignore HDR for now
         # def tagin_request(target):
@@ -361,7 +355,7 @@ class AnalysisView(CreatePlusView):
             's3_prefix': obj.s3_prefix,
             # TODO (gdingle): turn back on after we have a some real end-to-end
             # results to test
-            'dryrun': True,
+            'dryrun': False,
         }
 
         url = 'http://crispresso:5000/analyze'  # host is name of docker service

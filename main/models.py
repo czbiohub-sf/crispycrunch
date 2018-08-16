@@ -1,3 +1,4 @@
+import functools
 # TODO (gdingle): use non-jsonb JSONField so we preserve key order
 # see https://github.com/dmkoch/django-jsonfield
 from django.contrib.postgres import fields
@@ -168,9 +169,9 @@ class GuideDesign(BaseModel):
         ('NGG', '20bp-NGG - SpCas9, SpCas9-HF1, eSpCas9 1.1'),
         ('todo', 'TODO: more pams'),
     ], default='NGG')
-    # TODO (gdingle): normalize to samtools region chr loc string
+
+    # TODO (gdingle): crispor has a max length of 2000 bp... validate here?
     targets = fields.ArrayField(
-        # TODO (gdingle): crispor has a max length of 2000 bp... is that a problem?
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
         help_text='Chr location, seq, ENST, or gene. One per line.',
@@ -180,11 +181,11 @@ class GuideDesign(BaseModel):
         # default=['ATL2', 'ATL3'],
         default=JASON_LI_EXAMPLE,
     )
-    # TODO (gdingle): need to use pysam here
-    # TODO (gdingle): do we even want to convert now?
-    # target_fastas = fields.ArrayField(
-    #     models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst]),
-    # )
+    target_seqs = fields.ArrayField(
+        models.CharField(max_length=65536, validators=[validate_seq]),
+        blank=True,
+        default=[],
+    )
 
     hdr_seq = models.CharField(
         max_length=65536,
@@ -214,16 +215,20 @@ class GuideDesign(BaseModel):
 
 class GuideSelection(BaseModel):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
-    selected_guides_tagin = JSONField(default=dict, blank=True,
-                                      help_text='sgRNAs from tagin.stembio.org')
+    selected_guides_tagin = JSONField(
+        default=dict,
+        blank=True,
+        help_text='sgRNAs from tagin.stembio.org')
+
+    def _validate_selected_guides(val):
+        return [validate_seq(seq)
+                for seqs in val.values()
+                for seq in seqs.values()]
+
     selected_guides = JSONField(
         default=dict,
         blank=True,
-        validators=[lambda val: [
-            validate_seq(seq)
-            for seqs in val.values()
-            for seq in seqs.values()
-        ], validate_num_wells],  # dense, but it works
+        validators=[validate_num_wells, _validate_selected_guides],
         help_text='sgRNAs from crispor.tefor.net')
     # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(default=dict, blank=True,
@@ -263,16 +268,22 @@ class PrimerDesign(BaseModel):
 
 
 class PrimerSelection(BaseModel):
+
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
+
+    def _validate_selected_primers(val):
+        return [validate_seq(seq)
+                for seqs in val.values()
+                for seq in seqs]
+
     selected_primers = JSONField(
         default=dict,
         blank=True,
+        # Disable me for makemigrations. TODO: better solution
         validators=[
-            lambda val: [validate_seq(seq)
-                         for seqs in val.values()
-                         for seq in seqs],
-            # two primers per well
-            lambda val: validate_num_wells(val, 96 * 2)],
+            functools.partial(validate_num_wells, max=96 * 2),
+            _validate_selected_primers,
+        ],
         help_text='Primers from crispor.tefor.net')
 
     def __str__(self):

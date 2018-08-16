@@ -61,6 +61,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     # TODO (gdingle): recompute from guide_seq
     sheet['guide_offset'][lg] = [int(g[1][1:-1]) for g in guides]
     sheet['guide_direction'][lg] = [
+    # TODO (gdingle): best naming?
         'fwd' if g[1][-1] == '+' else 'rev'
         for g in guides]
 

@@ -62,9 +62,12 @@ def crispresso():
         (seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
         for chr_loc, guide_seqs in post_data['selected_guides'].items()
         for guide_seq in guide_seqs.values()
-    ]
+    ][0:1]
     # how to get hdr amplicons here?
     # donor_guides = post_data['donor_guides']
+
+    assert all(pair[1] in pair[0] for pair in amplicon_seqs), \
+        'The guide sequence must be present in the amplicon sequence'
 
     # Although threads would be more efficient, CRISPResso is not thead-safe.
     # # TODO (gdingle): what is the optimal number of processes? CRISPResso
