@@ -89,11 +89,13 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
 def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame:
     sheet = from_guide_selection(primer_selection.primer_design.guide_selection)
     selected_primers = primer_selection.selected_primers
-    for _crispor_pam_id, primer_pair in selected_primers.items():
-        # TODO (gdingle): this is awkward AND incorrect... need all primers of all selected guides!
-        mask = sheet['_crispor_pam_id'] == _crispor_pam_id
-        sheet['primer_seq_fwd'][mask] = primer_pair[0]
-        sheet['primer_seq_rev'][mask] = primer_pair[1]
+    for primer_id, primer_pair in selected_primers.items():
+        # TODO (gdingle): this is awkward
+        target_loc, _crispor_pam_id = primer_id.split(' ')
+        mask1 = sheet['target_loc'] == target_loc
+        mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
+        sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0]
+        sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1]
     # TODO (gdingle): is this really the best way to reindex?
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     sheet.index = _new_index(size=len(sheet))

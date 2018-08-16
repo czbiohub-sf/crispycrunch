@@ -289,7 +289,7 @@ class PrimerDesignProgressView(View):
                 pam_id=row['_crispor_pam_id'],
                 seq=row['target_loc'])
 
-        statuses = [(row._crispor_pam_id, primers_request(row).in_cache())
+        statuses = [(row._crispor_batch_id, row._crispor_pam_id, primers_request(row).in_cache())
                     for _, row in sheet.iterrows()]
         completed = [g for g in statuses if g[1]]
         incomplete = [g for g in statuses if not g[1]]
@@ -317,7 +317,8 @@ class PrimerSelectionView(CreatePlusView):
         return {
             # TODO (gdingle): IMPORTANT... need a unique ID ... batch_id + pam_id, or chr_loc + pam_id, or guide_loc
             'selected_primers': dict(
-                (p['pam_id'], get_fwd_and_rev_primers(p['ontarget_primers']))
+                (p['seq'] + ' ' + p['pam_id'],
+                    get_fwd_and_rev_primers(p['ontarget_primers']))
                 for p in primer_data)
         }
 
