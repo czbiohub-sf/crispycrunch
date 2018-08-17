@@ -385,6 +385,7 @@ class AnalysisProgressView(View):
             return path.replace('output/', 'output/CRISPResso_on_') \
                 + '/CRISPResso_RUNNING_LOG.txt'
 
+        # TODO (gdingle): allow set of running AND errorred
         running = [path for path in results_paths if self._exists(log_path(path))]
         if running:
             errorred = self._get_errorred(results_paths, log_path)
