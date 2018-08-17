@@ -33,6 +33,10 @@ from main.models import *
 from main.validators import is_ensemble_transcript
 
 
+# TODO (gdingle): move somewhere better
+CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
+
+
 def index(request):
     # TODO (gdingle): create useful index
     return HttpResponse("Hello, world. You're at the main index.")
@@ -265,7 +269,7 @@ class PrimerDesignProgressView(View):
                 seq=row['target_loc'])
 
         statuses = [(row._crispor_batch_id, row._crispor_pam_id, primers_request(row).in_cache())
-                    for _, row in sheet.iterrows()]
+                    for row in sheet.to_records()]
         completed = [g for g in statuses if g[1]]
         incomplete = [g for g in statuses if not g[1]]
         assert len(statuses) == len(completed) + len(incomplete)
@@ -348,9 +352,10 @@ class AnalysisView(CreatePlusView):
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
             'dryrun': True,
+            'async': True,
         }
 
-        url = 'http://crispresso:5000/analyze'  # host is name of docker service
+        url = CRISPRESSO_ROOT_URL + 'analyze'  # host is name of docker service
         response = requests.post(url, json=data)
         response.raise_for_status()
 
@@ -365,17 +370,18 @@ class AnalysisProgressView(View):
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         results_paths = analysis.results_data['results']
-        # TODO (gdingle): configure this in some settings or env var
-        crispresso_root_url = 'http://0.0.0.0:5000/'
-        for path in results_paths:
-            # TODO (gdingle): check for existing of crispresso log file
-            # TODO (gdingle): check for existence of
-            # /Quantification_of_editing_frequency.txt
-            # statuses =
-            # completed
-            # incomplete
-            pass
+        statuses = [(self._exists(path), path) for path in results_paths]
+        completed = [s[1] for s in statuses if s[0]]
+        incomplete = [s[1] for s in statuses if not s[0]]
         return render(request, self.template_name, locals())
+
+    @staticmethod
+    def _exists(path):
+        response = requests.head(CRISPRESSO_ROOT_URL + path)
+        # /Quantification_of_editing_frequency.txt
+
+        assert response.status_code in (200, 404)
+        return response.status_code == 200
 
 
 class ResultsView(View):
@@ -383,9 +389,8 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-        results_paths = analysis.results_data['results']
-        # TODO (gdingle): configure this in some settings or env var
-        crispresso_root_url = 'http://0.0.0.0:5000/'
+        results_urls = [CRISPRESSO_ROOT_URL + path
+                        for path in analysis.results_data['results']]
         return render(request, self.template_name, locals())
 
 

@@ -68,8 +68,7 @@ def crispresso():
 
 def _start_all_analyses(pool, sheet, fastqs, dryrun):
     futures = []
-    for i, _row in enumerate(sheet.iterrows()):
-        _, row = _row
+    for i, row in enumerate(sheet.to_records()):
         fwd = fastqs[i * 2]
         rev = fastqs[i * 2 + 1]
         assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
@@ -95,7 +94,7 @@ def _results_name(fwd):
 
 
 def _crispresso_results_path(fwd):
-    OUTPUT_DIR + '/CRISPResso_on_' + _results_name(fwd)
+    return OUTPUT_DIR + '/CRISPResso_on_' + _results_name(fwd)
 
 
 def _results_path(fwd):
