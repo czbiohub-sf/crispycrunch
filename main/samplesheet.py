@@ -103,8 +103,8 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
 
 
 def from_analysis(analysis: Analysis) -> pandas.DataFrame:
-    primer_selection = PrimerSelection.objects.get(
-        primer_design__guide_selection__guide_design__experiment=analysis.experiment)
+    primer_selection = PrimerSelection.objects.filter(
+        primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
     sheet = from_primer_selection(primer_selection)
 
     sheet._metadata = [
@@ -119,8 +119,10 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     sheet['s3_bucket'] = analysis.s3_bucket
     sheet['s3_prefix'] = analysis.s3_prefix
 
+    if not len(analysis.results_data):
+        return sheet
+
     # TODO (gdingle): s3_key based on returned 'files'
-    assert len(analysis.results_data)
     fastqs = analysis.results_data['fastqs']
     for i in range(0, len(fastqs), 2):
         # example: A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz

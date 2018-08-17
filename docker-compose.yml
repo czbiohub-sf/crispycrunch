@@ -16,6 +16,7 @@ services:
   web:
     build: .
     # TODO (gdingle): use gunicorn for prod
+    # TODO (gdingle): python3 manage.py migrate here??
     command: python3 manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code

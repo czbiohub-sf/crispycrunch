@@ -1,6 +1,5 @@
 import functools
-# TODO (gdingle): use non-jsonb JSONField so we preserve key order
-# see https://github.com/dmkoch/django-jsonfield
+
 from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.db import models
@@ -116,6 +115,7 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+        ordering = ['-id']
 
     create_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)
@@ -138,23 +138,17 @@ class Researcher(BaseModel):
 
 
 class Experiment(BaseModel):
-    class Meta:
-        ordering = ['-id']
     # TODO (gdingle): help_text and naming convention
     name = models.CharField(max_length=40, unique=True)
     researcher = models.ForeignKey(Researcher, on_delete=models.PROTECT)
     description = models.CharField(max_length=65536, blank=True)
     # TODO (gdingle): status field
-    #
-    # TODO (gdingle): ordering
-    # see https://docs.djangoproject.com/en/2.0/ref/models/options/
 
     def __str__(self):
         return 'Experiment({}, ...)'.format(self.name)
 
 
 class GuideDesign(BaseModel):
-    # TODO (gdingle): review guide to experiment cardinality
     experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
 
     # TODO (gdingle): make sure this works for TagIn as well
@@ -162,7 +156,6 @@ class GuideDesign(BaseModel):
         ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'),
         ('todo', 'TODO: more genomes'),
     ], default='hg19')
-    # TODO (gdingle): for pysam, we are actually using hg18!!!
 
     pam = models.CharField(max_length=80, choices=[
         # TODO (gdingle): what does this description all mean?
@@ -194,16 +187,6 @@ class GuideDesign(BaseModel):
         help_text='Sequence for Homology Directed Repair',
         # TODO (gdingle): is this default correct? it was taken from Jason Li sample sheet example
         default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt')
-
-    # TODO (gdingle): is this useful?
-    # tag_in = models.CharField(max_length=40, blank=True, choices=(
-    #     ('FLAG', 'FLAG'),
-    #     ('3XFLAG', '3XFLAG'),
-    #     ('V5', 'V5'),
-    #     ('HA', 'HA'),
-    #     ('MYC', 'MYC'),
-    #     ('TODO', 'TODO: tag used by Manu group'),
-    # ))
 
     guide_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
     donor_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
@@ -237,11 +220,6 @@ class GuideSelection(BaseModel):
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
 
-    # TODO (gdingle): still needed?
-    # @property
-    # def layout(self):
-    #     return Plate96Layout(self.selected_guides)
-
     @property
     def samplesheet(self):
         # Import here to avoid circular import
@@ -256,7 +234,6 @@ class GuideSelection(BaseModel):
 class PrimerDesign(BaseModel):
     guide_selection = models.ForeignKey(
         GuideSelection, on_delete=models.PROTECT)
-    # TODO (gdingle): Addgene plasmid type?
     # TODO (gdingle): any point in specifying temp?
     primer_temp = models.IntegerField(default=60)
     # TODO (gdingle): this needs to change based on HDR
@@ -279,7 +256,6 @@ class PrimerSelection(BaseModel):
     selected_primers = JSONField(
         default=dict,
         blank=True,
-        # Disable me for makemigrations. TODO: better solution
         validators=[
             functools.partial(validate_num_wells, max=96 * 2),
             _validate_selected_primers,
@@ -288,11 +264,6 @@ class PrimerSelection(BaseModel):
 
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)
-
-    # TODO (gdingle): still needed?
-    # @property
-    # def layout(self):
-    #     return Plate96Layout(self.selected_primers)
 
     @property
     def samplesheet(self):
@@ -308,12 +279,12 @@ class PrimerSelection(BaseModel):
 class Analysis(BaseModel):
     experiment = models.ForeignKey(
         Experiment, on_delete=models.PROTECT)
-    # TODO (gdingle): default this to experiment
+    # TODO (gdingle): default this to experiment researcher
     researcher = models.ForeignKey(
         Researcher, on_delete=models.PROTECT,
         help_text='The researcher doing the analysis')
     # TODO (gdingle): remove me on next migration
-    name = models.CharField(max_length=40)
+    name = models.CharField(max_length=40, blank=True)
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
@@ -326,13 +297,3 @@ class Analysis(BaseModel):
 
     def __str__(self):
         return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
-
-    def get_selected_guides(self):
-        # TODO (gdingle): this takes the latest guide selection... good idea?
-        return GuideSelection.objects.filter(
-            guide_design__experiment=self.experiment).latest('-id').selected_guides
-
-    def get_selected_donors(self):
-        # TODO (gdingle): this takes the latest donor selection... good idea?
-        return GuideSelection.objects.filter(
-            guide_design__experiment=self.experiment).latest('-id').selected_donors

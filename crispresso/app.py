@@ -13,8 +13,8 @@ from multiprocessing import cpu_count
 
 from flask import Flask, jsonify, request
 
+import pandas
 import s3
-import seqs
 
 from CRISPResso.CRISPRessoCORE import main as CRISPResso_main  # noqa
 
@@ -33,47 +33,27 @@ def crispresso():
     """
     `s3_bucket` and `s3_prefix` make up the location of all of the fastq files
     produced by one illumina reading of a sample plate.
-
-    `selected_guides` are expected to be a JSON map of target region to gRNAs.
-    {
-      "chr1:11130541-11130751": {
-        "s180+": "TTTCTACTACTACAGTTGAG TGG",
-        "s185+": "ACTACTACAGTTGAGTGGTC TGG",
-        "s76+": "AAAAGAGTTCCAGAGTGCTC TGG"
-      },
-      "chr7:5569177-5569415": {
-        "s191+": "TTCCGGCGCGCCGAGTCCTT AGG",
-        "s207-": "TCCCCAATCTGGGCGCGCGC CGG",
-        "s225+": "CGCCGGCGCGCGCCCAGATT GGG"
-      }
-    }
-
-    Likewise, `selected_donors` are a map of target region to ssDNAs.
     """
     post_data = request.get_json()
+    sheet = pandas.DataFrame(post_data['sheet'])
 
     # TODO (gdingle): make fastqs custom named such as
     # CC8763_chr3:1000-2000_chr3:1200-1220__S1_L001_R1_001.fastq.gz
     fastqs = s3.download_fastqs(post_data['s3_bucket'], post_data['s3_prefix'])
 
-    # TODO (gdingle): now that we have this on crispycrunch, remove me
-    amplicon_seqs = [
-        (seqs.get_reference_amplicon(chr_loc), guide_seq.split(' ')[0])
-        for chr_loc, guide_seqs in post_data['selected_guides'].items()
-        for guide_seq in guide_seqs.values()
-    ][0:1]
     # how to get hdr amplicons here?
-    # donor_guides = post_data['donor_guides']
 
-    assert all(pair[1] in pair[0] for pair in amplicon_seqs), \
-        'The guide sequence must be present in the amplicon sequence'
+    # TODO (gdingle): is this correct? what about rev direction?
+    # assert all(pair[1] in pair[0] for pair in amplicon_seqs), \
+    #     'The guide sequence must be present in the amplicon sequence'
 
     # Although threads would be more efficient, CRISPResso is not thead-safe.
     # # TODO (gdingle): what is the optimal number of processes? CRISPResso
     # has its own pool internally. See n_processes.
     with ProcessPoolExecutor(max_workers=cpu_count()) as pool:
         futures = []
-        for i, amplicon_seq in enumerate(amplicon_seqs):
+        for i, _row in enumerate(sheet.iterrows()):
+            _, row = _row
             fwd = fastqs[i * 2]
             rev = fastqs[i * 2 + 1]
             assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
@@ -84,8 +64,8 @@ def crispresso():
                     _analyze_fastq_pair,
                     fwd,
                     rev,
-                    amplicon_seq[0],
-                    amplicon_seq[1],
+                    row['target_seq'],
+                    row['guide_seq'],
                     None,  # TODO (gdingle): donor_guides
                     post_data.get('dryrun'),
                 ))
@@ -93,7 +73,6 @@ def crispresso():
     results = [f.result() for f in futures]
     return jsonify({
         'fastqs': fastqs,
-        'amplicon_seqs': [a[0] for a in amplicon_seqs],
         'results': results,
     })
 
@@ -110,7 +89,6 @@ def _analyze_fastq_pair(fwd,
 
     crispresso_args = [
         '/opt/conda/bin/CRISPResso',
-        # TODO (gdingle): group by fwd and reverse
         '--fastq_r1', fwd,
         '--fastq_r2', rev,
         '--amplicon_seq', amplicon_seq,
@@ -119,7 +97,6 @@ def _analyze_fastq_pair(fwd,
         '-o', OUTPUT_DIR,
         '--save_also_png',
         '--trim_sequences',
-        # TODO (gdingle): what is fasta adapter?
         '--trimmomatic_options_string', _get_trim_opt(),
         '--n_processes', str(cpu_count()),
         '--name', results_name,
@@ -143,7 +120,7 @@ def _analyze_fastq_pair(fwd,
 
 
 def _get_trim_opt(adapterloc='fastqs/TruSeq3-PE-2.fa'):
-    # TODO (gdingle): where to put adapterloc permanently? does it ever change?
+    # TODO (gdingle): where to put adapterloc permanently?
     # TODO (gdingle): these are all same as defaults... why?
     leadingqual = 3
     trailingqual = 3

@@ -9,6 +9,8 @@ the next form. Each model has a foreign key into the preceding model. One
 exception is PrimerDesign which depends on GuideSelection, two steps back in the
 sequence.
 """
+import time
+
 import requests
 
 from typing import no_type_check
@@ -24,9 +26,8 @@ from openpyxl import Workbook, writer  # noqa
 
 import crisporclient
 
-from main import samplesheet
-# TODO (gdingle): remove me?
 from main import conversions
+from main import samplesheet
 from main.forms import *
 from main.models import *
 from main.validators import is_ensemble_transcript
@@ -63,14 +64,12 @@ class CreatePlusView(CreateView):
 class ExperimentView(CreateView):
     template_name = 'experiment.html'
     form_class = ExperimentForm
-    # TODO (gdingle): refactor success_urls to models for reuse
     success_url = '/main/experiment/{id}/guide-design/'
 
 
 class GuideDesignView(CreatePlusView):
     template_name = 'guide-design.html'
     form_class = GuideDesignForm
-    # TODO (gdingle): redirect to waiting page
     success_url = '/main/guide-design/{id}/progress/'
 
     def _normalize_targets(self, targets):
@@ -125,7 +124,7 @@ class GuideDesignView(CreatePlusView):
         def guide_request(target):
             return crisporclient.CrisporGuideRequest(
                 target,
-                # TODO (gdingle): does experiment name get us anything useful?
+                # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
                 name=obj.experiment.name,
                 org=obj.genome,
                 pam=obj.pam).run()
@@ -142,6 +141,9 @@ class GuideDesignView(CreatePlusView):
             future = pool.submit(guide_request, target)
             future.add_done_callback(
                 functools.partial(insert_guide_data, index=i))
+
+        # Give some time for threads to finish to avoid GuideSelectionView too soon
+        time.sleep(1)
 
         return obj
 
@@ -195,42 +197,17 @@ class GuideSelectionView(CreatePlusView):
 
     def plus(self, obj):
         obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-
-        # TODO (gdingle): custom validate selected guides
-        # not found, error....all must have sequences
         return obj
 
     def get_context_data(self, **kwargs):
-        # TODO (gdingle): make multi guide
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         kwargs['crispor_url'] = [
             gd['url']
             for gd in guide_design.guide_data
-            # TODO (gdingle): this line is failing sometimes
             if gd.get('url')][0]
         if guide_design.donor_data:
             kwargs['tagin_url'] = guide_design.donor_data[0]['url']
         return super().get_context_data(**kwargs)
-
-
-# TODO (gdingle): do we still want this?
-# class GuidePlateLayoutView(CreatePlusView):
-#     template_name = 'guide-plate-layout.html'
-#     form_class = GuidePlateLayoutForm
-#     success_url = '/main/guide-selection/{guide_selection_id}/primer-design/'
-
-#     def plus(self, obj):
-#         obj.guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
-#         return obj
-
-#     def get_context_data(self, **kwargs):
-#         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
-#         # TODO (gdingle): show targets in plate or sgRNA?
-#         layout_map = dict((list(guides.values())[0], target)
-#                           for target, guides
-#                           in guide_selection.selected_guides.items())
-#         kwargs['plate_layout'] = Plate96Layout(layout_map)
-#         return super().get_context_data(**kwargs)
 
 
 class PrimerDesignView(CreatePlusView):
@@ -259,12 +236,14 @@ class PrimerDesignView(CreatePlusView):
         sheet = samplesheet.from_guide_selection(guide_selection)
         obj.primer_data = [{}] * len(sheet)
         pool = ThreadPoolExecutor()
-        # TODO (gdingle): _crispor_batch_id has a lifetime... handle expired
         largs = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
         for i, args in enumerate(largs):
             future = pool.submit(primers_request, args)
             future.add_done_callback(
                 functools.partial(insert_primer_data, index=i))
+
+        # Give some time for threads to finish to avoid PrimerSelectionView too soon
+        time.sleep(1)
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
@@ -315,7 +294,6 @@ class PrimerSelectionView(CreatePlusView):
             return values[0], values[1]
 
         return {
-            # TODO (gdingle): IMPORTANT... need a unique ID ... batch_id + pam_id, or chr_loc + pam_id, or guide_loc
             'selected_primers': dict(
                 (p['seq'] + ' ' + p['pam_id'],
                     get_fwd_and_rev_primers(p['ontarget_primers']))
@@ -333,40 +311,20 @@ class PrimerSelectionView(CreatePlusView):
         return super().get_context_data(**kwargs)
 
 
-# TODO (gdingle): do we still want this?
-# class PrimerPlateLayoutView(CreatePlusView):
-#     template_name = 'primer-plate-layout.html'
-#     form_class = PrimerPlateLayoutForm
-#     success_url = '/main/primer-plate-layout/{id}/experiment-summary/'
-
-#     def plus(self, obj):
-#         obj.primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
-#         return obj
-
-#     def get_context_data(self, **kwargs):
-#         primer_selection = PrimerSelection.objects.get(id=self.kwargs['id'])
-#         primer_pairs = dict((tuple(p.keys()), tuple(p.values()))
-#                             for target, p in primer_selection.selected_primers.items())
-#         kwargs['plate_layout'] = Plate96Layout(primer_pairs)
-#         return super().get_context_data(**kwargs)
-
-
 class AnalysisView(CreatePlusView):
     template_name = 'analysis.html'
     form_class = AnalysisForm
     success_url = '/main/analysis/{id}/results/'
 
     def plus(self, obj):
-        # TODO (gdingle): replace this with sheet.to_json()
-        # which includes target_seqs
+        sheet = samplesheet.from_analysis(obj)
+        # TODO (gdingle): make use of precise s3 location of fastq
+        sheet = sheet[['target_seq', 'guide_seq']]
         data = {
-            'selected_guides': obj.get_selected_guides(),
-            'selected_donors': obj.get_selected_donors(),
+            'sheet': sheet.to_dict(),
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
-            # TODO (gdingle): turn back on after we have a some real end-to-end
-            # results to test
-            'dryrun': False,
+            'dryrun': True,
         }
 
         url = 'http://crispresso:5000/analyze'  # host is name of docker service
@@ -386,11 +344,8 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-        # TODO (gdingle): this implies that crispresso will have a public web server
-        # do we want to upload all files to s3 instead? copy them to local django static dir?
+        # TODO (gdingle): configure this in some settings or env var
         crispresso_root_url = 'http://0.0.0.0:5000/'
-        # TODO (gdingle): temp... remove me
-        guide_seq = 'AATCGGTACAAGATGGCGGA'
         return render(request, self.template_name, locals())
 
 
@@ -473,5 +428,4 @@ class PrimerOrderFormView(OrderFormView):
 
     model = PrimerSelection
     # TODO (gdingle): how to order fwd and reverse primer at once?
-    # TODO (gdingle): what to do about "not found" primers?
     seq_key = 'primer_seq_fwd'
