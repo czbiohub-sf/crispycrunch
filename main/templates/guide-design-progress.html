@@ -14,7 +14,25 @@
   {{ completed|length }} out of {{ statuses|length }} tasks completed
 </h3>
 
-{% if incomplete %}
+{% if errorred %}
+<h5>
+  Errorred
+</h5>
+<ul>
+  {% for target in errorred %}
+  <li>{{ target }}</li>
+  {% endfor %}
+</ul>
+{% elif running %}
+<h5>
+  Running
+</h5>
+<ul>
+  {% for target in running %}
+  <li>{{ target }}</li>
+  {% endfor %}
+</ul>
+{% elif incomplete %}
 <h5>
   Incomplete
 </h5>

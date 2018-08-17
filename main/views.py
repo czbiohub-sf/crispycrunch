@@ -374,19 +374,46 @@ class AnalysisProgressView(View):
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         results_paths = analysis.results_data['results']
-        # TODO (gdingle): any good to check current log in CRISPResso_on_* ?
-        # log_file = '/CRISPResso_RUNNING_LOG.txt'
+
         success_file = '/Quantification_of_editing_frequency.txt'
         statuses = [(self._exists(path + success_file), path) for path in results_paths]
         completed = [s[1] for s in statuses if s[0]]
         incomplete = [s[1] for s in statuses if not s[0]]
+
+        # TODO (gdingle): temp hack for testing... need to replace with well_names goodness
+        def log_path(path):
+            return path.replace('output/', 'output/CRISPResso_on_') \
+                + '/CRISPResso_RUNNING_LOG.txt'
+
+        running = [path for path in results_paths if self._exists(log_path(path))]
+        if running:
+            errorred = self._get_errorred(results_paths, log_path)
         return render(request, self.template_name, locals())
+
+    # TODO (gdingle): clean me up with final path structure
+    def _get_errorred(self, results_paths, log_path):
+        errorred = []
+        for path in results_paths:
+            error_lines = {
+                line for line in
+                self._get_log(log_path(path)).split('\n')
+                if line.startswith('ERROR')
+            }
+            if error_lines:
+                errorred.append((path, error_lines))
+        return errorred
 
     @staticmethod
     def _exists(path):
-        response = requests.head(CRISPRESSO_ROOT_URL + path)
+        with requests_cache.disabled():
+            response = requests.head(CRISPRESSO_ROOT_URL + path)
         assert response.status_code in (200, 404)
         return response.status_code == 200
+
+    @staticmethod
+    def _get_log(path):
+        with requests_cache.disabled():
+            return requests.get(CRISPRESSO_ROOT_URL + path).text
 
 
 class ResultsView(View):
