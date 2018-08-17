@@ -8,7 +8,7 @@ import os
 import shutil
 import sys
 
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count
 
 from flask import Flask, jsonify, request
@@ -50,31 +50,56 @@ def crispresso():
     # Although threads would be more efficient, CRISPResso is not thead-safe.
     # # TODO (gdingle): what is the optimal number of processes? CRISPResso
     # has its own pool internally. See n_processes.
-    with ProcessPoolExecutor(max_workers=cpu_count()) as pool:
-        futures = []
-        for i, _row in enumerate(sheet.iterrows()):
-            _, row = _row
-            fwd = fastqs[i * 2]
-            rev = fastqs[i * 2 + 1]
-            assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
-            # TODO (gdingle): how to handle missing or extra fastq files?
-            # TODO (gdingle): match fastq files and selected_guides on sample names
-            futures.append(
-                pool.submit(
-                    _analyze_fastq_pair,
-                    fwd,
-                    rev,
-                    row['target_seq'],
-                    row['guide_seq'],
-                    None,  # TODO (gdingle): donor_guides
-                    post_data.get('dryrun'),
-                ))
+    pool = ProcessPoolExecutor(max_workers=cpu_count())
+    futures = _start_all_analyses(pool, sheet, fastqs, post_data.get('dryrun'))
 
-    results = [f.result() for f in futures]
+    # In async mode, return the paths where results are expected to be written.
+    if post_data.get('async'):
+        results = [_results_path(fastqs[i])
+                   for i in range(0, len(sheet), 2)]
+    else:
+        results = [f.result() for f in as_completed(futures)]
+
     return jsonify({
         'fastqs': fastqs,
         'results': results,
     })
+
+
+def _start_all_analyses(pool, sheet, fastqs, dryrun):
+    futures = []
+    for i, _row in enumerate(sheet.iterrows()):
+        _, row = _row
+        fwd = fastqs[i * 2]
+        rev = fastqs[i * 2 + 1]
+        assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
+        # TODO (gdingle): how to handle missing or extra fastq files?
+        # TODO (gdingle): match fastq files and selected_guides on sample names
+        futures.append(
+            pool.submit(
+                _analyze_fastq_pair,
+                fwd,
+                rev,
+                row['target_seq'],
+                row['guide_seq'],
+                None,  # TODO (gdingle): donor_guides
+                dryrun,
+            ))
+    return futures
+
+# Eliminate illumina boilerplate. See https://goo.gl/fvPLMa.
+
+
+def _results_name(fwd):
+    return fwd.split('/')[-1].split('_')[0]
+
+
+def _crispresso_results_path(fwd):
+    OUTPUT_DIR + '/CRISPResso_on_' + _results_name(fwd)
+
+
+def _results_path(fwd):
+    return _crispresso_results_path(fwd).replace('CRISPResso_on_', '')
 
 
 def _analyze_fastq_pair(fwd,
@@ -83,9 +108,6 @@ def _analyze_fastq_pair(fwd,
                         guide_seq,
                         expected_hdr_amplicon_seq,
                         dryrun):
-
-    # Eliminate illumina boilerplate. See https://goo.gl/fvPLMa.
-    results_name = fwd.split('/')[-1].split('_')[0]
 
     crispresso_args = [
         '/opt/conda/bin/CRISPResso',
@@ -99,19 +121,18 @@ def _analyze_fastq_pair(fwd,
         '--trim_sequences',
         '--trimmomatic_options_string', _get_trim_opt(),
         '--n_processes', str(cpu_count()),
-        '--name', results_name,
+        '--name', _results_name(fwd),
     ]
 
     if not dryrun:
         _import_and_execute(crispresso_args)
 
     # Remove dir prefix. See https://goo.gl/s7dzEK .
-    crispresso_results_path = OUTPUT_DIR + '/CRISPResso_on_' + results_name
-    results_path = crispresso_results_path.replace('CRISPResso_on_', '')
-    if os.path.exists(crispresso_results_path):
+    results_path = _results_path(fwd)
+    if os.path.exists(_crispresso_results_path(fwd)):
         if os.path.exists(results_path):
             shutil.rmtree(results_path)
-        os.rename(crispresso_results_path, results_path)
+        os.rename(_crispresso_results_path(fwd), results_path)
 
     success = os.path.exists(
         results_path + '/Quantification_of_editing_frequency.txt')

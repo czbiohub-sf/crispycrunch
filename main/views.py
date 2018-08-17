@@ -37,10 +37,6 @@ def index(request):
     # TODO (gdingle): create useful index
     return HttpResponse("Hello, world. You're at the main index.")
 
-#
-# BEGIN EXPERIMENT CREATION VIEWS
-#
-
 
 class CreatePlusView(CreateView):
     """
@@ -311,44 +307,6 @@ class PrimerSelectionView(CreatePlusView):
         return super().get_context_data(**kwargs)
 
 
-class AnalysisView(CreatePlusView):
-    template_name = 'analysis.html'
-    form_class = AnalysisForm
-    success_url = '/main/analysis/{id}/results/'
-
-    def plus(self, obj):
-        sheet = samplesheet.from_analysis(obj)
-        # TODO (gdingle): make use of precise s3 location of fastq
-        sheet = sheet[['target_seq', 'guide_seq']]
-        data = {
-            'sheet': sheet.to_dict(),
-            's3_bucket': obj.s3_bucket,
-            's3_prefix': obj.s3_prefix,
-            'dryrun': True,
-        }
-
-        url = 'http://crispresso:5000/analyze'  # host is name of docker service
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-
-        obj.results_data = response.json()
-        return obj
-
-
-#
-# END EXPERIMENT CREATION VIEWS
-#
-
-class ResultsView(View):
-    template_name = 'results.html'
-
-    def get(self, request, *args, **kwargs):
-        analysis = Analysis.objects.get(id=self.kwargs['id'])
-        # TODO (gdingle): configure this in some settings or env var
-        crispresso_root_url = 'http://0.0.0.0:5000/'
-        return render(request, self.template_name, locals())
-
-
 class ExperimentSummaryView(View):
     template_name = 'experiment-summary.html'
 
@@ -374,6 +332,49 @@ class ExperimentSummaryView(View):
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
         sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
         return sheet
+
+
+class AnalysisView(CreatePlusView):
+    template_name = 'analysis.html'
+    form_class = AnalysisForm
+    success_url = '/main/analysis/{id}/progress/'
+
+    def plus(self, obj):
+        sheet = samplesheet.from_analysis(obj)
+        # TODO (gdingle): make use of precise s3 location of fastq
+        sheet = sheet[['target_seq', 'guide_seq']]
+        data = {
+            'sheet': sheet.to_dict(),
+            's3_bucket': obj.s3_bucket,
+            's3_prefix': obj.s3_prefix,
+            'dryrun': True,
+        }
+
+        url = 'http://crispresso:5000/analyze'  # host is name of docker service
+        response = requests.post(url, json=data)
+        response.raise_for_status()
+
+        obj.results_data = response.json()
+        return obj
+
+
+class AnalysisProgressView(View):
+    template_name = 'analysis-progress.html'
+    success_url = '/main/analysis/{id}/results/'
+
+    def get(self, request, **kwargs):
+        analysis = Analysis.objects.get(id=kwargs['id'])
+
+
+class ResultsView(View):
+    template_name = 'results.html'
+
+    def get(self, request, *args, **kwargs):
+        analysis = Analysis.objects.get(id=self.kwargs['id'])
+        results_data = analysis.results_data
+        # TODO (gdingle): configure this in some settings or env var
+        crispresso_root_url = 'http://0.0.0.0:5000/'
+        return render(request, self.template_name, locals())
 
 
 class OrderFormView(DetailView):
