@@ -364,6 +364,18 @@ class AnalysisProgressView(View):
 
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
+        results_paths = analysis.results_data['results']
+        # TODO (gdingle): configure this in some settings or env var
+        crispresso_root_url = 'http://0.0.0.0:5000/'
+        for path in results_paths:
+            # TODO (gdingle): check for existing of crispresso log file
+            # TODO (gdingle): check for existence of
+            # /Quantification_of_editing_frequency.txt
+            # statuses =
+            # completed
+            # incomplete
+            pass
+        return render(request, self.template_name, locals())
 
 
 class ResultsView(View):
@@ -371,7 +383,7 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-        results_data = analysis.results_data
+        results_paths = analysis.results_data['results']
         # TODO (gdingle): configure this in some settings or env var
         crispresso_root_url = 'http://0.0.0.0:5000/'
         return render(request, self.template_name, locals())
