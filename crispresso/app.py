@@ -115,7 +115,6 @@ def _analyze_fastq_pair(fwd,
         '--fastq_r2', rev,
         '--amplicon_seq', amplicon_seq,
         '--guide_seq', guide_seq,
-        '--expected_hdr_amplicon_seq', expected_hdr_amplicon_seq,
         '-o', OUTPUT_DIR,
         '--save_also_png',
         '--trim_sequences',
@@ -123,8 +122,13 @@ def _analyze_fastq_pair(fwd,
         '--n_processes', str(cpu_count()),
         '--name', _results_name(fwd),
     ]
+    if expected_hdr_amplicon_seq:
+        crispresso_args += [
+            '--expected_hdr_amplicon_seq', expected_hdr_amplicon_seq,
+        ]
 
     if not dryrun:
+        app.logger.info(crispresso_args)
         _import_and_execute(crispresso_args)
 
     # Remove dir prefix. See https://goo.gl/s7dzEK .

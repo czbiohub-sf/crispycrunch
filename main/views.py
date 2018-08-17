@@ -12,6 +12,7 @@ sequence.
 import time
 
 import requests
+import requests_cache
 
 from typing import no_type_check
 
@@ -35,6 +36,7 @@ from main.validators import is_ensemble_transcript
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
+CRISPRESSO_PUBLIC_ROOT_URL = 'http://0.0.0.0:5000/'
 
 
 def index(request):
@@ -354,11 +356,12 @@ class AnalysisView(CreatePlusView):
             'dryrun': False,
             'async': True,
         }
-        assert False, sheet
 
         url = CRISPRESSO_ROOT_URL + 'analyze'  # host is name of docker service
-        response = requests.post(url, json=data)
-        response.raise_for_status()
+        # TODO: should we allow caching here as elsewhere?
+        with requests_cache.disabled():
+            response = requests.post(url, json=data)
+            response.raise_for_status()
 
         obj.results_data = response.json()
         return obj
@@ -391,7 +394,7 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-        results_urls = [CRISPRESSO_ROOT_URL + path
+        results_urls = [CRISPRESSO_PUBLIC_ROOT_URL + path
                         for path in analysis.results_data['results']]
         return render(request, self.template_name, locals())
 
