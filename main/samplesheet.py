@@ -73,6 +73,10 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
         axis=1,
     )
 
+    # TODO (gdingle): is this really the best unique name?
+    sheet['well_name'][lg] = '{}:{}:{}'.format(
+        sheet['target_loc'], sheet['guide_offset'], sheet['guide_direction'])
+
     sheet['_crispor_batch_id'][lg] = [g[3] for g in guides]
     sheet['_crispor_pam_id'][lg] = [g[1] for g in guides]
     # 'TODO_crispor_stats',
@@ -90,7 +94,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
     sheet = from_guide_selection(primer_selection.primer_design.guide_selection)
     selected_primers = primer_selection.selected_primers
     for primer_id, primer_pair in selected_primers.items():
-        # TODO (gdingle): this is awkward
+        # TODO (gdingle): this is awkward... should we use well_name?
         target_loc, _crispor_pam_id = primer_id.split(' ')
         mask1 = sheet['target_loc'] == target_loc
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
@@ -177,6 +181,7 @@ def _new_samplesheet():
             # TODO (gdingle): what's the source of truth for these?
             # 'well_pos',
             # 'well_num',
+            'well_name',
             's3_bucket',
             's3_prefix',
             'fastq_fwd',

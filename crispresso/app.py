@@ -93,6 +93,7 @@ def _results_name(fwd):
     return fwd.split('/')[-1].split('_')[0]
 
 
+# TODO (gdingle): IMORTANT: use well_names
 def _crispresso_results_path(fwd):
     return OUTPUT_DIR + '/CRISPResso_on_' + _results_name(fwd)
 

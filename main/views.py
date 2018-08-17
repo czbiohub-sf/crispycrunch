@@ -346,14 +346,15 @@ class AnalysisView(CreatePlusView):
     def plus(self, obj):
         sheet = samplesheet.from_analysis(obj)
         # TODO (gdingle): make use of precise s3 location of fastq
-        sheet = sheet[['target_seq', 'guide_seq']]
+        sheet = sheet[['target_seq', 'guide_seq', 'well_name']]
         data = {
             'sheet': sheet.to_dict(),
             's3_bucket': obj.s3_bucket,
             's3_prefix': obj.s3_prefix,
-            'dryrun': True,
+            'dryrun': False,
             'async': True,
         }
+        assert False, sheet
 
         url = CRISPRESSO_ROOT_URL + 'analyze'  # host is name of docker service
         response = requests.post(url, json=data)
@@ -370,7 +371,10 @@ class AnalysisProgressView(View):
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         results_paths = analysis.results_data['results']
-        statuses = [(self._exists(path), path) for path in results_paths]
+        # TODO (gdingle): any good to check current log in CRISPResso_on_* ?
+        # log_file = '/CRISPResso_RUNNING_LOG.txt'
+        success_file = '/Quantification_of_editing_frequency.txt'
+        statuses = [(self._exists(path + success_file), path) for path in results_paths]
         completed = [s[1] for s in statuses if s[0]]
         incomplete = [s[1] for s in statuses if not s[0]]
         return render(request, self.template_name, locals())
@@ -378,8 +382,6 @@ class AnalysisProgressView(View):
     @staticmethod
     def _exists(path):
         response = requests.head(CRISPRESSO_ROOT_URL + path)
-        # /Quantification_of_editing_frequency.txt
-
         assert response.status_code in (200, 404)
         return response.status_code == 200
 
