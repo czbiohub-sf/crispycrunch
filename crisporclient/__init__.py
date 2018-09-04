@@ -62,7 +62,9 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
             'email': 'gdingle@chanzuckerberg.com',
             'exons': '',
             'fastq_se': '',
-            'hdr_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
+            # TODO (gdingle): why is this not working?
+            # 'hdr_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
+            'hdr_seq': '',
             'optional_name': '',
             'optradio_exc_l': 15,
             'optradio_exc_r': 15,
@@ -83,31 +85,104 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
         self.request = requests.Request('POST', self.endpoint, data=self.data, files=files).prepare()
 
     def run(self) -> Dict[str, Any]:
-        response = requests.Session().send(self.request)
-        response.raise_for_status()
-        # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
-        report_id = response.url.split('/')[-1]
+        # TODO (gdingle):
+
+        # response = requests.Session().send(self.request)
+        # response.raise_for_status()
+        # # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
+        # report_id = response.url.split('/')[-1]
+
+        report_id = 'NblHvD'
 
         # TODO (gdingle): change me later
         assert self.in_cache() is False
 
-        # Time for errors to show up
-        time.sleep(1)
-        self._check_report_status(report_id)
+        # Poll for SUCCESS. Typically takes 90 secs.
+        while not self._check_report_status(report_id):
+            time.sleep(15)
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return self._extract_data(soup)
+        report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
+        report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
+        report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
+        report_response = requests.get(report_url)
+        soup = BeautifulSoup(report_response.text, 'html.parser')
+        return {
+            'report_url': report_url,
+            'report_zip': report_zip,
+            'log_params': soup.find(id='log_params').get_text(),
+            'report_files': [
+                '{}/CRISPResso_on_{}/{}'.format(
+                    report_data_url, report_id, file
+                ) for file in self.report_files
+            ]
+        }
 
-    def _check_report_status(self, report_id: int) -> None:
+    def _check_report_status(self, report_id: str) -> None:
         status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'
-        report_status = requests.get(status_endpoint + report_id).json()
+        with requests_cache.disabled():
+            report_status = requests.get(status_endpoint + report_id).json()
         if report_status['state'] == 'FAILURE':
             raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
+        elif report_status['state'] == 'SUCCESS':
+            return True
+        else:
+            return False
 
-    def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        # TODO (gdingle): more
-        body = soup.find('body')
-        return body.get_text().strip()
+    @property
+    def report_files(self):
+        return (
+            'CRISPResso_RUNNING_LOG.txt',
+            # TODO (gdingle): read pickle file and avoid "invalid start byte" error
+            'CRISPResso2_info.pickle',  # contains figure captions
+
+            'Alleles_frequency_table.txt',
+            'CRISPResso_mapping_statistics.txt',
+            'CRISPResso_quantification_of_editing_frequency.txt',
+            'Mapping_statistics.txt',
+            'Quantification_of_editing_frequency.txt',
+            'Reference.Alleles_frequency_table_around_cut_site_for_AATCGGTACAAGATGGCGGA.txt',
+            'Reference.deletion_histogram.txt',
+            'Reference.effect_vector_combined.txt',
+            'Reference.effect_vector_deletion.txt',
+            'Reference.effect_vector_insertion.txt',
+            'Reference.effect_vector_substitution.txt',
+            'Reference.indel_histogram.txt',
+            'Reference.insertion_histogram.txt',
+            'Reference.modification_count_vectors.txt',
+            'Reference.nucleotide_frequency_table.txt',
+            'Reference.nucleotide_percentage_table.txt',
+            'Reference.quantification_window_modification_count_vectors.txt',
+            'Reference.quantification_window_nucleotide_frequency_table.txt',
+            'Reference.quantification_window_nucleotide_percentage_table.txt',
+            'Reference.quantification_window_substitution_frequency_table.txt',
+            'Reference.substitution_frequency_table.txt',
+            'Reference.substitution_histogram.txt',
+
+            '1a.Read_Barplot.pdf',
+            '1a.Read_Barplot.png',
+            '1b.Alignment_Pie_Chart.pdf',
+            '1b.Alignment_Pie_Chart.png',
+            '1c.Alignment_Barplot.pdf',
+            '1c.Alignment_Barplot.png',
+            '2a.Reference.Nucleotide_Percentage_Quilt.pdf',
+            '2a.Reference.Nucleotide_Percentage_Quilt.png',
+            '2b.Reference.Nucleotide_Percentage_Quilt_For_AATCGGTACAAGATGGCGGA.pdf',
+            '2b.Reference.Nucleotide_Percentage_Quilt_For_AATCGGTACAAGATGGCGGA.png',
+            '3a.Reference.Indel_Size_Distribution.pdf',
+            '3a.Reference.Indel_Size_Distribution.png',
+            '3b.Reference.Insertion_Deletion_Substitutions_Size_Hist.pdf',
+            '3b.Reference.Insertion_Deletion_Substitutions_Size_Hist.png',
+            '4a.Reference.Combined_Insertion_Deletion_Substitution_Locations.pdf',
+            '4a.Reference.Combined_Insertion_Deletion_Substitution_Locations.png',
+            '4b.Reference.Insertion_Deletion_Substitution_Locations.pdf',
+            '4b.Reference.Insertion_Deletion_Substitution_Locations.png',
+            '4c.Reference.Quantification_Window_Insertion_Deletion_Substitution_Locations.pdf',
+            '4c.Reference.Quantification_Window_Insertion_Deletion_Substitution_Locations.png',
+            '4d.Reference.Position_Dependent_Average_Indel_Size.pdf',
+            '4d.Reference.Position_Dependent_Average_Indel_Size.png',
+            '9.Reference.Alleles_Frequency_Table_Around_Cut_Site_For_AATCGGTACAAGATGGCGGA.pdf',
+            '9.Reference.Alleles_Frequency_Table_Around_Cut_Site_For_AATCGGTACAAGATGGCGGA.png',
+        )
 
 
 class CrisporGuideRequest(AbstractCrisporRequest):
