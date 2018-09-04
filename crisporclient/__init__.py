@@ -23,6 +23,9 @@ requests_cache.install_cache(
 CACHE = requests_cache.core.get_cache()
 # CACHE.clear()
 
+# TODO (gdingle): re-enable?
+requests_cache.uninstall_cache()
+
 
 class AbstractCrisporRequest:
 
@@ -42,6 +45,69 @@ class AbstractCrisporRequest:
     @abstractmethod
     def run(self) -> Dict[str, Any]:
         """Requests self.endpoint and extracts relevant data from the HTML response"""
+
+
+# TODO (gdingle): rename to AbstractScrapeRequest
+class CrispressoScrapeRequest(AbstractCrisporRequest):
+
+    def __init__(self):
+        self.endpoint = 'http://crispresso.pinellolab.partners.org/submit'
+        self.data = {
+            # NOTE: all post vars are required, even if empty
+            'amplicon': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
+            'amplicon_names': '',
+            'be_from': 'C',
+            'be_to': 'T',
+            'demo_used': '',
+            'email': 'gdingle@chanzuckerberg.com',
+            'exons': '',
+            'fastq_se': '',
+            'hdr_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
+            'optional_name': '',
+            'optradio_exc_l': 15,
+            'optradio_exc_r': 15,
+            'optradio_hs': 60,
+            'optradio_qc': 0,
+            'optradio_qn': 0,
+            'optradio_qs': 0,
+            'optradio_trim': '',
+            'optradio_wc': -3,
+            'optradio_ws': 1,
+            'seq_design': 'paired',
+            'sgRNA': 'AATCGGTACAAGATGGCGGA',
+        }
+        files = {
+            'fastq_r1': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'rb'),
+            'fastq_r2': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq', 'rb'),
+        }
+        self.request = requests.Request('POST', self.endpoint, data=self.data, files=files).prepare()
+
+    def run(self) -> Dict[str, Any]:
+        response = requests.Session().send(self.request)
+        response.raise_for_status()
+        # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
+        report_id = response.url.split('/')[-1]
+
+        # TODO (gdingle): change me later
+        assert self.in_cache() is False
+
+        # Time for errors to show up
+        time.sleep(1)
+        self._check_report_status(report_id)
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        return self._extract_data(soup)
+
+    def _check_report_status(self, report_id: int) -> None:
+        status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'
+        report_status = requests.get(status_endpoint + report_id).json()
+        if report_status['state'] == 'FAILURE':
+            raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
+
+    def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
+        # TODO (gdingle): more
+        body = soup.find('body')
+        return body.get_text().strip()
 
 
 class CrisporGuideRequest(AbstractCrisporRequest):
@@ -395,5 +461,7 @@ class TagInRequest(AbstractCrisporRequest):
 
 
 if __name__ == '__main__':
-    import doctest  # noqa
-    doctest.testmod()
+    # import doctest  # noqa
+    # doctest.testmod()
+
+    print(CrispressoScrapeRequest().run())
