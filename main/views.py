@@ -176,6 +176,8 @@ class GuideDesignProgressView(View):
         if len(incomplete):
             return render(request, self.template_name, locals())
         else:
+            # Give some time for threads to finish updating database
+            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
 
@@ -279,6 +281,8 @@ class PrimerDesignProgressView(View):
         if len(incomplete):
             return render(request, self.template_name, locals())
         else:
+            # Give some time for threads to finish updating database
+            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=kwargs['id']))
 

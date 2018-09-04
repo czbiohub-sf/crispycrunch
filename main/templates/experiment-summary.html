@@ -37,7 +37,9 @@
     {% for row in sheet.values %}
     <tr>
       {% for cell in row %}
-      <td>{{ cell }}</td>
+      <td title="{{ cell }}">
+        {{ cell|truncatechars:32 }}
+      </td>
       {% endfor %}
     </tr>
     {% endfor %}

@@ -74,8 +74,11 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     )
 
     # TODO (gdingle): is this really the best unique name?
-    sheet['well_name'][lg] = '{}:{}:{}'.format(
-        sheet['target_loc'], sheet['guide_offset'], sheet['guide_direction'])
+    sheet['well_name'][lg] = sheet[lg].apply(
+        lambda row: '{}:{}:{}'.format(
+        row['target_loc'], row['guide_offset'], row['guide_direction']),
+        axis=1,
+    )
 
     sheet['_crispor_batch_id'][lg] = [g[3] for g in guides]
     sheet['_crispor_pam_id'][lg] = [g[1] for g in guides]
