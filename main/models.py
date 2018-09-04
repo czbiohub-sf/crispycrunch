@@ -153,9 +153,10 @@ class GuideDesign(BaseModel):
 
     # TODO (gdingle): make sure this works for TagIn as well
     genome = models.CharField(max_length=80, choices=[
+        ('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38) + SNPs: dbSNP148, Kaviar'),
         ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'),
         ('todo', 'TODO: more genomes'),
-    ], default='hg19')
+    ], default='hg38')
 
     pam = models.CharField(max_length=80, choices=[
         # TODO (gdingle): what does this description all mean?

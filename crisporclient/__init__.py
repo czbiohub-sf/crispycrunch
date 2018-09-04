@@ -62,7 +62,7 @@ class CrisporGuideRequest(AbstractCrisporRequest):
     True
     """
 
-    def __init__(self, seq: str, name: str = '', org: str = 'hg19', pam: str = 'NGG') -> None:
+    def __init__(self, seq: str, name: str = '', org: str = 'hg38', pam: str = 'NGG') -> None:
         self.data = {
             'name': name,
             'seq': seq,
@@ -176,7 +176,7 @@ class CrisporGuideRequestById(CrisporGuideRequest):
     > data = CrisporGuideRequestById(batch_id).run()
     Traceback (most recent call last):
     ...
-    ValueError: Crispor on 5JS3eHUiAeaV6eTSZ9av: Query sequence, not present in the selected genome, Homo sapiens (hg19)
+    ValueError: Crispor on 5JS3eHUiAeaV6eTSZ9av: Query sequence, not present in the selected genome, Homo sapiens (hg38)
     """
 
     def __init__(self, batch_id) -> None:

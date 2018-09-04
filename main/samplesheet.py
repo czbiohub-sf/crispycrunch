@@ -154,6 +154,7 @@ def _new_index(size=96,
     chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
     ints = list(range(1, end_int + 1))
     assert len(chars) * len(ints) >= size
+    # TODO (gdingle): A01, A02 for easier sorting?
     return [c + str(i) for c in chars for i in ints][:size]
 
 

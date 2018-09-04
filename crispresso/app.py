@@ -71,7 +71,7 @@ def _start_all_analyses(pool, sheet, fastqs, dryrun):
     for i, row in enumerate(sheet.to_records()):
         fwd = fastqs[i * 2]
         rev = fastqs[i * 2 + 1]
-        assert'_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
+        assert '_R1_' in fwd and '_R2_' in rev, 'Fastq files must be paired and sorted'
         # TODO (gdingle): how to handle missing or extra fastq files?
         # TODO (gdingle): match fastq files and selected_guides on sample names
         futures.append(
