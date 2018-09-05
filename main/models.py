@@ -296,7 +296,8 @@ class Analysis(BaseModel):
 
     results_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
     fastqs = fields.ArrayField(
-        models.CharField(max_length=160, validators=[validate_seq]),
+        # TODO (gdingle): use django filefield? https://docs.djangoproject.com/en/2.1/topics/files/#file-storage
+        models.CharField(max_length=160, validators=[validate_fastq]),
         blank=True,
         default=[],
     )

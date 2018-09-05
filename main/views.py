@@ -357,18 +357,18 @@ class AnalysisView(CreatePlusView):
 
     def plus(self, obj):
         # TODO (gdingle): make use of precise s3 location of fastq, hdr amplicon
-        fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
+        obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
 
         # TODO (gdingle): pass in fastqs to sheet for rows
         sheet = samplesheet.from_analysis(obj)
         sheet = sheet[['target_seq', 'guide_seq', 'donor_seq', 'well_name']]
 
-        self._start_all_analyses(sheet, fastqs, obj)
+        self._start_all_analyses(sheet, obj)
 
         return obj
 
     @staticmethod
-    def _start_all_analyses(sheet, fastqs, obj):
+    def _start_all_analyses(sheet, obj):
 
         def analyze_fastq_pair(fastq_r1, fastq_r2, row):
             try:
@@ -395,8 +395,8 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): optimal number of workers for crispresso2?
         pool = ThreadPoolExecutor(max_workers=4)
         for i, row in enumerate(sheet.to_records()):
-            fastq_r1 = fastqs[i * 2]
-            fastq_r2 = fastqs[i * 2 + 1]
+            fastq_r1 = obj.fastqs[i * 2]
+            fastq_r2 = obj.fastqs[i * 2 + 1]
             assert '_R1_' in fastq_r1 and '_R2_' in fastq_r2, 'Fastq files must be paired and sorted'
             # TODO (gdingle): match fastq files and selected_guides on sample names
             pool.submit(

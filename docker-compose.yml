@@ -25,7 +25,8 @@ services:
       - "8000:8000"
     depends_on:
       - db
-      - crispresso
+      # TODO (gdingle): remove
+      # - crispresso
     # For pdb
     stdin_open: true
     tty: true

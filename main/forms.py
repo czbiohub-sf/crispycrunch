@@ -111,4 +111,4 @@ class AnalysisForm(ModelForm):
     class Meta:
         model = Analysis
         fields = '__all__'
-        exclude = ['results_data']
+        exclude = ['fastqs', 'results_data']

@@ -1,6 +1,8 @@
 """
 This represents the contents of an experiment on a per sample, per well basis,
 whereas the Django models represent contents per plate.
+
+For tests, see main/tests.py.
 """
 import pandas
 
@@ -110,6 +112,23 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
     return sheet
 
 
+def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
+    for well_pos in sheet.index:
+        matches = sorted([
+            filename for filename in fastqs
+            if well_pos in filename.split('-')
+        ])
+        if len(matches) == 0:
+            # TODO (gdingle): allow missing fastqs?
+            continue
+        assert len(matches) == 2, 'Exactly two fastq files expected per well'
+        # example: A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz
+        sheet.loc[well_pos, 'fastq_fwd'] = matches[0]
+        sheet.loc[well_pos, 'fastq_rev'] = matches[1]
+    sheet = sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
+    return sheet
+
+
 def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     primer_selection = PrimerSelection.objects.filter(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
@@ -127,18 +146,13 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     sheet['s3_bucket'] = analysis.s3_bucket
     sheet['s3_prefix'] = analysis.s3_prefix
 
+    sheet = _insert_fastqs(sheet, analysis.fastqs)
+
     # TODO (gdingle): update below based on new struct of results_data
     return sheet
 
     # if not len(analysis.results_data):
     #     return sheet
-
-    # TODO (gdingle): s3_key based on returned 'files'
-    # fastqs = analysis.results_data['fastqs']
-    # for i in range(0, len(fastqs), 2):
-    #     # example: A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz
-    #     sheet['fastq_fwd'] = fastqs[i].split('/')[-1]
-    #     sheet['fastq_rev'] = fastqs[i + 1].split('/')[-1]
 
     # results = analysis.results_data['results']
     # # TODO (gdingle): match results by well location
