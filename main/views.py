@@ -26,7 +26,7 @@ from django.views.generic.edit import CreateView
 from itertools import islice
 from openpyxl import Workbook, writer  # noqa
 
-import crisporclient
+import webscraperequest
 
 from main import conversions
 from main import samplesheet
@@ -112,7 +112,7 @@ class GuideDesignView(CreatePlusView):
 
         # TODO (gdingle): ignore HDR for now
         # def tagin_request(target):
-        #     return crisporclient.TagInRequest(
+        #     return webscraperequest.TagInRequest(
         #         target,
         #         tag=obj.tag_in,
         #         # species # TODO (gdingle): translate from crispor
@@ -127,7 +127,7 @@ class GuideDesignView(CreatePlusView):
         #     crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
 
         def guide_request(target):
-            return crisporclient.CrisporGuideRequest(
+            return webscraperequest.CrisporGuideRequest(
                 target,
                 # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
                 name=obj.experiment.name,
@@ -163,7 +163,7 @@ class GuideDesignProgressView(View):
 
         # See also guide_request above. These should match. TODO: refactor.
         def guide_request(target):
-            return crisporclient.CrisporGuideRequest(
+            return webscraperequest.CrisporGuideRequest(
                 target,
                 name=guide_design.experiment.name,
                 org=guide_design.genome,
@@ -228,7 +228,7 @@ class PrimerDesignView(CreatePlusView):
 
         def primers_request(args):
             seq, pam_id, batch_id = args
-            return crisporclient.CrisporPrimerRequest(
+            return webscraperequest.CrisporPrimerRequest(
                 batch_id=batch_id,
                 amp_len=obj.max_amplicon_length,
                 tm=obj.primer_temp,
@@ -267,7 +267,7 @@ class PrimerDesignProgressView(View):
 
         # See also primers_request in PrimerDesignView. TODO: refactor
         def primers_request(row):
-            return crisporclient.CrisporPrimerRequest(
+            return webscraperequest.CrisporPrimerRequest(
                 batch_id=row['_crispor_batch_id'],
                 amp_len=primer_design.max_amplicon_length,
                 tm=primer_design.primer_temp,
@@ -367,7 +367,7 @@ class AnalysisView(CreatePlusView):
 
         def crispresso_request(row):
             try:
-                return crisporclient.CrispressoScrapeRequest(
+                return webscraperequest.CrispressoRequest(
                     row['target_seq'],
                     row['guide_seq'],
                     row['fastq_fwd'],
@@ -411,7 +411,7 @@ class AnalysisProgressView(View):
         sheet.insert(0, 'well_pos', sheet.index)
 
         def crispresso_request(row):
-            return crisporclient.CrispressoScrapeRequest(
+            return webscraperequest.CrispressoRequest(
                 row['target_seq'],
                 row['guide_seq'],
                 row['fastq_fwd'],
