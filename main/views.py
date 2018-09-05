@@ -413,6 +413,9 @@ class AnalysisProgressView(View):
     template_name = 'analysis-progress.html'
     success_url = '/main/analysis/{id}/results/'
 
+    # TODO (gdingle): decide whether to use requests_cache for status or database... then update other views
+    # # TODO (gdingle): test different statuses
+    # TODO (gdingle): why does first error wipe away running?
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_analysis(analysis)
@@ -432,11 +435,6 @@ class AnalysisProgressView(View):
                 running.append((row['well_pos'], row['well_name']))
 
         return render(request, self.template_name, locals())
-
-    # TODO (gdingle): clean me up with final path structure
-    def _get_errorred(self, results_paths, log_path):
-        errorred = []
-        return errorred
 
 # TODO (gdingle): replace me
 # class AnalysisProgressViewOLD(View):

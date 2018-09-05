@@ -77,7 +77,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     # how about reverse by chr:high:low?
     sheet['well_name'][lg] = sheet[lg].apply(
         lambda row: '{}:{}:{}'.format(
-        row['target_loc'], row['guide_offset'], row['guide_direction']),
+            row['target_loc'], row['guide_offset'], row['guide_direction']),
         axis=1,
     )
 
@@ -127,30 +127,29 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     sheet['s3_bucket'] = analysis.s3_bucket
     sheet['s3_prefix'] = analysis.s3_prefix
 
-    if not len(analysis.results_data):
-        return sheet
-
+    # TODO (gdingle): update below based on new struct of results_data
     return sheet
 
-    # TODO (gdingle): update below based on new struct of results_data
+    # if not len(analysis.results_data):
+    #     return sheet
 
     # TODO (gdingle): s3_key based on returned 'files'
-    fastqs = analysis.results_data['fastqs']
-    for i in range(0, len(fastqs), 2):
-        # example: A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz
-        sheet['fastq_fwd'] = fastqs[i].split('/')[-1]
-        sheet['fastq_rev'] = fastqs[i + 1].split('/')[-1]
+    # fastqs = analysis.results_data['fastqs']
+    # for i in range(0, len(fastqs), 2):
+    #     # example: A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz
+    #     sheet['fastq_fwd'] = fastqs[i].split('/')[-1]
+    #     sheet['fastq_rev'] = fastqs[i + 1].split('/')[-1]
 
-    results = analysis.results_data['results']
-    # TODO (gdingle): match results by well location
-    sheet['results_success'][0:len(results)] = [r[0] for r in results]
-    sheet['results_path'][0:len(results)] = [r[1] for r in results]
+    # results = analysis.results_data['results']
+    # # TODO (gdingle): match results by well location
+    # sheet['results_success'][0:len(results)] = [r[0] for r in results]
+    # sheet['results_path'][0:len(results)] = [r[1] for r in results]
 
-    # Update target sequences only now because they are found by crispresso service
-    amplicon_seqs = analysis.results_data['amplicon_seqs']
-    sheet['target_seq'][0:len(amplicon_seqs)] = amplicon_seqs
+    # # Update target sequences only now because they are found by crispresso service
+    # amplicon_seqs = analysis.results_data['amplicon_seqs']
+    # sheet['target_seq'][0:len(amplicon_seqs)] = amplicon_seqs
 
-    return sheet
+    # return sheet
 
 
 def _new_index(size=96,

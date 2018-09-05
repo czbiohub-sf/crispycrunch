@@ -13,6 +13,7 @@
 <h3>
   {{ completed|length }} out of {{ statuses|length }} tasks completed
 </h3>
+{# TODO: put in html progress bar #}
 
 {% if errorred %}
 <h5>
@@ -23,7 +24,9 @@
   <li>{{ target }}</li>
   {% endfor %}
 </ul>
-{% elif running %}
+{% endif %}
+
+{% if running %}
 <h5>
   Running
 </h5>
