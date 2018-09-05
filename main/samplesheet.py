@@ -113,6 +113,11 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
 
 
 def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
+    """
+    Insert pairs of fastq sequence files into their corresponding rows.
+    NOTE: This assumes a naming convention of A1, A2, ...H12 in the filename,
+    separated by dashes (-).
+    """
     for well_pos in sheet.index:
         matches = sorted([
             filename for filename in fastqs
