@@ -6,3 +6,4 @@ django-bootstrap4
 openpyxl
 pandas
 requests_cache
+boto3

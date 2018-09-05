@@ -20,13 +20,12 @@ from urllib.parse import quote
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
     expire_after=3600,
-    allowable_methods=('GET', 'POST'),
-    ignored_parameters=('fastq_r1', 'fastq_r2'))
+    allowable_methods=('GET', 'POST'))
 CACHE = requests_cache.core.get_cache()
 # CACHE.clear()
 
 # NOTE: This monkey-patch is needed for a stable cache key for file uploads.
-urllib3.filepost.choose_boundary = lambda: 'my_super_special_form_boundary'
+urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boundary'
 
 
 class AbstractCrisporRequest:
@@ -57,7 +56,9 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
 
     >>> amplicon = 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC'
     >>> sgRNA = 'AATCGGTACAAGATGGCGGA'
-    >>> req = CrispressoScrapeRequest(amplicon, sgRNA)
+    >>> fastq_r1 = '../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz'
+    >>> fastq_r2 = '../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz'
+    >>> req = CrispressoScrapeRequest(amplicon, sgRNA, fastq_r1, fastq_r2)
     >>> response = req.run()
 
     >>> len(response['report_files']) > 0
@@ -67,7 +68,13 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
     True
     """
 
-    def __init__(self, amplicon, sgRNA, hdr_seq='', optional_name='',):
+    def __init__(self,
+                 amplicon: str,
+                 sgRNA: str,
+                 fastq_r1: str,
+                 fastq_r2: str,
+                 hdr_seq: str='',
+                 optional_name: str=''):
         self.endpoint = 'http://crispresso.pinellolab.partners.org/submit'
         # TODO (gdingle): compare crispresso2 values to chosen crispresso1 values
         self.data = {
@@ -97,8 +104,8 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
             'sgRNA': sgRNA,
         }
         files = {
-            'fastq_r1': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz', 'rb'),
-            'fastq_r2': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz', 'rb'),
+            'fastq_r1': open(fastq_r1, 'rb'),
+            'fastq_r2': open(fastq_r2, 'rb'),
         }
         self.request = requests.Request(
             'POST',
@@ -110,13 +117,17 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
     def run(self) -> Dict[str, Any]:
         response = requests.Session().send(self.request)
         response.raise_for_status()
-
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
-        # Poll for SUCCESS. Typically takes 90 secs.
-        while not self._check_report_status(report_id):
-            time.sleep(15)
+        try:
+            # Poll for SUCCESS. Typically takes 90 secs.
+            while not self._check_report_status(report_id):
+                time.sleep(15)
+        except Exception as e:
+            # IMPORTANT: Delete cache of unexpected output
+            CACHE.delete(self.cache_key)
+            raise e
 
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
@@ -125,6 +136,7 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
 
         soup = BeautifulSoup(report_response.text, 'html.parser')
         return {
+            'success': True,
             'report_url': report_url,
             'report_zip': report_zip,
             'log_params': soup.find(id='log_params').get_text(),

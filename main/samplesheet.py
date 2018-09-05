@@ -74,6 +74,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     )
 
     # TODO (gdingle): is this really the best unique name?
+    # how about reverse by chr:high:low?
     sheet['well_name'][lg] = sheet[lg].apply(
         lambda row: '{}:{}:{}'.format(
         row['target_loc'], row['guide_offset'], row['guide_direction']),
@@ -128,6 +129,10 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
 
     if not len(analysis.results_data):
         return sheet
+
+    return sheet
+
+    # TODO (gdingle): update below based on new struct of results_data
 
     # TODO (gdingle): s3_key based on returned 'files'
     fastqs = analysis.results_data['fastqs']
