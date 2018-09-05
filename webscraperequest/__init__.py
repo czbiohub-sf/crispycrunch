@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
-    expire_after=3600,
+    expire_after=3600 * 12,
     allowable_methods=('GET', 'POST'))
 CACHE = requests_cache.core.get_cache()
 # CACHE.clear()
@@ -122,6 +122,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         ).prepare()
 
     def run(self, retries: int = 3) -> Dict[str, Any]:
+        logging.info('POST request to: {}'.format(self.endpoint))
         response = requests.Session().send(self.request)
         response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
@@ -139,6 +140,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
         report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
+        logging.info('GET request to: {}'.format(report_url))
         report_response = requests.get(report_url)
 
         soup = BeautifulSoup(report_response.text, 'html.parser')
@@ -156,8 +158,10 @@ class CrispressoRequest(AbstractScrapeRequest):
 
     def _check_report_status(self, report_id: str) -> None:
         status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'
+        status_url = status_endpoint + report_id
         with requests_cache.disabled():
-            report_status = requests.get(status_endpoint + report_id).json()
+            logging.info('GET request to: {}'.format(status_url))
+            report_status = requests.get(status_url).json()
         if report_status['state'] == 'FAILURE':
             raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
         elif report_status['state'] == 'SUCCESS':
@@ -257,6 +261,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
+            logging.info('POST request to: {}'.format(self.endpoint))
             response = requests.Session().send(self.request)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -308,8 +313,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                         'invalid chromosome range': 'invalid chromosome range'
                     },
                 )
-            raise RuntimeError('Crispor on {}: No output rows in: {}'.format(
-                self.data['seq'], soup.find('body')))
+            raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
+                self.data['seq'], soup.find('body').get_text().strip()))
 
         rows = output_table.find_all(class_='guideRow')
 
@@ -368,6 +373,7 @@ class CrisporGuideRequestById(CrisporGuideRequest):
         self.data = {'seq': batch_id, 'pam_id': batch_id}  # hack for error messages
 
     def run(self, retries: int=0) -> Dict[str, Any]:
+        logging.info('GET request to: {}'.format(self.endpoint))
         response = requests.get(self.endpoint)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -411,6 +417,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
     def run(self,
             retries: int=1) -> Dict[str, Any]:
         try:
+            logging.info('GET request to: {}'.format(self.endpoint))
             response = requests.Session().send(self.request)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -514,12 +521,14 @@ class TagInRequest(AbstractScrapeRequest):
             'csrftoken': self.csrftoken,
             'sessionid': self.sessionid,
         }
+        logging.info('GET request to: {}'.format(url))
         response = requests.get(url, cookies=cookies)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         return self._extract_data(soup, url)
 
     def _init_session(self) -> None:
+        logging.info('GET request to: {}'.format(self.endpoint))
         initial = requests.get(self.endpoint)
         initial.raise_for_status()
         self.csrftoken = initial.cookies['csrftoken']
@@ -531,6 +540,7 @@ class TagInRequest(AbstractScrapeRequest):
             'Cookie': 'csrftoken={}'.format(self.csrftoken),
         }
 
+        logging.info('POST request to: {}'.format(self.endpoint))
         json_response = requests.post(self.endpoint, data=self.data, headers=headers)
         self.sessionid = json_response.cookies['sessionid']
 

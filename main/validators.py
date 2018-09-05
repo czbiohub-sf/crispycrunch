@@ -144,8 +144,9 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
         raise ValidationError(
             '{}" is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
     if is_chr(value):
+        # TODO (gdingle): why isn't error message displaying properly?
         validate_chr_length(value)
-    # TODO (gdingle): length of other types
+        # TODO (gdingle): length of other types
 
 
 def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:

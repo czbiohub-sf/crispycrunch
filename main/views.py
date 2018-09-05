@@ -128,10 +128,10 @@ class GuideDesignView(CreatePlusView):
         #     # TODO (gdingle): is this wise?
         #     crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
 
-        def guide_request(target):
+        def guide_request(target_seq):
             try:
                 return webscraperequest.CrisporGuideRequest(
-                    target,
+                    target_seq,
                     # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
                     name=obj.experiment.name,
                     org=obj.genome,
@@ -149,8 +149,8 @@ class GuideDesignView(CreatePlusView):
             obj.guide_data[index] = future.result()
             obj.save()
 
-        for i, target in enumerate(obj.targets):
-            future = pool.submit(guide_request, target)
+        for i, target_seq in enumerate(obj.target_seqs):
+            future = pool.submit(guide_request, target_seq)
             future.add_done_callback(
                 functools.partial(insert_guide_data, index=i))
 
@@ -169,16 +169,16 @@ class GuideDesignProgressView(View):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
 
         # See also guide_request above. These should match.
-        def guide_request(target):
+        def guide_request(target_seq):
             return webscraperequest.CrisporGuideRequest(
-                target,
+                target_seq,
                 name=guide_design.experiment.name,
                 org=guide_design.genome,
                 pam=guide_design.pam)
 
         statuses = [
-            (target, guide_request(target).in_cache())
-            for target in guide_design.targets]
+            (target, guide_request(target_seq).in_cache())
+            for target, target_seq in zip(guide_design.targets, guide_design.target_seqs)]
         completed = [target for target, status in statuses if status]
         incomplete = [target for target, status in statuses if not status]
         errored = [(target, data['error'])
