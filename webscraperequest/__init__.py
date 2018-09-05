@@ -7,18 +7,22 @@ Server responses are cached by default using requests_cache.
 
 Doctests assume previously cached responses, so they will fail on the first run.
 """
+import json
+import logging
+import time
+
+from abc import abstractmethod
+from collections import OrderedDict
+from typing import Any, Dict, Tuple
+from urllib.parse import quote
+
 import requests
 import requests_cache
 import urllib3
 
-import json
-import time
-
-from abc import abstractmethod
 from bs4 import BeautifulSoup
-from collections import OrderedDict
-from typing import Any, Dict, Tuple
-from urllib.parse import quote
+
+logger = logging.getLogger(__name__)
 
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
@@ -117,20 +121,20 @@ class CrispressoRequest(AbstractScrapeRequest):
             files=files,
         ).prepare()
 
-    def run(self) -> Dict[str, Any]:
+    def run(self, retries: int = 3) -> Dict[str, Any]:
         response = requests.Session().send(self.request)
         response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
         # Poll for SUCCESS. Typically takes 90 secs.
-        while not self._check_report_status(report_id):
-            time.sleep(15)
-        # try:
-        # except Exception as e:
-        #     # IMPORTANT: Delete cache of unexpected output
-        #     CACHE.delete(self.cache_key)
-        #     raise e
+        while not self._check_report_status(report_id) and retries >= 0:
+            time.sleep(30)
+            retries -= 1
+
+        if retries < 0:
+            raise TimeoutError('Crispresso on {}: Retries exhausted.'.format(
+                report_id))
 
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
@@ -257,7 +261,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)
-        except TimeoutError:
+        except TimeoutError as e:
+            logger.warning(str(e))
             # IMPORTANT: Delete cache of "waiting" page
             CACHE.delete(self.cache_key)
             if retries:
@@ -265,7 +270,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 return self.run(retries - 1)
             else:
                 raise
-        except RuntimeError:
+        except RuntimeError as e:
+            logger.warning(str(e))
             # IMPORTANT: Delete cache of unexpected output
             CACHE.delete(self.cache_key)
 
@@ -312,7 +318,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
 
         # TODO (gdingle): keeping only top three for now... what is best?
-        guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text()) for t in rows[0:3])
+        guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
+                                 for t in rows[0:3])
         return dict(
             # TODO (gdingle): crispor uses seq to denote chr_loc... rename?
             # TODO (gdingle): why is off by one from input?
@@ -335,6 +342,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # TODO (gdingle): other formats?
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
             offtargets_url=self.endpoint + '?batchId={}&download=offtargets&format=tsv'.format(batch_id),
+            success=True,
         )
 
 
@@ -407,7 +415,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)
-        except RuntimeError:
+        except RuntimeError as e:
+            logger.warning(str(e))
             if retries:
                 return self.run(retries - 1)
             else:
@@ -433,7 +442,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             # TODO (gdingle): may not need primer_seqs
             # primer_tables=primer_tables,
             # primer_seqs=primer_seqs,
-            ontarget_primers=self._extract_ontarget_primers(soup)
+            ontarget_primers=self._extract_ontarget_primers(soup),
+            success=True,
         )
 
     def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, str]:

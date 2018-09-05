@@ -110,6 +110,8 @@ class GuideDesignView(CreatePlusView):
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
 
+        obj.guide_data = [{'success': None}] * len(obj.targets)
+
         # TODO (gdingle): ignore HDR for now
         # def tagin_request(target):
         #     return webscraperequest.TagInRequest(
@@ -127,12 +129,18 @@ class GuideDesignView(CreatePlusView):
         #     crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
 
         def guide_request(target):
-            return webscraperequest.CrisporGuideRequest(
-                target,
-                # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
-                name=obj.experiment.name,
-                org=obj.genome,
-                pam=obj.pam).run()
+            try:
+                return webscraperequest.CrisporGuideRequest(
+                    target,
+                    # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
+                    name=obj.experiment.name,
+                    org=obj.genome,
+                    pam=obj.pam).run()
+            except Exception as e:
+                return {
+                    'success': False,
+                    'error': e.args[0],
+                }
 
         # More than 8 threads appears to cause a 'no output' Crispor error
         pool = ThreadPoolExecutor(8)
@@ -141,7 +149,6 @@ class GuideDesignView(CreatePlusView):
             obj.guide_data[index] = future.result()
             obj.save()
 
-        obj.guide_data = [{}] * len(obj.targets)
         for i, target in enumerate(obj.targets):
             future = pool.submit(guide_request, target)
             future.add_done_callback(
@@ -161,7 +168,7 @@ class GuideDesignProgressView(View):
     def get(self, request, **kwargs):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
 
-        # See also guide_request above. These should match. TODO: refactor.
+        # See also guide_request above. These should match.
         def guide_request(target):
             return webscraperequest.CrisporGuideRequest(
                 target,
@@ -174,10 +181,13 @@ class GuideDesignProgressView(View):
             for target in guide_design.targets]
         completed = [target for target, status in statuses if status]
         incomplete = [target for target, status in statuses if not status]
+        errored = [(target, data['error'])
+                   for target, data in zip(guide_design.targets, guide_design.guide_data)
+                   if data['success'] is False]
         assert len(completed) + len(incomplete) == len(statuses)
 
         if len(incomplete):
-            percent_success = 100 * len(completed) // len(statuses)
+            percent_success = 100 * len(completed) // len(statuses) + 1
             return render(request, self.template_name, locals())
         else:
             # Give some time for threads to finish updating database
@@ -283,7 +293,7 @@ class PrimerDesignProgressView(View):
         assert len(statuses) == len(completed) + len(incomplete)
 
         if len(incomplete):
-            percent_success = 100 * len(completed) // len(statuses)
+            percent_success = 100 * len(completed) // len(statuses) + 1
             return render(request, self.template_name, locals())
         else:
             # Give some time for threads to finish updating database
@@ -361,7 +371,8 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): use predetermined s3 location of fastq
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         sheet = samplesheet.from_analysis(obj)
-        obj.results_data = [{}] * len(sheet)
+        # TODO (gdingle): why is success None necessary? why is cache not in db? a
+        obj.results_data = [{'success': None}] * len(sheet)
         self._start_all_analyses(sheet, obj)
         return obj
 
@@ -431,9 +442,9 @@ class AnalysisProgressView(View):
                 elif result['success'] is False:
                     errorred.append((row['well_pos'], result['error']))
             else:
-                running.append((row['well_pos'], row['fastq_fwd']))
+                running.append((row['well_pos'], row['fastq_fwd'].split('/')[-1]))
 
-        percent_success = 100 * len(completed) // len(statuses)
+        percent_success = 100 * len(completed) // len(statuses) + 1
         percent_error = 100 * len(errorred) // len(statuses)
 
         return render(request, self.template_name, locals())

@@ -80,6 +80,21 @@ def validate_chr(value: str) -> None:
         raise ValidationError('"{}" is not a chromosome location'.format(value))
 
 
+def validate_chr_length(value: str, max_length: int = 2000) -> None:
+    """
+    >>> validate_chr_length('chr1:11,130,540-11,130,751')
+    >>> validate_chr_length('chr1:11,230,540-11,130,751')
+    Traceback (most recent call last):
+    ...
+    django.core.exceptions.ValidationError: ['"99789" is longer than the max length of 2000']
+    """
+    matches = [m.replace(',', '') for m in re.match(CHR_REGEX, value).groups()]
+    length = abs(int(matches[1]) - sum(int(m) for m in matches[2:]))
+    if length > max_length:
+        raise ValidationError('"{}" is longer than the max length of {}'.format(
+            length, max_length))
+
+
 def is_chr(value: str) -> bool:
     """
     >>> is_chr('chr1:11,130,540-11,130,751')
@@ -128,6 +143,9 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
             is_gene(value))):
         raise ValidationError(
             '{}" is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
+    if is_chr(value):
+        validate_chr_length(value)
+    # TODO (gdingle): length of other types
 
 
 def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
