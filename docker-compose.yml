@@ -5,13 +5,14 @@ services:
   db:
     image: postgres
 
-  crispresso:
-    build: crispresso
-    command: python app.py
-    volumes:
-      - ./crispresso:/code
-    ports:
-      - "5000:5000"
+  # TODO (gdingle): remove
+  # crispresso:
+  #   build: crispresso
+  #   command: python app.py
+  #   volumes:
+  #     - ./crispresso:/code
+  #   ports:
+  #     - "5000:5000"
 
   web:
     build: .

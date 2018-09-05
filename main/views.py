@@ -357,10 +357,9 @@ class AnalysisView(CreatePlusView):
 
     def plus(self, obj):
         # TODO (gdingle): make use of precise s3 location of fastq, hdr amplicon
-        # TODO (gdingle): need more elegant way of using fastq download dir
-        os.chdir('./crispresso')
         fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
 
+        # TODO (gdingle): pass in fastqs to sheet for rows
         sheet = samplesheet.from_analysis(obj)
         sheet = sheet[['target_seq', 'guide_seq', 'donor_seq', 'well_name']]
 
