@@ -177,6 +177,7 @@ class GuideDesignProgressView(View):
         assert len(completed) + len(incomplete) == len(statuses)
 
         if len(incomplete):
+            percent_success = 100 * len(completed) // len(statuses)
             return render(request, self.template_name, locals())
         else:
             # Give some time for threads to finish updating database
@@ -282,6 +283,7 @@ class PrimerDesignProgressView(View):
         assert len(statuses) == len(completed) + len(incomplete)
 
         if len(incomplete):
+            percent_success = 100 * len(completed) // len(statuses)
             return render(request, self.template_name, locals())
         else:
             # Give some time for threads to finish updating database
@@ -403,7 +405,7 @@ class AnalysisProgressView(View):
     template_name = 'analysis-progress.html'
     success_url = '/main/analysis/{id}/results/'
 
-    # TODO (gdingle): test different statuses
+    # TODO (gdingle): test different for SUCCESS status!
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_analysis(analysis)
@@ -430,6 +432,9 @@ class AnalysisProgressView(View):
                     errorred.append((row['well_pos'], result['error']))
             else:
                 running.append((row['well_pos'], row['fastq_fwd']))
+
+        percent_success = 100 * len(completed) // len(statuses)
+        percent_error = 100 * len(errorred) // len(statuses)
 
         return render(request, self.template_name, locals())
 
