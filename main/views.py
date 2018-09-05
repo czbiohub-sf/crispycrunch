@@ -356,27 +356,22 @@ class AnalysisView(CreatePlusView):
     success_url = '/main/analysis/{id}/progress/'
 
     def plus(self, obj):
-        # TODO (gdingle): make use of precise s3 location of fastq, hdr amplicon
+        # TODO (gdingle): use predetermined s3 location of fastq
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
-
-        # TODO (gdingle): pass in fastqs to sheet for rows
         sheet = samplesheet.from_analysis(obj)
-        sheet = sheet[['target_seq', 'guide_seq', 'donor_seq', 'well_name']]
-
         self._start_all_analyses(sheet, obj)
-
         return obj
 
     @staticmethod
     def _start_all_analyses(sheet, obj):
 
-        def analyze_fastq_pair(fastq_r1, fastq_r2, row):
+        def crispresso_request(row):
             try:
                 return crisporclient.CrispressoScrapeRequest(
                     row['target_seq'],
                     row['guide_seq'],
-                    fastq_r1,
-                    fastq_r2,
+                    row['fastq_fwd'],
+                    row['fastq_rev'],
                     row['donor_seq'],
                     row['well_name']
                 ).run()
@@ -386,7 +381,7 @@ class AnalysisView(CreatePlusView):
                     'error': e.args[0],
                 }
 
-        obj.results_data = [{'success': None}] * len(sheet)
+        obj.results_data = [{}] * len(sheet)
 
         def insert_results_data(future, index=None):
             obj.results_data[index] = future.result()
@@ -395,14 +390,9 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): optimal number of workers for crispresso2?
         pool = ThreadPoolExecutor(max_workers=4)
         for i, row in enumerate(sheet.to_records()):
-            fastq_r1 = obj.fastqs[i * 2]
-            fastq_r2 = obj.fastqs[i * 2 + 1]
-            assert '_R1_' in fastq_r1 and '_R2_' in fastq_r2, 'Fastq files must be paired and sorted'
             # TODO (gdingle): match fastq files and selected_guides on sample names
             pool.submit(
-                analyze_fastq_pair,
-                fastq_r1,
-                fastq_r2,
+                crispresso_request,
                 row,
             ).add_done_callback(
                 functools.partial(insert_results_data, index=i))
@@ -418,20 +408,29 @@ class AnalysisProgressView(View):
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_analysis(analysis)
-        # TODO (gdingle): donor_seq
-        sheet = sheet[['target_seq', 'guide_seq', 'well_name']]
         sheet.insert(0, 'well_pos', sheet.index)
+
+        def crispresso_request(row):
+            return crisporclient.CrispressoScrapeRequest(
+                row['target_seq'],
+                row['guide_seq'],
+                row['fastq_fwd'],
+                row['fastq_rev'],
+                row['donor_seq'],
+                row['well_name']
+            )
+
         statuses, completed, running, errorred = [], [], [], []
         for i, row in enumerate(sheet.to_records()):
-            statuses.append(row['well_name'])
-            result = analysis.results_data[i]
-            if result['success'] is True:
-                completed.append(result['result_url'])
-            elif result['success'] is False:
-                errorred.append(result['error'])
-            elif result['success'] is None:
-                # TODO (gdingle): why isn't well_name working here?
-                running.append((row['well_pos'], row['well_name']))
+            statuses.append(True)
+            if crispresso_request(row).in_cache():
+                result = analysis.results_data[i]
+                if result['success'] is True:
+                    completed.append((row['well_pos'], result['report_url']))
+                elif result['success'] is False:
+                    errorred.append((row['well_pos'], result['error']))
+            else:
+                running.append((row['well_pos'], row['fastq_fwd']))
 
         return render(request, self.template_name, locals())
 

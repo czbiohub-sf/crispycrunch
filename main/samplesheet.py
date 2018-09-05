@@ -112,28 +112,6 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
     return sheet
 
 
-def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
-    """
-    Insert pairs of fastq sequence files into their corresponding rows.
-    NOTE: This assumes a naming convention of A1, A2, ...H12 in the filename,
-    separated by dashes (-).
-    """
-    for well_pos in sheet.index:
-        matches = sorted([
-            filename for filename in fastqs
-            if well_pos in filename.split('-')
-        ])
-        if len(matches) == 0:
-            # TODO (gdingle): allow missing fastqs?
-            continue
-        assert len(matches) == 2, 'Exactly two fastq files expected per well'
-        # example: A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz
-        sheet.loc[well_pos, 'fastq_fwd'] = matches[0]
-        sheet.loc[well_pos, 'fastq_rev'] = matches[1]
-    sheet = sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
-    return sheet
-
-
 def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     primer_selection = PrimerSelection.objects.filter(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
@@ -153,22 +131,10 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
 
     sheet = _insert_fastqs(sheet, analysis.fastqs)
 
-    # TODO (gdingle): update below based on new struct of results_data
+    # TODO (gdingle): add analysis results?
+    # if len(analysis.results_data):
+
     return sheet
-
-    # if not len(analysis.results_data):
-    #     return sheet
-
-    # results = analysis.results_data['results']
-    # # TODO (gdingle): match results by well location
-    # sheet['results_success'][0:len(results)] = [r[0] for r in results]
-    # sheet['results_path'][0:len(results)] = [r[1] for r in results]
-
-    # # Update target sequences only now because they are found by crispresso service
-    # amplicon_seqs = analysis.results_data['amplicon_seqs']
-    # sheet['target_seq'][0:len(amplicon_seqs)] = amplicon_seqs
-
-    # return sheet
 
 
 def _new_index(size=96,
@@ -217,6 +183,31 @@ def _new_samplesheet():
             'results_path',
             # results_stats_TODO
         ])
+
+
+def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
+    """
+    Insert pairs of fastq sequence files into their corresponding rows.
+    NOTE: This assumes a naming convention of A1, A2, ...H12 in the filename,
+    separated by dashes (-), and Illumina "R1", "R2" for foward and reverse reads.
+
+    For example: "A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz".
+    """
+    for well_pos in sheet.index:
+        matches = sorted([
+            filename for filename in fastqs
+            if well_pos in os.path.basename(filename).split('-')
+        ])
+        if len(matches) == 0:
+            # TODO (gdingle): allow missing fastqs?
+            continue
+        assert len(matches) == 2, 'Exactly two fastq files expected per well'
+        sheet.loc[well_pos, 'fastq_fwd'] = matches[0]
+        sheet.loc[well_pos, 'fastq_rev'] = matches[1]
+
+    sheet = sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
+    assert len(sheet), 'Some fastqs must match rows'
+    return sheet
 
 
 def to_illumina_sheet(samplesheet):
