@@ -359,6 +359,7 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): use predetermined s3 location of fastq
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         sheet = samplesheet.from_analysis(obj)
+        obj.results_data = [{}] * len(sheet)
         self._start_all_analyses(sheet, obj)
         return obj
 
@@ -381,30 +382,28 @@ class AnalysisView(CreatePlusView):
                     'error': e.args[0],
                 }
 
-        obj.results_data = [{}] * len(sheet)
-
         def insert_results_data(future, index=None):
             obj.results_data[index] = future.result()
             obj.save()
 
         # TODO (gdingle): optimal number of workers for crispresso2?
-        pool = ThreadPoolExecutor(max_workers=4)
+        pool = ThreadPoolExecutor(max_workers=8)
         for i, row in enumerate(sheet.to_records()):
-            # TODO (gdingle): match fastq files and selected_guides on sample names
             pool.submit(
                 crispresso_request,
                 row,
             ).add_done_callback(
                 functools.partial(insert_results_data, index=i))
 
+        # Give some time for threads to finish to avoid AnalysisProgressView too soon
+        time.sleep(1)
+
 
 class AnalysisProgressView(View):
     template_name = 'analysis-progress.html'
     success_url = '/main/analysis/{id}/results/'
 
-    # TODO (gdingle): decide whether to use requests_cache for status or database... then update other views
-    # # TODO (gdingle): test different statuses
-    # TODO (gdingle): why does first error wipe away running?
+    # TODO (gdingle): test different statuses
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_analysis(analysis)
@@ -433,84 +432,6 @@ class AnalysisProgressView(View):
                 running.append((row['well_pos'], row['fastq_fwd']))
 
         return render(request, self.template_name, locals())
-
-# TODO (gdingle): replace me
-# class AnalysisProgressViewOLD(View):
-#     template_name = 'analysis-progress.html'
-#     success_url = '/main/analysis/{id}/results/'
-
-#     def get(self, request, **kwargs):
-#         analysis = Analysis.objects.get(id=kwargs['id'])
-#         results_paths = analysis.results_data['results']
-
-#         success_file = '/Quantification_of_editing_frequency.txt'
-#         statuses = [(self._exists(path + success_file), path) for path in results_paths]
-#         completed = [s[1] for s in statuses if s[0]]
-#         incomplete = [s[1] for s in statuses if not s[0]]
-
-#         # TODO (gdingle): temp hack for testing... need to replace with well_names goodness
-#         def log_path(path):
-#             return path.replace('output/', 'output/CRISPResso_on_') \
-#                 + '/CRISPResso_RUNNING_LOG.txt'
-
-#         # TODO (gdingle): allow set of running AND errorred
-#         running = [path for path in results_paths if self._exists(log_path(path))]
-#         if running:
-#             errorred = self._get_errorred(results_paths, log_path)
-#         return render(request, self.template_name, locals())
-
-#     # TODO (gdingle): clean me up with final path structure
-#     def _get_errorred(self, results_paths, log_path):
-#         errorred = []
-#         for path in results_paths:
-#             error_lines = {
-#                 line for line in
-#                 self._get_log(log_path(path)).split('\n')
-#                 if line.startswith('ERROR')
-#             }
-#             if error_lines:
-#                 errorred.append((path, error_lines))
-#         return errorred
-
-#     @staticmethod
-#     def _exists(path):
-#         with requests_cache.disabled():
-#             response = requests.head(CRISPRESSO_ROOT_URL + path)
-#         assert response.status_code in (200, 404)
-#         return response.status_code == 200
-
-#     @staticmethod
-#     def _get_log(path):
-#         with requests_cache.disabled():
-#             return requests.get(CRISPRESSO_ROOT_URL + path).text
-
-
-# TODO (gdingle): replace me
-# class AnalysisViewOLD(CreatePlusView):
-#     template_name = 'analysis.html'
-#     form_class = AnalysisForm
-#     success_url = '/main/analysis/{id}/progress/'
-
-#     def plus(self, obj):
-#         sheet = samplesheet.from_analysis(obj)
-#         # TODO (gdingle): make use of precise s3 location of fastq
-#         sheet = sheet[['target_seq', 'guide_seq', 'well_name']]
-#         data = {
-#             'sheet': sheet.to_dict(),
-#             's3_bucket': obj.s3_bucket,
-#             's3_prefix': obj.s3_prefix,
-#             'dryrun': False,
-#             'async': True,
-#         }
-
-#         url = CRISPRESSO_ROOT_URL + 'analyze'  # host is name of docker service
-#         # TODO: should we allow caching here as elsewhere?
-#         with requests_cache.disabled():
-#             response = requests.post(url, json=data)
-#             response.raise_for_status()
-
-#         obj.results_data = response.json()
-#         return obj
 
 
 class ResultsView(View):

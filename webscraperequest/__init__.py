@@ -123,14 +123,14 @@ class CrispressoRequest(AbstractScrapeRequest):
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
-        try:
-            # Poll for SUCCESS. Typically takes 90 secs.
-            while not self._check_report_status(report_id):
-                time.sleep(15)
-        except Exception as e:
-            # IMPORTANT: Delete cache of unexpected output
-            CACHE.delete(self.cache_key)
-            raise e
+        # Poll for SUCCESS. Typically takes 90 secs.
+        while not self._check_report_status(report_id):
+            time.sleep(15)
+        # try:
+        # except Exception as e:
+        #     # IMPORTANT: Delete cache of unexpected output
+        #     CACHE.delete(self.cache_key)
+        #     raise e
 
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
