@@ -295,6 +295,11 @@ class Analysis(BaseModel):
                                  default='JasonHDR/96wp1sorted-fastq/')
 
     results_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
+    fastqs = fields.ArrayField(
+        models.CharField(max_length=160, validators=[validate_seq]),
+        blank=True,
+        default=[],
+    )
 
     def __str__(self):
         return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
