@@ -344,7 +344,41 @@ class ExperimentSummaryView(View):
         return sheet
 
 
+
+
 class AnalysisView(CreatePlusView):
+    """
+    # TODO (gdingle): replace AnalysisViewOLD
+    """
+    template_name = 'analysis.html'
+    form_class = AnalysisForm
+    success_url = '/main/analysis/{id}/progress/'
+
+    def plus(self, obj):
+        sheet = samplesheet.from_analysis(obj)
+        # TODO (gdingle): make use of precise s3 location of fastq
+        sheet = sheet[['target_seq', 'guide_seq', 'well_name']]
+        # TODO (gdingle): start here
+        data = {
+            'sheet': sheet.to_dict(),
+            's3_bucket': obj.s3_bucket,
+            's3_prefix': obj.s3_prefix,
+            'dryrun': False,
+            'async': True,
+        }
+
+        url = CRISPRESSO_ROOT_URL + 'analyze'  # host is name of docker service
+        # TODO: should we allow caching here as elsewhere?
+        with requests_cache.disabled():
+            response = requests.post(url, json=data)
+            response.raise_for_status()
+
+        obj.results_data = response.json()
+        return obj
+
+
+# TODO (gdingle): replace me
+class AnalysisViewOLD(CreatePlusView):
     template_name = 'analysis.html'
     form_class = AnalysisForm
     success_url = '/main/analysis/{id}/progress/'

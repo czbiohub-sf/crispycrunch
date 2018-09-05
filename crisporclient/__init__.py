@@ -6,6 +6,7 @@ an official public web API. You've been warned!
 """
 import requests
 import requests_cache
+import urllib3
 
 import json
 import time
@@ -19,12 +20,13 @@ from urllib.parse import quote
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
     expire_after=3600,
-    allowable_methods=('GET', 'POST'))
+    allowable_methods=('GET', 'POST'),
+    ignored_parameters=('fastq_r1', 'fastq_r2'))
 CACHE = requests_cache.core.get_cache()
 # CACHE.clear()
 
-# TODO (gdingle): re-enable?
-requests_cache.uninstall_cache()
+# NOTE: This monkey-patch is needed for a stable cache key for file uploads.
+urllib3.filepost.choose_boundary = lambda: 'my_super_special_form_boundary'
 
 
 class AbstractCrisporRequest:
@@ -49,12 +51,28 @@ class AbstractCrisporRequest:
 
 # TODO (gdingle): rename to AbstractScrapeRequest
 class CrispressoScrapeRequest(AbstractCrisporRequest):
+    """
+    Requests a Crispresso2 analysis and returns the resulting report.
+    Typically takes 90 seconds.
 
-    def __init__(self):
+    >>> amplicon = 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC'
+    >>> sgRNA = 'AATCGGTACAAGATGGCGGA'
+    >>> req = CrispressoScrapeRequest(amplicon, sgRNA)
+    >>> response = req.run()
+
+    >>> len(response['report_files']) > 0
+    True
+
+    >>> req.in_cache()
+    True
+    """
+
+    def __init__(self, amplicon, sgRNA, hdr_seq='', optional_name='',):
         self.endpoint = 'http://crispresso.pinellolab.partners.org/submit'
+        # TODO (gdingle): compare crispresso2 values to chosen crispresso1 values
         self.data = {
             # NOTE: all post vars are required, even if empty
-            'amplicon': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
+            'amplicon': amplicon,
             'amplicon_names': '',
             'be_from': 'C',
             'be_to': 'T',
@@ -66,36 +84,35 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
             # 'hdr_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
             'hdr_seq': '',
             'optional_name': '',
-            'optradio_exc_l': 15,
-            'optradio_exc_r': 15,
-            'optradio_hs': 60,
-            'optradio_qc': 0,
-            'optradio_qn': 0,
-            'optradio_qs': 0,
+            'optradio_exc_l': '15',
+            'optradio_exc_r': '15',
+            'optradio_hs': '60',
+            'optradio_qc': '0',
+            'optradio_qn': '0',
+            'optradio_qs': '0',
             'optradio_trim': '',
-            'optradio_wc': -3,
-            'optradio_ws': 1,
+            'optradio_wc': '-3',
+            'optradio_ws': '1',
             'seq_design': 'paired',
-            'sgRNA': 'AATCGGTACAAGATGGCGGA',
+            'sgRNA': sgRNA,
         }
         files = {
-            'fastq_r1': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'rb'),
-            'fastq_r2': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq', 'rb'),
+            'fastq_r1': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz', 'rb'),
+            'fastq_r2': open('../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz', 'rb'),
         }
-        self.request = requests.Request('POST', self.endpoint, data=self.data, files=files).prepare()
+        self.request = requests.Request(
+            'POST',
+            self.endpoint,
+            data=self.data,
+            files=files,
+        ).prepare()
 
     def run(self) -> Dict[str, Any]:
-        # TODO (gdingle):
+        response = requests.Session().send(self.request)
+        response.raise_for_status()
 
-        # response = requests.Session().send(self.request)
-        # response.raise_for_status()
-        # # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
-        # report_id = response.url.split('/')[-1]
-
-        report_id = 'NblHvD'
-
-        # TODO (gdingle): change me later
-        assert self.in_cache() is False
+        # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
+        report_id = response.url.split('/')[-1]
 
         # Poll for SUCCESS. Typically takes 90 secs.
         while not self._check_report_status(report_id):
@@ -105,6 +122,7 @@ class CrispressoScrapeRequest(AbstractCrisporRequest):
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
         report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
         report_response = requests.get(report_url)
+
         soup = BeautifulSoup(report_response.text, 'html.parser')
         return {
             'report_url': report_url,
@@ -536,7 +554,5 @@ class TagInRequest(AbstractCrisporRequest):
 
 
 if __name__ == '__main__':
-    # import doctest  # noqa
-    # doctest.testmod()
-
-    print(CrispressoScrapeRequest().run())
+    import doctest  # noqa
+    doctest.testmod()
