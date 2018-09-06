@@ -462,6 +462,7 @@ class AnalysisProgressView(View):
                 row['well_name']
             )
 
+        # TODO (gdingle): this is mis-reporting during running... nothing shown as running??? don't use cache
         statuses, completed, running, errorred = [], [], [], []
         for i, row in enumerate(sheet.to_records()):
             statuses.append(True)
@@ -474,19 +475,24 @@ class AnalysisProgressView(View):
             else:
                 running.append((row['well_pos'], row['fastq_fwd'].split('/')[-1]))
 
-        percent_success = 100 * len(completed) // len(statuses) + 1
-        percent_error = 100 * len(errorred) // len(statuses)
-
-        return render(request, self.template_name, locals())
+        # TODO (gdingle): refactor with above
+        if len(completed) != len(statuses):
+            percent_success = 100 * len(completed) // len(statuses) + 1
+            percent_error = 100 * len(errorred) // len(statuses)
+            return render(request, self.template_name, locals())
+        else:
+            # Give some time for threads to finish updating database
+            time.sleep(1)
+            return HttpResponseRedirect(
+                self.success_url.format(id=self.kwargs['id']))
 
 
 class ResultsView(View):
-    template_name = 'results.html'
+    template_name = 'crispresso-results.html'
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-        results_urls = [CRISPRESSO_PUBLIC_ROOT_URL + path
-                        for path in analysis.results_data['results']]
+            sheet = samplesheet.from_analysis(analysis)
         return render(request, self.template_name, locals())
 
 

@@ -121,7 +121,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             files=files,
         ).prepare()
 
-    def run(self, retries: int = 3) -> Dict[str, Any]:
+    def run(self, retries: int = 5) -> Dict[str, Any]:
         logger.info('POST request to: {}'.format(self.endpoint))
         response = requests.Session().send(self.request)
         response.raise_for_status()
@@ -138,23 +138,43 @@ class CrispressoRequest(AbstractScrapeRequest):
                 report_id))
 
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
+        report_files_url = report_data_url + '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
         report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
-        logger.info('GET request to: {}'.format(report_url))
-        report_response = requests.get(report_url)
+        stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
 
-        soup = BeautifulSoup(report_response.text, 'html.parser')
         return {
             'success': True,
             'report_url': report_url,
             'report_zip': report_zip,
-            'log_params': soup.find(id='log_params').get_text(),
-            'report_files': [
-                '{}/CRISPResso_on_{}/{}'.format(
-                    report_data_url, report_id, file
-                ) for file in self.report_files
-            ]
+            'log_params': self._get_log_params(report_url),
+            'report_files': [report_files_url + file for file in self.report_files],
+            'report_stats': self._get_stats(stats_url),
         }
+
+    def _get_stats(self, stats_url: str) -> dict:
+        logger.info('GET request to: {}'.format(stats_url))
+        stats_response = requests.get(stats_url)
+        return self._parse_tsv(stats_response.text)
+
+    @staticmethod
+    def _parse_tsv(tsv: str) -> dict:
+        r"""
+        >>> tsv = '''Reference\tTotal\tUnmodified\tModified\tDiscarded\tInsertions\tDeletions\tSubstitutions\tOnly Insertions\tOnly Deletions\tOnly Substitutions\tInsertions and Deletions\tInsertions and Substitutions\tDeletions and Substitutions\tInsertions Deletions and Substitutions
+        ... Reference\t14470\t12930\t1540\t0\t1537\t0\t6\t1534\t0\t3\t0\t3\t0\t0'''
+        >>> CrispressoRequest._parse_tsv(tsv)
+        {'Total': 14470, 'Unmodified': 12930, 'Modified': 1540, 'Discarded': 0, 'Insertions': 1537, 'Deletions': 0, 'Substitutions': 6, 'Only Insertions': 1534, 'Only Deletions': 0, 'Only Substitutions': 3, 'Insertions and Deletions': 0, 'Insertions and Substitutions': 3, 'Deletions and Substitutions': 0, 'Insertions Deletions and Substitutions': 0}
+        """
+        lines = [line.split('\t')[1:] for line in tsv.split('\n')]
+        headers = [h.strip() for h in lines[0]]
+        values = [int(v.strip()) for v in lines[1]]
+        return dict(zip(headers, values))
+
+    def _get_log_params(self, report_url: str) -> str:
+        logger.info('GET request to: {}'.format(report_url))
+        report_response = requests.get(report_url)
+        soup = BeautifulSoup(report_response.text, 'html.parser')
+        return soup.find(id='log_params').get_text()
 
     def _check_report_status(self, report_id: str) -> None:
         status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'

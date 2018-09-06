@@ -70,6 +70,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
         for g in guides]
 
     # TODO (gdingle): is this correct? off by one?
+    # TODO (gdingle): indicate direction by high to low for reverse?
     sheet['guide_loc'][lg] = sheet[lg].apply(
         lambda row: get_guide_loc(row['target_loc'], row['guide_offset'], len(row['guide_seq'])),
         axis=1,
@@ -131,8 +132,13 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
 
     sheet = _insert_fastqs(sheet, analysis.fastqs)
 
-    # TODO (gdingle): add analysis results?
-    # if len(analysis.results_data):
+    if not len(analysis.results_data):
+        return sheet
+
+    # TODO (gdingle): what do to about incomplete analysis?
+    # TODO (gdingle): put in schema
+    sheet['report_url'] = [r['report_url'] for r in analysis.results_data if r['success']]
+    sheet['report_zip'] = [r['report_zip'] for r in analysis.results_data if r['success']]
 
     return sheet
 
@@ -179,8 +185,8 @@ def _new_samplesheet():
             's3_prefix',
             'fastq_fwd',
             'fastq_rev',
-            'results_success',
-            'results_path',
+            'report_url',
+            'report_zip',
             # results_stats_TODO
         ])
 
@@ -196,7 +202,9 @@ def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
     for well_pos in sheet.index:
         matches = sorted([
             filename for filename in fastqs
-            if well_pos in os.path.basename(filename).split('-')
+            # TODO (gdingle): temp override for testing!!!!
+            if 'A6' in os.path.basename(filename).split('-')
+            # if well_pos in os.path.basename(filename).split('-')
         ])
         if len(matches) == 0:
             # TODO (gdingle): allow missing fastqs?
