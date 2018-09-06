@@ -132,13 +132,13 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
 
     sheet = _insert_fastqs(sheet, analysis.fastqs)
 
-    if not len(analysis.results_data):
+    reports = [r for r in analysis.results_data]
+    if not any(reports):
         return sheet
 
-    # TODO (gdingle): what do to about incomplete analysis?
-    # TODO (gdingle): put in schema
-    sheet['report_url'] = [r['report_url'] for r in analysis.results_data if r['success']]
-    sheet['report_zip'] = [r['report_zip'] for r in analysis.results_data if r['success']]
+    sheet['report_url'] = [r.get('report_url') for r in reports]
+    sheet['report_zip'] = [r.get('report_zip') for r in reports]
+    sheet['report_stats'] = [r.get('report_stats') for r in reports]
 
     return sheet
 
@@ -187,7 +187,7 @@ def _new_samplesheet():
             'fastq_rev',
             'report_url',
             'report_zip',
-            # results_stats_TODO
+            'report_stats',
         ])
 
 

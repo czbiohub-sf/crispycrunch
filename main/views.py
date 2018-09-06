@@ -492,7 +492,7 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-            sheet = samplesheet.from_analysis(analysis)
+        sheet = samplesheet.from_analysis(analysis)
         return render(request, self.template_name, locals())
 
 

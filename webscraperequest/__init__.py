@@ -71,6 +71,9 @@ class CrispressoRequest(AbstractScrapeRequest):
     >>> len(response['report_files']) > 0
     True
 
+    >>> len(response['report_stats']) > 0
+    True
+
     >>> req.in_cache()
     True
     """
@@ -138,7 +141,7 @@ class CrispressoRequest(AbstractScrapeRequest):
                 report_id))
 
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
-        report_files_url = report_data_url + '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
+        report_files_url = '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
         report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
         stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
