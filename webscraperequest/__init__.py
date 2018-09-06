@@ -166,12 +166,12 @@ class CrispressoRequest(AbstractScrapeRequest):
         >>> tsv = '''Reference\tTotal\tUnmodified\tModified\tDiscarded\tInsertions\tDeletions\tSubstitutions\tOnly Insertions\tOnly Deletions\tOnly Substitutions\tInsertions and Deletions\tInsertions and Substitutions\tDeletions and Substitutions\tInsertions Deletions and Substitutions
         ... Reference\t14470\t12930\t1540\t0\t1537\t0\t6\t1534\t0\t3\t0\t3\t0\t0'''
         >>> CrispressoRequest._parse_tsv(tsv)
-        {'Total': 14470, 'Unmodified': 12930, 'Modified': 1540, 'Discarded': 0, 'Insertions': 1537, 'Deletions': 0, 'Substitutions': 6, 'Only Insertions': 1534, 'Only Deletions': 0, 'Only Substitutions': 3, 'Insertions and Deletions': 0, 'Insertions and Substitutions': 3, 'Deletions and Substitutions': 0, 'Insertions Deletions and Substitutions': 0}
+        OrderedDict([('Total', 14470), ('Unmodified', 12930), ('Modified', 1540), ('Discarded', 0), ('Insertions', 1537), ('Deletions', 0), ('Substitutions', 6), ('Only Insertions', 1534), ('Only Deletions', 0), ('Only Substitutions', 3), ('Insertions and Deletions', 0), ('Insertions and Substitutions', 3), ('Deletions and Substitutions', 0), ('Insertions Deletions and Substitutions', 0)])
         """
         lines = [line.split('\t')[1:] for line in tsv.split('\n')]
         headers = [h.strip() for h in lines[0]]
         values = [int(v.strip()) for v in lines[1]]
-        return dict(zip(headers, values))
+        return OrderedDict(zip(headers, values))
 
     def _get_log_params(self, report_url: str) -> str:
         logger.info('GET request to: {}'.format(report_url))

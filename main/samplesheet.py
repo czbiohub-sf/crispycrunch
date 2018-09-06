@@ -138,9 +138,26 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
 
     sheet['report_url'] = [r.get('report_url') for r in reports]
     sheet['report_zip'] = [r.get('report_zip') for r in reports]
-    sheet['report_stats'] = [r.get('report_stats') for r in reports]
+
+    sheet['report_stats'] = _drop_empty_report_stats(reports)
+
+    # TODO (gdingle): strangely, we lose the order of headers as when compared to...
+    # sheet['report_stats'] = [r.get('report_stats') for r in reports]
+    # is it another instance of postgres json type ordered alphabetical?
+    # TODO (gdingle): reapply original ordering:
+    # ['Total', 'Unmodified', 'Modified', 'Discarded', 'Insertions', 'Deletions', 'Substitutions', 'Only Insertions', 'Only Deletions', 'Only Substitutions', 'Insertions and Deletions', 'Insertions and Substitutions', 'Deletions and Substitutions', 'Insertions Deletions and Substitutions']
 
     return sheet
+
+
+def _drop_empty_report_stats(reports):
+    """
+    See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
+    """
+    temp_sheet = pandas.DataFrame.from_records([r.get('report_stats') for r in reports])
+    nonzero_cols = (temp_sheet != 0).any(axis='rows')
+    temp_sheet = temp_sheet.loc[:, nonzero_cols]
+    return temp_sheet.to_dict(orient='records')
 
 
 def _new_index(size=96,
