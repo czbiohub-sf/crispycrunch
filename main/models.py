@@ -168,7 +168,7 @@ class GuideDesign(BaseModel):
     targets = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
-        help_text='Chr location, seq, ENST, or gene. One per line.',
+        help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.',
         # TODO (gdingle): temp default for testing
         # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],

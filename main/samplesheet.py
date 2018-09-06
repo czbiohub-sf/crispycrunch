@@ -33,8 +33,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     sheet = from_experiment(guide_design.experiment)
 
     # Ungroup guide data into rows
-    target_loc_to_batch_id = dict((g['seq'], g['batch_id'])
-                                  for g in guide_design.guide_data
+    target_loc_to_batch_id = dict((g['target'], g['batch_id'])
+                                  for t, g in zip(guide_design.targets, guide_design.guide_data)
                                   if g.get('batch_id'))  # filter out errors
     target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
     guides = [(target_loc, offset, seq,

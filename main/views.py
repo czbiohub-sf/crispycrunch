@@ -128,18 +128,19 @@ class GuideDesignView(CreatePlusView):
         #     # TODO (gdingle): is this wise?
         #     crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
 
-        def guide_request(target_seq):
+        def guide_request(target_seq, target):
             try:
                 return webscraperequest.CrisporGuideRequest(
                     target_seq,
                     # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
                     name=obj.experiment.name,
                     org=obj.genome,
-                    pam=obj.pam).run()
+                    pam=obj.pam,
+                    target=target).run()
             except Exception as e:
                 return {
                     'success': False,
-                    'error': e.args[0],
+                    'error': getattr(e, 'message', str(e)),
                 }
 
         # More than 8 threads appears to cause a 'no output' Crispor error
@@ -150,8 +151,9 @@ class GuideDesignView(CreatePlusView):
             obj.save()
 
         for i, target_seq in enumerate(obj.target_seqs):
-            future = pool.submit(guide_request, target_seq)
-            future.add_done_callback(
+            pool.submit(
+                guide_request, target_seq, obj.targets[i]
+            ).add_done_callback(
                 functools.partial(insert_guide_data, index=i))
 
         # Give some time for threads to finish to avoid GuideSelectionView too soon
@@ -201,16 +203,30 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
+    @staticmethod
+    def _slice(odict, top=3):
+        """
+        OrderedDict does not support slicing :(
+        See https://stackoverflow.com/a/30975520.
+        """
+        from itertools import islice
+        from collections import OrderedDict
+        return OrderedDict(islice(odict.items(), top))
+
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        # TODO (gdingle): maybe make this a guide design option to "fit to plate"
+        wells_per_target = min(1, 96 // len(guide_design.targets))
         return {
-            'selected_guides': dict((g['seq'], g['guide_seqs'])
-                                    for g in guide_design.guide_data if g),
+            'selected_guides': dict(
+                (g['target'], self._slice(g['guide_seqs'], wells_per_target))
+                for g in guide_design.guide_data),
             'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
                                     for g in guide_design.donor_data),
             # TODO (gdingle): temp for debuggin
-            'selected_guides_tagin': dict((g['metadata']['chr_loc'], g['guide_seqs'])
-                                          for g in guide_design.donor_data),
+            'selected_guides_tagin': dict(
+                (g['metadata']['chr_loc'], self._slice(g['guide_seqs'], wells_per_target))
+                for g in guide_design.donor_data),
         }
 
     def plus(self, obj):
@@ -316,7 +332,7 @@ class PrimerSelectionView(CreatePlusView):
 
         return {
             'selected_primers': dict(
-                (p['seq'] + ' ' + p['pam_id'],
+                (p['target'] + ' ' + p['pam_id'],
                     get_fwd_and_rev_primers(p['ontarget_primers']))
                 for p in primer_data)
         }
@@ -392,7 +408,7 @@ class AnalysisView(CreatePlusView):
             except Exception as e:
                 return {
                     'success': False,
-                    'error': e.args[0],
+                    'error': getattr(e, 'message', str(e)),
                 }
 
         def insert_results_data(future, index=None):

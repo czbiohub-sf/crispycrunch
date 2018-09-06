@@ -122,7 +122,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         ).prepare()
 
     def run(self, retries: int = 3) -> Dict[str, Any]:
-        logging.info('POST request to: {}'.format(self.endpoint))
+        logger.info('POST request to: {}'.format(self.endpoint))
         response = requests.Session().send(self.request)
         response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
@@ -140,7 +140,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
         report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
-        logging.info('GET request to: {}'.format(report_url))
+        logger.info('GET request to: {}'.format(report_url))
         report_response = requests.get(report_url)
 
         soup = BeautifulSoup(report_response.text, 'html.parser')
@@ -160,7 +160,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'
         status_url = status_endpoint + report_id
         with requests_cache.disabled():
-            logging.info('GET request to: {}'.format(status_url))
+            logger.info('GET request to: {}'.format(status_url))
             report_status = requests.get(status_url).json()
         if report_status['state'] == 'FAILURE':
             raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
@@ -247,7 +247,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
     True
     """
 
-    def __init__(self, seq: str, name: str = '', org: str = 'hg38', pam: str = 'NGG') -> None:
+    def __init__(self, seq: str, name: str = '', org: str = 'hg38', pam: str = 'NGG', target: str = '') -> None:
         self.data = {
             'name': name,
             'seq': seq,
@@ -258,10 +258,11 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
         self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()
+        self.target = target
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
-            logging.info('POST request to: {}'.format(self.endpoint))
+            logger.info('POST request to: {}'.format(self.endpoint))
             response = requests.Session().send(self.request)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -284,30 +285,33 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         title = soup.find(class_='title')
         if title and 'not present in the selected genome' in title.get_text():
             raise ValueError('Crispor on {}: {}'.format(
-                self.data['seq'], title.get_text()))
+                self.target, title.get_text()))
 
         if 'retry with a sequence range shorter than 2000 bp' in soup.find(class_='contentcentral').get_text():
             raise ValueError('Crispor on {}: retry with a sequence range shorter than 2000 bp'.format(
-                self.data['seq']))
+                self.target))
 
         if 'This page will refresh every 10 seconds' in soup.find(class_='contentcentral').get_text():
             raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(
-                self.data['seq']))
+                self.target))
 
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
             if 'Found no possible guide sequence' in soup.get_text():
                 return dict(
+                    target=self.target,
                     seq=self.data['seq'],
                     guide_seqs={'not found': 'not found'},
                 )
             if 'Server error: could not run command' in soup.get_text():
                 return dict(
+                    target=self.target,
                     seq=self.data['seq'],
                     guide_seqs={'server error': 'server error'},
                 )
             if 'are not valid in the genome' in soup.get_text():
                 return dict(
+                    target=self.target,
                     seq=self.data['seq'],
                     guide_seqs={
                         'invalid chromosome range': 'invalid chromosome range'
@@ -321,14 +325,12 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         batch_id = soup.find('input', {'name': 'batchId'})['value']
         url = self.endpoint + '?batchId=' + batch_id
         primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
-
-        # TODO (gdingle): keeping only top three for now... what is best?
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
-                                 for t in rows[0:3])
+                                 for t in rows)
         return dict(
-            # TODO (gdingle): crispor uses seq to denote chr_loc... rename?
             # TODO (gdingle): why is off by one from input?
             # seq=soup.find(class_='title').find('a').get_text(),
+            target=self.target,
             seq=self.data['seq'],
             url=url,
             batch_id=batch_id,
@@ -373,7 +375,7 @@ class CrisporGuideRequestById(CrisporGuideRequest):
         self.data = {'seq': batch_id, 'pam_id': batch_id}  # hack for error messages
 
     def run(self, retries: int=0) -> Dict[str, Any]:
-        logging.info('GET request to: {}'.format(self.endpoint))
+        logger.info('GET request to: {}'.format(self.endpoint))
         response = requests.get(self.endpoint)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -417,7 +419,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
     def run(self,
             retries: int=1) -> Dict[str, Any]:
         try:
-            logging.info('GET request to: {}'.format(self.endpoint))
+            logger.info('GET request to: {}'.format(self.endpoint))
             response = requests.Session().send(self.request)
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
@@ -521,14 +523,14 @@ class TagInRequest(AbstractScrapeRequest):
             'csrftoken': self.csrftoken,
             'sessionid': self.sessionid,
         }
-        logging.info('GET request to: {}'.format(url))
+        logger.info('GET request to: {}'.format(url))
         response = requests.get(url, cookies=cookies)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         return self._extract_data(soup, url)
 
     def _init_session(self) -> None:
-        logging.info('GET request to: {}'.format(self.endpoint))
+        logger.info('GET request to: {}'.format(self.endpoint))
         initial = requests.get(self.endpoint)
         initial.raise_for_status()
         self.csrftoken = initial.cookies['csrftoken']
@@ -540,7 +542,7 @@ class TagInRequest(AbstractScrapeRequest):
             'Cookie': 'csrftoken={}'.format(self.csrftoken),
         }
 
-        logging.info('POST request to: {}'.format(self.endpoint))
+        logger.info('POST request to: {}'.format(self.endpoint))
         json_response = requests.post(self.endpoint, data=self.data, headers=headers)
         self.sessionid = json_response.cookies['sessionid']
 
@@ -557,8 +559,7 @@ class TagInRequest(AbstractScrapeRequest):
         data_user = [json.loads(s.attrs['data-user'])
                      for s in soup.findAll('div')
                      if s.has_attr('data-user')]
-        # TODO (gdingle): keeping only top three for now... what is best?
-        top_guides = sorted(data_user[1], key=lambda d: d['sgRNA_score'], reverse=True)[:3]
+        top_guides = sorted(data_user[1], key=lambda d: d['sgRNA_score'], reverse=True)
         # TODO (gdingle): remap to offset position key used by Crispor
         guide_seqs = OrderedDict((round(d['sgRNA_score'], 2), d['sgRNA']) for d in top_guides)
 
