@@ -139,6 +139,7 @@ class GuideDesignView(CreatePlusView):
                     target=target).run()
             except Exception as e:
                 return {
+                    'target': target,
                     'success': False,
                     'error': getattr(e, 'message', str(e)),
                 }
@@ -216,7 +217,7 @@ class GuideSelectionView(CreatePlusView):
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         # TODO (gdingle): maybe make this a guide design option to "fit to plate"
-        wells_per_target = min(1, 96 // len(guide_design.targets))
+        wells_per_target = max(1, 96 // len(guide_design.targets))
         return {
             'selected_guides': dict(
                 (g['target'], self._slice(g['guide_seqs'], wells_per_target))
@@ -254,21 +255,30 @@ class PrimerDesignView(CreatePlusView):
         obj.guide_selection = guide_selection
 
         def primers_request(args):
-            seq, pam_id, batch_id = args
-            return webscraperequest.CrisporPrimerRequest(
-                batch_id=batch_id,
-                amp_len=obj.max_amplicon_length,
-                tm=obj.primer_temp,
-                pam=guide_selection.guide_design.pam,
-                pam_id=pam_id,
-                seq=seq).run()
+            target, pam_id, batch_id = args
+            try:
+                return webscraperequest.CrisporPrimerRequest(
+                    batch_id=batch_id,
+                    amp_len=obj.max_amplicon_length,
+                    tm=obj.primer_temp,
+                    pam=guide_selection.guide_design.pam,
+                    pam_id=pam_id,
+                    target=target).run()
+            except RuntimeError as e:
+                return {
+                    'target': target,
+                    'pam_id': pam_id,
+                    'success': False,
+                    'error': getattr(e, 'message', str(e)),
+                }
 
         def insert_primer_data(future, index=None):
             obj.primer_data[index] = future.result()
             obj.save()
 
         sheet = samplesheet.from_guide_selection(guide_selection)
-        obj.primer_data = [{}] * len(sheet)
+        obj.primer_data = [{'success': None}] * len(sheet)
+
         pool = ThreadPoolExecutor()
         largs = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
         for i, args in enumerate(largs):
@@ -300,12 +310,15 @@ class PrimerDesignProgressView(View):
                 tm=primer_design.primer_temp,
                 pam=primer_design.guide_selection.guide_design.pam,
                 pam_id=row['_crispor_pam_id'],
-                seq=row['target_loc'])
+                target=row['target_loc'])
 
         statuses = [(row._crispor_batch_id, row._crispor_pam_id, primers_request(row).in_cache())
                     for row in sheet.to_records()]
-        completed = [g for g in statuses if g[1]]
-        incomplete = [g for g in statuses if not g[1]]
+        completed = [g for g in statuses if g[2]]
+        incomplete = [g for g in statuses if not g[2]]
+
+        # TODO (gdingle): count successes here
+
         assert len(statuses) == len(completed) + len(incomplete)
 
         if len(incomplete):
@@ -333,7 +346,8 @@ class PrimerSelectionView(CreatePlusView):
         return {
             'selected_primers': dict(
                 (p['target'] + ' ' + p['pam_id'],
-                    get_fwd_and_rev_primers(p['ontarget_primers']))
+                    get_fwd_and_rev_primers(p['ontarget_primers'])
+                 if p['success'] else p['error'])
                 for p in primer_data)
         }
 

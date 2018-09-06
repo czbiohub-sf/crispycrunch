@@ -404,13 +404,13 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             amp_len: int=400,
             tm: int=60,
             pam: str='NGG',
-            seq: str='') -> None:
+            target: str='') -> None:
 
         self.pam_id = pam_id
         quoted_pam_id = quote(pam_id)  # percent encode the '+' symbol
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
             '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(**locals())
-        self.seq = seq  # just for metadata
+        self.target = target  # just for metadata
         self.request = requests.Request('GET', self.endpoint).prepare()
 
     def __repr__(self):
@@ -437,17 +437,21 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         if 'exceptions.ValueError' in soup.get_text():
             raise RuntimeError('Crispor exceptions.ValueError')
 
+        if soup is None:
+            raise RuntimeError('Cannot parse HTML {}'.format(soup))
+
         return dict(
             pam_id=self.pam_id,
-            # TODO (gdingle): crispor uses seq to denote chr_loc
-            seq=self.seq,
+            target=self.target,
             url=self.endpoint,
-            amplicon_length=soup
-            .find('select', {'name': 'ampLen'})
-            .find('option', {'selected': 'selected'})['value'],
-            primer_temp=soup
-            .find('select', {'name': 'tm'})
-            .find('option', {'selected': 'selected'})['value'],
+            # TODO (gdingle): this is broken sometimes
+            # amplicon_length=soup
+            # .find('select', {'name': 'ampLen'})
+            # .find('option', {'selected': 'selected'})['value'],
+            # TODO (gdingle): this is broken sometimes
+            # primer_temp=soup
+            # .find('select', {'name': 'tm'})
+            # .find('option', {'selected': 'selected'})['value'],
             # TODO (gdingle): may not need primer_seqs
             # primer_tables=primer_tables,
             # primer_seqs=primer_seqs,
@@ -456,7 +460,15 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         )
 
     def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, str]:
-        table = soup.find(id='ontargetPcr').find_next(class_='primerTable')
+        ontargetPcr = soup.find(id='ontargetPcr')
+        table = ontargetPcr.find_next(class_='primerTable')
+        if table is None:
+            text = ontargetPcr.find_next('div').get_text()
+            if 'No perfect match found' in text:
+                return {
+                    'No perfect match found for guide sequence in the genome. Cannot design primers for a non-matching guide sequence.',
+                    'No perfect match found for guide sequence in the genome. Cannot design primers for a non-matching guide sequence.',
+                }
         rows = (row.find_all('td') for row in table.find_all('tr'))
         return dict((row[0].get_text().split('_')[-1], row[1].get_text()) for row in rows)
 
