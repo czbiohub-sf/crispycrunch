@@ -154,7 +154,8 @@ def _drop_empty_report_stats(reports):
     """
     See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
     """
-    temp_sheet = pandas.DataFrame.from_records([r.get('report_stats') for r in reports])
+    report_stats = [r.get('report_stats', {}) for r in reports]
+    temp_sheet = pandas.DataFrame.from_records(report_stats)
     nonzero_cols = (temp_sheet != 0).any(axis='rows')
     temp_sheet = temp_sheet.loc[:, nonzero_cols]
     return temp_sheet.to_dict(orient='records')

@@ -9,6 +9,7 @@ the next form. Each model has a foreign key into the preceding model. One
 exception is PrimerDesign which depends on GuideSelection, two steps back in the
 sequence.
 """
+import logging
 import os
 import time
 
@@ -40,6 +41,8 @@ from crispresso.s3 import download_fastqs
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
 CRISPRESSO_PUBLIC_ROOT_URL = 'http://0.0.0.0:5000/'
+
+logger = logging.getLogger(__name__)
 
 
 def index(request):
@@ -110,7 +113,8 @@ class GuideDesignView(CreatePlusView):
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
 
-        obj.guide_data = [{'success': None}] * len(obj.targets)
+        obj.guide_data = [{'success': None, 'target': target}
+                          for target in obj.targets]
 
         # TODO (gdingle): ignore HDR for now
         # def tagin_request(target):
@@ -144,13 +148,12 @@ class GuideDesignView(CreatePlusView):
                     'error': getattr(e, 'message', str(e)),
                 }
 
-        # More than 8 threads appears to cause a 'no output' Crispor error
-        pool = ThreadPoolExecutor(8)
-
         def insert_guide_data(future, index=None):
             obj.guide_data[index] = future.result()
             obj.save()
 
+        # More than 8 threads appears to cause a 'no output' Crispor error
+        pool = ThreadPoolExecutor(8)
         for i, target_seq in enumerate(obj.target_seqs):
             pool.submit(
                 guide_request, target_seq, obj.targets[i]
@@ -171,26 +174,22 @@ class GuideDesignProgressView(View):
     def get(self, request, **kwargs):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
 
-        # See also guide_request above. These should match.
-        def guide_request(target_seq):
-            return webscraperequest.CrisporGuideRequest(
-                target_seq,
-                name=guide_design.experiment.name,
-                org=guide_design.genome,
-                pam=guide_design.pam)
+        # TODO (gdingle): refactor with AnalysisProgressView
+        statuses, completed, running, errorred = [], [], [], []
+        for i, result in enumerate(guide_design.guide_data):
+            # TODO (gdingle): is this needed? simplify to total count
+            statuses.append(True)
+            if result['success'] is True:
+                completed.append(result['target'])
+            elif result['success'] is False:
+                errorred.append((result['target'], result['error']))
+            else:
+                running.append(result['target'])
 
-        statuses = [
-            (target, guide_request(target_seq).in_cache())
-            for target, target_seq in zip(guide_design.targets, guide_design.target_seqs)]
-        completed = [target for target, status in statuses if status]
-        incomplete = [target for target, status in statuses if not status]
-        errored = [(target, data['error'])
-                   for target, data in zip(guide_design.targets, guide_design.guide_data)
-                   if data['success'] is False]
-        assert len(completed) + len(incomplete) == len(statuses)
-
-        if len(incomplete):
+        # TODO (gdingle): refactor with above
+        if len(completed) != len(statuses):
             percent_success = 100 * len(completed) // len(statuses) + 1
+            percent_error = 100 * len(errorred) // len(statuses)
             return render(request, self.template_name, locals())
         else:
             # Give some time for threads to finish updating database
@@ -264,7 +263,7 @@ class PrimerDesignView(CreatePlusView):
                     pam=guide_selection.guide_design.pam,
                     pam_id=pam_id,
                     target=target).run()
-            except RuntimeError as e:
+            except Exception as e:
                 return {
                     'target': target,
                     'pam_id': pam_id,
@@ -273,11 +272,23 @@ class PrimerDesignView(CreatePlusView):
                 }
 
         def insert_primer_data(future, index=None):
+            # TODO (gdingle): is last-write-wins always safe here?
+            # I believe it is because each thread modifies a different part
+            # of the same in-memory model instance. Q: would this also work in a
+            # process pool?
             obj.primer_data[index] = future.result()
-            obj.save()
+            # TODO (gdingle): try catch all insert_* functions
+            try:
+                obj.save()
+            except Exception as e:
+                logger.error('Error inserting into index {} value {}: {}'
+                             .format(index, obj.primer_data[index], str(e)))
 
         sheet = samplesheet.from_guide_selection(guide_selection)
-        obj.primer_data = [{'success': None}] * len(sheet)
+        obj.primer_data = [
+            # TODO (gdingle): combine target_loc and pam_id into key here
+            {'success': None, 'target': row['target_loc'], 'pam_id': row['_crispor_pam_id']}
+            for row in sheet.to_records()]
 
         pool = ThreadPoolExecutor()
         largs = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
@@ -300,35 +311,30 @@ class PrimerDesignProgressView(View):
 
     def get(self, request, **kwargs):
         primer_design = PrimerDesign.objects.get(id=kwargs['id'])
-        sheet = samplesheet.from_guide_selection(primer_design.guide_selection)
 
-        # See also primers_request in PrimerDesignView. TODO: refactor
-        def primers_request(row):
-            return webscraperequest.CrisporPrimerRequest(
-                batch_id=row['_crispor_batch_id'],
-                amp_len=primer_design.max_amplicon_length,
-                tm=primer_design.primer_temp,
-                pam=primer_design.guide_selection.guide_design.pam,
-                pam_id=row['_crispor_pam_id'],
-                target=row['target_loc'])
+        # TODO (gdingle): refactor with AnalysisProgressView
+        statuses, completed, running, errorred = [], [], [], []
+        for i, result in enumerate(primer_design.primer_data):
+            # TODO (gdingle): is this needed? simplify to total count
+            statuses.append(True)
+            key = (result['target'], result['pam_id'])
+            if result['success'] is True:
+                completed.append(key)
+            elif result['success'] is False:
+                errorred.append(key + (result['error'],))
+            else:
+                running.append(key)
 
-        statuses = [(row._crispor_batch_id, row._crispor_pam_id, primers_request(row).in_cache())
-                    for row in sheet.to_records()]
-        completed = [g for g in statuses if g[2]]
-        incomplete = [g for g in statuses if not g[2]]
-
-        # TODO (gdingle): count successes here
-
-        assert len(statuses) == len(completed) + len(incomplete)
-
-        if len(incomplete):
+        # TODO (gdingle): refactor with above
+        if len(completed) != len(statuses):
             percent_success = 100 * len(completed) // len(statuses) + 1
+            percent_error = 100 * len(errorred) // len(statuses)
             return render(request, self.template_name, locals())
         else:
             # Give some time for threads to finish updating database
             time.sleep(1)
             return HttpResponseRedirect(
-                self.success_url.format(id=kwargs['id']))
+                self.success_url.format(id=self.kwargs['id']))
 
 
 class PrimerSelectionView(CreatePlusView):
@@ -450,30 +456,18 @@ class AnalysisProgressView(View):
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_analysis(analysis)
-        sheet.insert(0, 'well_pos', sheet.index)
-
-        def crispresso_request(row):
-            return webscraperequest.CrispressoRequest(
-                row['target_seq'],
-                row['guide_seq'],
-                row['fastq_fwd'],
-                row['fastq_rev'],
-                row['donor_seq'],
-                row['well_name']
-            )
 
         # TODO (gdingle): this is mis-reporting during running... nothing shown as running??? don't use cache
         statuses, completed, running, errorred = [], [], [], []
         for i, row in enumerate(sheet.to_records()):
             statuses.append(True)
-            if crispresso_request(row).in_cache():
-                result = analysis.results_data[i]
-                if result['success'] is True:
-                    completed.append((row['well_pos'], result['report_url']))
-                elif result['success'] is False:
-                    errorred.append((row['well_pos'], result['error']))
+            result = analysis.results_data[i]
+            if result['success'] is True:
+                completed.append((row.index, result['report_url']))
+            elif result['success'] is False:
+                errorred.append((row.index, result['error']))
             else:
-                running.append((row['well_pos'], row['fastq_fwd'].split('/')[-1]))
+                running.append((row.index, row['fastq_fwd'].split('/')[-1]))
 
         # TODO (gdingle): refactor with above
         if len(completed) != len(statuses):

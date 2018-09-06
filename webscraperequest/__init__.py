@@ -124,21 +124,14 @@ class CrispressoRequest(AbstractScrapeRequest):
             files=files,
         ).prepare()
 
-    def run(self, retries: int = 5) -> Dict[str, Any]:
+    def run(self) -> Dict[str, Any]:
         logger.info('POST request to: {}'.format(self.endpoint))
         response = requests.Session().send(self.request)
         response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
-        # Poll for SUCCESS. Typically takes 90 secs.
-        while not self._check_report_status(report_id) and retries >= 0:
-            time.sleep(30)
-            retries -= 1
-
-        if retries < 0:
-            raise TimeoutError('Crispresso on {}: Retries exhausted.'.format(
-                report_id))
+        self._wait_for_success(report_id)
 
         report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
         report_files_url = '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
@@ -155,6 +148,21 @@ class CrispressoRequest(AbstractScrapeRequest):
             'report_stats': self._get_stats(stats_url),
         }
 
+    def _wait_for_success(self, report_id: str, retries: int = 5) -> None:
+        """
+        Poll for SUCCESS. Typically took 90 secs in testing.
+        """
+        total = 0
+        while not self._check_report_status(report_id) and retries >= 0:
+            amount = 90 // (retries + 1)  # backoff
+            time.sleep(amount)
+            retries -= 1
+            total += amount
+
+        if retries < 0:
+            raise TimeoutError('Crispresso on {}: Retries exhausted after {}s.'.format(
+                report_id, total))
+
     def _get_stats(self, stats_url: str) -> dict:
         logger.info('GET request to: {}'.format(stats_url))
         stats_response = requests.get(stats_url)
@@ -166,7 +174,8 @@ class CrispressoRequest(AbstractScrapeRequest):
         >>> tsv = '''Reference\tTotal\tUnmodified\tModified\tDiscarded\tInsertions\tDeletions\tSubstitutions\tOnly Insertions\tOnly Deletions\tOnly Substitutions\tInsertions and Deletions\tInsertions and Substitutions\tDeletions and Substitutions\tInsertions Deletions and Substitutions
         ... Reference\t14470\t12930\t1540\t0\t1537\t0\t6\t1534\t0\t3\t0\t3\t0\t0'''
         >>> CrispressoRequest._parse_tsv(tsv)
-        OrderedDict([('Total', 14470), ('Unmodified', 12930), ('Modified', 1540), ('Discarded', 0), ('Insertions', 1537), ('Deletions', 0), ('Substitutions', 6), ('Only Insertions', 1534), ('Only Deletions', 0), ('Only Substitutions', 3), ('Insertions and Deletions', 0), ('Insertions and Substitutions', 3), ('Deletions and Substitutions', 0), ('Insertions Deletions and Substitutions', 0)])
+        OrderedDict([('Total', 14470), ('Unmodified', 12930), ('Modified', 1540), ('Discarded', 0), ('Insertions', 1537), ('Deletions', 0), ('Substitutions', 6), ('Only Insertions', 1534), ('Only Deletions',
+                    0), ('Only Substitutions', 3), ('Insertions and Deletions', 0), ('Insertions and Substitutions', 3), ('Deletions and Substitutions', 0), ('Insertions Deletions and Substitutions', 0)])
         """
         lines = [line.split('\t')[1:] for line in tsv.split('\n')]
         headers = [h.strip() for h in lines[0]]
@@ -320,6 +329,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
+            # TODO (gdingle): convert these to exceptions to be handled on progress page?
             if 'Found no possible guide sequence' in soup.get_text():
                 return dict(
                     target=self.target,
@@ -485,13 +495,16 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
     def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, str]:
         ontargetPcr = soup.find(id='ontargetPcr')
         table = ontargetPcr.find_next(class_='primerTable')
+
         if table is None:
             text = ontargetPcr.find_next('div').get_text()
             if 'No perfect match found' in text:
-                return {
-                    'No perfect match found for guide sequence in the genome. Cannot design primers for a non-matching guide sequence.',
-                    'No perfect match found for guide sequence in the genome. Cannot design primers for a non-matching guide sequence.',
-                }
+                raise ValueError('Cripor at {}: "{}"'.format(
+                    self.endpoint,
+                    'No perfect match found for guide sequence in the genome. Cannot design primers for a non-matching guide sequence.'))
+            else:
+                raise ValueError('Cripor at {}: "{}"'.format(self.endpoint, text))
+
         rows = (row.find_all('td') for row in table.find_all('tr'))
         return dict((row[0].get_text().split('_')[-1], row[1].get_text()) for row in rows)
 
