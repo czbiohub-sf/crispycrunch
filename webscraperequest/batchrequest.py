@@ -157,6 +157,8 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     field_name = 'guide_data'
     # More than 8 threads appears to cause a 'no output' Crispor error
     max_workers = 8
+    # TODO (gdingle):
+    # request_key = ('success',)
 
 
 class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
@@ -173,6 +175,8 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
     max_workers = 16
+    # TODO (gdingle):
+    # request_key = ('success',)
 
 
 class CrispressoBatchWebRequest(BaseBatchWebRequest):

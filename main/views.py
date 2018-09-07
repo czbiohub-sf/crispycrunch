@@ -196,55 +196,16 @@ class PrimerDesignView(CreatePlusView):
         guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
         obj.guide_selection = guide_selection
 
-        def primers_request(args):
-            target, pam_id, batch_id = args
-            try:
-                return webscraperequest.CrisporPrimerRequest(
-                    batch_id=batch_id,
-                    amp_len=obj.max_amplicon_length,
-                    tm=obj.primer_temp,
-                    pam=guide_selection.guide_design.pam,
-                    pam_id=pam_id,
-                    target=target).run()
-            except Exception as e:
-                return {
-                    'target': target,
-                    'pam_id': pam_id,
-                    'success': False,
-                    'error': getattr(e, 'message', str(e)),
-                }
-
-        def insert_primer_data(future, index=None):
-            # TODO (gdingle): is last-write-wins always safe here?
-            # I believe it is because each thread modifies a different part
-            # of the same in-memory model instance. Q: would this also work in a
-            # process pool?
-            result = future.result()
-            assert result['target'] == obj.primer_data[index]['target']
-            assert result['pam_id'] == obj.primer_data[index]['pam_id']
-            obj.primer_data[index] = result
-            # TODO (gdingle): try catch all insert_* functions
-            try:
-                obj.save()
-            except Exception as e:
-                logger.error('Error inserting into index {} value {}: {}'
-                             .format(index, obj.primer_data[index], str(e)))
-
         sheet = samplesheet.from_guide_selection(guide_selection)
-        obj.primer_data = [
-            # TODO (gdingle): combine target_loc and pam_id into key here
-            {'success': None, 'target': row['target_loc'], 'pam_id': row['_crispor_pam_id']}
-            for row in sheet.to_records()]
-
-        pool = ThreadPoolExecutor()
-        largs = sheet[['target_loc', '_crispor_pam_id', '_crispor_batch_id']].values
-        for i, args in enumerate(largs):
-            future = pool.submit(primers_request, args)
-            future.add_done_callback(
-                functools.partial(insert_primer_data, index=i))
-
-        # Give some time for threads to finish to avoid PrimerSelectionView too soon
-        time.sleep(1)
+        batch = webscraperequest.CrisporPrimerBatchWebRequest(guide_selection)
+        largs = [[row['_crispor_batch_id'],
+                  row['_crispor_pam_id'],
+                  obj.max_amplicon_length,
+                  obj.primer_temp,
+                  guide_selection.guide_design.pam,
+                  row['target_loc']]
+                 for row in sheet.to_records()]
+        batch.start(largs)
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
@@ -257,28 +218,11 @@ class PrimerDesignProgressView(View):
 
     def get(self, request, **kwargs):
         primer_design = PrimerDesign.objects.get(id=kwargs['id'])
+        batch_status = webscraperequest.CrisporPrimerBatchWebRequest(primer_design).get_batch_status()
 
-        # TODO (gdingle): refactor with AnalysisProgressView
-        statuses, completed, running, errorred = [], [], [], []
-        for i, result in enumerate(primer_design.primer_data):
-            # TODO (gdingle): is this needed? simplify to total count
-            statuses.append(True)
-            key = (result['target'], result['pam_id'])
-            if result['success'] is True:
-                completed.append(key)
-            elif result['success'] is False:
-                errorred.append(key + (result['error'],))
-            else:
-                running.append(key)
-
-        # TODO (gdingle): refactor with above
-        if len(completed) != len(statuses):
-            percent_success = 100 * len(completed) // len(statuses) + 1
-            percent_error = 100 * len(errorred) // len(statuses)
+        if not batch_status.is_successful:
             return render(request, self.template_name, locals())
         else:
-            # Give some time for threads to finish updating database
-            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
 
