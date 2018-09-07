@@ -143,7 +143,8 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     sheet['report_url'] = [r.get('report_url') for r in reports]
     sheet['report_zip'] = [r.get('report_zip') for r in reports]
 
-    sheet['report_stats'] = _drop_empty_report_stats(reports)
+    if any(sheet['report_url']):
+        sheet['report_stats'] = _drop_empty_report_stats(reports)
 
     # TODO (gdingle): strangely, we lose the order of headers as when compared to...
     # sheet['report_stats'] = [r.get('report_stats') for r in reports]

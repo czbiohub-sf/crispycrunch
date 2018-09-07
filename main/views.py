@@ -438,7 +438,8 @@ class AnalysisView(CreatePlusView):
 
         def insert_results_data(future, index=None):
             result = future.result()
-            assert result['target'] == obj.results_data[index]['target']
+            # TODO (gdingle): assert what?
+            # assert result['target'] == obj.results_data[index]['target']
             obj.results_data[index] = result
             obj.save()
 
