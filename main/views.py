@@ -286,9 +286,6 @@ class ExperimentSummaryView(View):
 
 
 class AnalysisView(CreatePlusView):
-    """
-    # TODO (gdingle): replace AnalysisViewOLD
-    """
     template_name = 'analysis.html'
     form_class = AnalysisForm
     success_url = '/main/analysis/{id}/progress/'
@@ -297,78 +294,30 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): use predetermined s3 location of fastq
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         sheet = samplesheet.from_analysis(obj)
-        obj.results_data = [{'success': None, 'target': row['target_loc']}
-                            for row in sheet.to_records()]
-        self._start_all_analyses(sheet, obj)
+        batch = webscraperequest.CrispressoBatchWebRequest(obj)
+        largs = [[
+            row['target_seq'],
+            row['guide_seq'],
+            row['fastq_fwd'],
+            row['fastq_rev'],
+            row['donor_seq'],
+            row['well_name']
+        ] for row in sheet.to_records()]
+        batch.start(largs)
         return obj
-
-    @staticmethod
-    def _start_all_analyses(sheet, obj):
-
-        def crispresso_request(row):
-            try:
-                return webscraperequest.CrispressoRequest(
-                    row['target_seq'],
-                    row['guide_seq'],
-                    row['fastq_fwd'],
-                    row['fastq_rev'],
-                    row['donor_seq'],
-                    row['well_name']
-                ).run()
-            except Exception as e:
-                return {
-                    'success': False,
-                    'error': getattr(e, 'message', str(e)),
-                }
-
-        def insert_results_data(future, index=None):
-            result = future.result()
-            # TODO (gdingle): assert what?
-            # assert result['target'] == obj.results_data[index]['target']
-            obj.results_data[index] = result
-            obj.save()
-
-        # TODO (gdingle): optimal number of workers for crispresso2?
-        pool = ThreadPoolExecutor(max_workers=8)
-        for i, row in enumerate(sheet.to_records()):
-            pool.submit(
-                crispresso_request,
-                row,
-            ).add_done_callback(
-                functools.partial(insert_results_data, index=i))
-
-        # Give some time for threads to finish to avoid AnalysisProgressView too soon
-        time.sleep(1)
 
 
 class AnalysisProgressView(View):
     template_name = 'analysis-progress.html'
     success_url = '/main/analysis/{id}/results/'
 
-    # TODO (gdingle): test different for SUCCESS status!
     def get(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
-        sheet = samplesheet.from_analysis(analysis)
+        batch_status = webscraperequest.CrispressoBatchWebRequest(analysis).get_batch_status()
 
-        statuses, completed, running, errorred = [], [], [], []
-        for i, row in enumerate(sheet.to_records()):
-            statuses.append(True)
-            result = analysis.results_data[i]
-            if result['success'] is True:
-                completed.append((row.index, result['report_url']))
-            elif result['success'] is False:
-                errorred.append((row.index, result['error']))
-            else:
-                running.append((row.index, row['fastq_fwd'].split('/')[-1]))
-
-        # TODO (gdingle): refactor with above
-        if len(completed) != len(statuses):
-            percent_success = 100 * len(completed) // len(statuses) + 1
-            percent_error = 100 * len(errorred) // len(statuses)
+        if not batch_status.is_successful:
             return render(request, self.template_name, locals())
         else:
-            # Give some time for threads to finish updating database
-            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
 

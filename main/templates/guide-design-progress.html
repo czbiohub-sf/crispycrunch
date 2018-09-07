@@ -33,12 +33,12 @@
   </div>
 </p>
 
-{% if batch_status.errorred %}
+{% if batch_status.errored %}
 <h5>
-  Errorred
+  Errored
 </h5>
 <ul>
-  {% for target in batch_status.errorred %}
+  {% for target in batch_status.errored %}
   <li>{{ target }}</li>
   {% endfor %}
 </ul>

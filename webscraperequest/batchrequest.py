@@ -81,7 +81,6 @@ class BaseBatchWebRequest:
             for args in largs
         ])
         self.model_instance.save()
-        # assert False, (self.model_instance.primer_data)
 
     def _request(self, args: list) -> Dict[str, Any]:
         # TODO (gdingle): how to ensure arg order correct?
@@ -132,7 +131,7 @@ class BatchStatus:
 
     @property
     def percent_error(self):
-        return 100 * len(self.errored) // len(self.statuses) + 1
+        return 100 * len(self.errored) // len(self.statuses)
 
     @property
     def is_done(self):
