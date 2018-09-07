@@ -11,67 +11,56 @@
 </p>
 
 <h3>
-  {{ completed|length }} out of {{ statuses|length }} tasks completed
+  {{ batch_status.completed|length }} out of {{ batch_status.statuses|length }} tasks completed
 </h3>
 
-{% if percent_success or percent_error %}
 <p>
   <div class="progress w-25">
     <div
       class="progress-bar progress-bar-striped"
       role="progressbar"
-      style="width:{{ percent_success }}%"
-      aria-valuenow="{{ percent_success }}"
+      style="width:{{ batch_status.percent_success }}%"
+      aria-valuenow="{{ batch_status.percent_success }}"
       aria-valuemin="0"
       aria-valuemax="100"></div>
     <div
       class="progress-bar progress-bar-striped bg-danger"
       role="progressbar"
-      style="width:{{ percent_error }}%"
-      aria-valuenow="{{ percent_error }}"
+      style="width:{{ batch_status.percent_error }}%"
+      aria-valuenow="{{ batch_status.percent_error }}"
       aria-valuemin="0"
       aria-valuemax="100"></div>
   </div>
 </p>
-{% endif %}
 
-{% if errorred %}
+{% if batch_status.errorred %}
 <h5>
   Errorred
 </h5>
 <ul>
-  {% for target in errorred %}
+  {% for target in batch_status.errorred %}
   <li>{{ target }}</li>
   {% endfor %}
 </ul>
 {% endif %}
 
-{% if running %}
+{% if batch_status.running %}
 <h5>
   Running
 </h5>
 <ul>
-  {% for target in running %}
-  <li>{{ target }}</li>
-  {% endfor %}
-</ul>
-{% elif incomplete %}
-<h5>
-  Incomplete
-</h5>
-<ul>
-  {% for target in incomplete %}
+  {% for target in batch_status.running %}
   <li>{{ target }}</li>
   {% endfor %}
 </ul>
 {% endif %}
 
-{% if completed %}
+{% if batch_status.completed %}
 <h5>
   Completed
 </h5>
 <ul>
-  {% for target in completed %}
+  {% for target in batch_status.completed %}
   <li>{{ target }}</li>
   {% endfor %}
 </ul>

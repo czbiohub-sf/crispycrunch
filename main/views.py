@@ -13,17 +13,17 @@ import logging
 import os
 import time
 
-import requests
-
+from concurrent.futures import ThreadPoolExecutor
+from itertools import islice
 from typing import no_type_check
 
-from concurrent.futures import ThreadPoolExecutor
+import requests
+
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView
 from django.views.generic.edit import CreateView
-from itertools import islice
 from openpyxl import Workbook, writer  # noqa
 
 import webscraperequest
@@ -90,7 +90,7 @@ class GuideDesignView(CreatePlusView):
                 targets,
             ))
         # TODO: normalize seqs also
-        assert all(is_chr(t)for t in normalized)
+        assert all(is_chr(t) for t in normalized)
         return normalized
 
     def _get_target_seqs(self, targets, genome):
@@ -112,58 +112,15 @@ class GuideDesignView(CreatePlusView):
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
 
-        obj.guide_data = [{'success': None, 'target': target}
-                          for target in obj.targets]
-
         # TODO (gdingle): ignore HDR for now
-        # def tagin_request(target):
-        #     return webscraperequest.TagInRequest(
-        #         target,
-        #         tag=obj.tag_in,
-        #         # species # TODO (gdingle): translate from crispor
-        #     ).run()
         # if obj.hdr_seq:
         #     # TODO (gdingle): put in form validation somehow
         #     assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
-        #     obj.donor_data = list(ex.map(tagin_request, obj.targets))
-        #     # Crispor does not accept Ensembl transcript IDs
-        #     # and use guide_chr_range to avoid 2000 bp limit
-        #     # TODO (gdingle): is this wise?
-        #     crispor_targets = [d['metadata']['guide_chr_range'] for d in obj.donor_data]
 
-        def guide_request(target_seq, target):
-            try:
-                # TODO (gdingle): why are 96 cached requests still so slow?
-                return webscraperequest.CrisporGuideRequest(
-                    target_seq,
-                    # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
-                    name=obj.experiment.name,
-                    org=obj.genome,
-                    pam=obj.pam,
-                    target=target).run()
-            except Exception as e:
-                return {
-                    'target': target,
-                    'success': False,
-                    'error': getattr(e, 'message', str(e)),
-                }
-
-        def insert_guide_data(future, index=None):
-            result = future.result()
-            assert result['target'] == obj.guide_data[index]['target']
-            obj.guide_data[index] = result
-            obj.save()
-
-        # More than 8 threads appears to cause a 'no output' Crispor error
-        pool = ThreadPoolExecutor(8)
-        for i, target_seq in enumerate(obj.target_seqs):
-            pool.submit(
-                guide_request, target_seq, obj.targets[i]
-            ).add_done_callback(
-                functools.partial(insert_guide_data, index=i))
-
-        # Give some time for threads to finish to avoid GuideSelectionView too soon
-        time.sleep(1)
+        batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
+        largs = [[target_seq, obj.experiment.name, obj.genome, obj.pam, target]
+                 for target_seq, target in zip(obj.target_seqs, obj.targets)]
+        batch.start(largs)
 
         return obj
 
@@ -175,27 +132,11 @@ class GuideDesignProgressView(View):
 
     def get(self, request, **kwargs):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        batch_status = webscraperequest.CrisporGuideBatchWebRequest(guide_design).get_batch_status()
 
-        # TODO (gdingle): refactor with AnalysisProgressView
-        statuses, completed, running, errorred = [], [], [], []
-        for i, result in enumerate(guide_design.guide_data):
-            # TODO (gdingle): is this needed? simplify to total count
-            statuses.append(True)
-            if result['success'] is True:
-                completed.append(result['target'])
-            elif result['success'] is False:
-                errorred.append((result['target'], result['error']))
-            else:
-                running.append(result['target'])
-
-        # TODO (gdingle): refactor with above
-        if len(completed) != len(statuses):
-            percent_success = 100 * len(completed) // len(statuses) + 1
-            percent_error = 100 * len(errorred) // len(statuses)
+        if not batch_status.is_successful:
             return render(request, self.template_name, locals())
         else:
-            # Give some time for threads to finish updating database
-            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
 
@@ -350,7 +291,7 @@ class PrimerSelectionView(CreatePlusView):
     def get_initial(self):
         primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
 
-        def get_fwd_and_rev_primers(ontarget_primers):
+        def get_fwd_and_rev_primers(ontarget_primers: dict):
             values = list(ontarget_primers.values())
             return values[0], values[1]
 
@@ -391,7 +332,7 @@ class ExperimentSummaryView(View):
 
     def _prepare_sheet(self, sheet):
         """Modify sheet for optimal rendering"""
-        sheet = sheet.loc[:, 'target_loc':]
+        sheet = sheet.loc[:, 'target_loc':]  # type: ignore
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
         sheet = sheet.dropna(axis=1, how='all')
         sheet.insert(0, 'well_pos', sheet.index)

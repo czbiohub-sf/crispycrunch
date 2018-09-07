@@ -62,7 +62,9 @@ def gene_to_chr_loc(gene: str, genome='hg38') -> str:
     })
     response.raise_for_status()
     match = re.search(CHR_REGEX, response.text)
-    return match[0] if match else None
+    if not match:
+        raise ValueError('No chr location for {}'.format(gene))
+    return match[0]
 
 
 if __name__ == '__main__':

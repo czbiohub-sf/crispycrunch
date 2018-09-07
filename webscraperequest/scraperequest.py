@@ -14,7 +14,7 @@ import time
 from abc import abstractmethod
 from collections import OrderedDict
 from typing import Any, Dict, Tuple
-from urllib.parse import quote
+import urllib.parse
 
 import requests
 import requests_cache  # type: ignore
@@ -289,7 +289,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
         self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
-        self.target = target
+        self.target = target or seq
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
@@ -320,7 +320,12 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 self.target, title.get_text()))
 
         if 'retry with a sequence range shorter than 2000 bp' in soup.find(class_='contentcentral').get_text():
-            raise ValueError('Crispor on {}: retry with a sequence range shorter than 2000 bp'.format(
+            raise ValueError('Crispor on {}: Bad sequence size'.format(
+                self.target))
+
+        # TODO (gdingle): this error occurs for too short seqs also
+        if 'cannot handle sequences longer than 2000 bp' in soup.find(class_='contentcentral').get_text():
+            raise ValueError('Crispor on {}: Bad sequence size'.format(
                 self.target))
 
         if 'This page will refresh every 10 seconds' in soup.find(class_='contentcentral').get_text():
@@ -368,7 +373,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             url=url,
             batch_id=batch_id,
             guide_seqs=guide_seqs,
-            primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, quote(t['id']))) for t in rows),
+            primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, urllib.parse.quote(t['id']))) for t in rows),
 
             # TODO (gdingle): remove unneeded
             # min_freq=float(soup.find('input', {'name': 'minFreq'})['value']),
@@ -440,7 +445,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             target: str='') -> None:
 
         self.pam_id = pam_id
-        quoted_pam_id = quote(pam_id)  # percent encode the '+' symbol
+        quoted_pam_id = urllib.parse.quote(pam_id)  # percent encode the '+' symbol
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
             '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(**locals())
         self.target = target  # just for metadata
