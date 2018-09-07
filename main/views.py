@@ -14,7 +14,6 @@ import os
 import time
 
 import requests
-import requests_cache
 
 from typing import no_type_check
 
@@ -134,6 +133,7 @@ class GuideDesignView(CreatePlusView):
 
         def guide_request(target_seq, target):
             try:
+                # TODO (gdingle): why are 96 cached requests still so slow?
                 return webscraperequest.CrisporGuideRequest(
                     target_seq,
                     # TODO (gdingle): does experiment name get us anything useful? aside from cache isolation per experiment?
@@ -149,7 +149,9 @@ class GuideDesignView(CreatePlusView):
                 }
 
         def insert_guide_data(future, index=None):
-            obj.guide_data[index] = future.result()
+            result = future.result()
+            assert result['target'] == obj.guide_data[index]['target']
+            obj.guide_data[index] = result
             obj.save()
 
         # More than 8 threads appears to cause a 'no output' Crispor error
@@ -276,7 +278,10 @@ class PrimerDesignView(CreatePlusView):
             # I believe it is because each thread modifies a different part
             # of the same in-memory model instance. Q: would this also work in a
             # process pool?
-            obj.primer_data[index] = future.result()
+            result = future.result()
+            assert result['target'] == obj.primer_data[index]['target']
+            assert result['pam_id'] == obj.primer_data[index]['pam_id']
+            obj.primer_data[index] = result
             # TODO (gdingle): try catch all insert_* functions
             try:
                 obj.save()
@@ -407,8 +412,8 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): use predetermined s3 location of fastq
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         sheet = samplesheet.from_analysis(obj)
-        # TODO (gdingle): why is success None necessary? why is cache not in db? a
-        obj.results_data = [{'success': None}] * len(sheet)
+        obj.results_data = [{'success': None, 'target': row['target_loc']}
+                            for row in sheet.to_records()]
         self._start_all_analyses(sheet, obj)
         return obj
 
@@ -432,7 +437,9 @@ class AnalysisView(CreatePlusView):
                 }
 
         def insert_results_data(future, index=None):
-            obj.results_data[index] = future.result()
+            result = future.result()
+            assert result['target'] == obj.results_data[index]['target']
+            obj.results_data[index] = result
             obj.save()
 
         # TODO (gdingle): optimal number of workers for crispresso2?
@@ -457,7 +464,6 @@ class AnalysisProgressView(View):
         analysis = Analysis.objects.get(id=kwargs['id'])
         sheet = samplesheet.from_analysis(analysis)
 
-        # TODO (gdingle): this is mis-reporting during running... nothing shown as running??? don't use cache
         statuses, completed, running, errorred = [], [], [], []
         for i, row in enumerate(sheet.to_records()):
             statuses.append(True)
