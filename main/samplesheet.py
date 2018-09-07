@@ -33,17 +33,21 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     sheet = from_experiment(guide_design.experiment)
 
     # Ungroup guide data into rows
+    # TODO (gdingle): this is a complicated beast that should at least have its own tests
     target_loc_to_batch_id = dict((g['target'], g['batch_id'])
-                                  for t, g in zip(guide_design.targets, guide_design.guide_data)
+                                  for g in guide_design.guide_data
                                   if g.get('batch_id'))  # filter out errors
     target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
+    selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
+                               for g in guide_design.guide_data]
     guides = [(target_loc, offset, seq,
                target_loc_to_batch_id[target_loc],
                target_loc_to_target_seq[target_loc])
-              for target_loc, selected in guide_selection.selected_guides.items()
+              for target_loc, selected in selected_guides_ordered
               for offset, seq in selected.items()]
 
     # For assigning to subset of rows of A1 to H12
+    # TODO: This looses ordering of input
     lg = slice(0, len(guides))
 
     sheet['target_genome'] = guide_design.genome
