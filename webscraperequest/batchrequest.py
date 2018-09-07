@@ -17,7 +17,7 @@ class BatchWebRequest:
 
     def __init__(
             self,
-            web_requester: 'AbstractScrapeRequest',  # forward ref for mypy
+            web_requester: AbstractScrapeRequest,
             model_instance: models.Model) -> None:
         pass
 
@@ -35,11 +35,3 @@ class BatchWebRequest:
         A tuple of key names that identify a request result. For example,
         ('target', 'pam_id').
         """
-
-
-def testt(i: int) -> str:
-    return str(i)
-
-
-if __name__ == '__main__':
-    print(testt('asdf'))
