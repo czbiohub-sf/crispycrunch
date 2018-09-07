@@ -164,7 +164,6 @@ class GuideDesign(BaseModel):
         ('todo', 'TODO: more pams'),
     ], default='NGG')
 
-    # TODO (gdingle): crispor has a max length of 2000 bp... validate here?
     targets = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
@@ -205,7 +204,7 @@ class GuideSelection(BaseModel):
         help_text='sgRNAs from tagin.stembio.org')
 
     def _validate_selected_guides(val):
-        return [validate_seq(seq)
+        return [validate_seq(seq)  # type: ignore
                 for seqs in val.values()
                 for seq in seqs.values()]
 
@@ -250,7 +249,7 @@ class PrimerSelection(BaseModel):
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
 
     def _validate_selected_primers(val):
-        return [validate_seq(seq)
+        return [validate_seq(seq)  # type: ignore
                 for seqs in val.values()
                 for seq in seqs]
 

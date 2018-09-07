@@ -17,7 +17,7 @@ from typing import Any, Dict, Tuple
 from urllib.parse import quote
 
 import requests
-import requests_cache
+import requests_cache  # type: ignore
 import urllib3
 
 from bs4 import BeautifulSoup
@@ -84,7 +84,7 @@ class CrispressoRequest(AbstractScrapeRequest):
                  fastq_r1: str,
                  fastq_r2: str,
                  hdr_seq: str='',
-                 optional_name: str=''):
+                 optional_name: str='') -> None:
         self.endpoint = 'http://crispresso.pinellolab.partners.org/submit'
         # TODO (gdingle): compare crispresso2 values to chosen crispresso1 values
         self.data = {
@@ -117,7 +117,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             'fastq_r1': open(fastq_r1, 'rb'),
             'fastq_r2': open(fastq_r2, 'rb'),
         }
-        self.request = requests.Request(
+        self.request = requests.Request(  # type: ignore
             'POST',
             self.endpoint,
             data=self.data,
@@ -126,7 +126,7 @@ class CrispressoRequest(AbstractScrapeRequest):
 
     def run(self) -> Dict[str, Any]:
         logger.info('POST request to: {}'.format(self.endpoint))
-        response = requests.Session().send(self.request)
+        response = requests.Session().send(self.request)  # type: ignore
         response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
@@ -188,7 +188,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         soup = BeautifulSoup(report_response.text, 'html.parser')
         return soup.find(id='log_params').get_text()
 
-    def _check_report_status(self, report_id: str) -> None:
+    def _check_report_status(self, report_id: str) -> bool:
         status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'
         status_url = status_endpoint + report_id
         with requests_cache.disabled():
@@ -289,13 +289,13 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
-        self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()
+        self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
         self.target = target
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
             logger.info('POST request to: {}'.format(self.endpoint))
-            response = requests.Session().send(self.request)
+            response = requests.Session().send(self.request)  # type: ignore
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)
@@ -312,6 +312,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             logger.warning(str(e))
             # IMPORTANT: Delete cache of unexpected output
             CACHE.delete(self.cache_key)
+        raise RuntimeError('unknown error')
 
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
         title = soup.find(class_='title')
@@ -444,7 +445,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
             '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(**locals())
         self.target = target  # just for metadata
-        self.request = requests.Request('GET', self.endpoint).prepare()
+        self.request = requests.Request('GET', self.endpoint).prepare()  # type: ignore
 
     def __repr__(self):
         return 'CrisporPrimerRequest({})'.format(self.endpoint)
@@ -453,7 +454,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             retries: int=1) -> Dict[str, Any]:
         try:
             logger.info('GET request to: {}'.format(self.endpoint))
-            response = requests.Session().send(self.request)
+            response = requests.Session().send(self.request)  # type: ignore
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)

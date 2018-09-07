@@ -88,7 +88,7 @@ def validate_chr_length(value: str, max_length: int = 2000) -> None:
     ...
     django.core.exceptions.ValidationError: ['"99789" is longer than the max length of 2000']
     """
-    matches = [m.replace(',', '') for m in re.match(CHR_REGEX, value).groups()]
+    matches = [m.replace(',', '') for m in re.match(CHR_REGEX, value).groups()]  # type: ignore
     length = abs(int(matches[1]) - sum(int(m) for m in matches[2:]))
     if length > max_length:
         raise ValidationError('"{}" is longer than the max length of {}'.format(
@@ -156,7 +156,7 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     'chr7:5569368-5569388'
     """
     validate_chr(target_loc)
-    matches = re.match(CHR_REGEX, target_loc)
+    matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
     start = int(matches[2]) + guide_offset
     return 'chr{}:{}-{}'.format(matches[1], start, start + guide_len)
 

@@ -35,7 +35,7 @@ from main.models import *
 from main.validators import is_ensemble_transcript
 
 # TODO (gdingle): move this when crispresso1 not needed
-from crispresso.s3 import download_fastqs
+from crispresso.s3 import download_fastqs  # type: ignore
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'

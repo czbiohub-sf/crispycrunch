@@ -155,7 +155,7 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     return sheet
 
 
-def _drop_empty_report_stats(reports):
+def _drop_empty_report_stats(reports: list):
     """
     See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
     """
@@ -168,7 +168,7 @@ def _drop_empty_report_stats(reports):
 
 def _new_index(size=96,
                end_char='H',
-               end_int=12):
+               end_int=12) -> list:
     chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
     ints = list(range(1, end_int + 1))
     assert len(chars) * len(ints) >= size
@@ -176,7 +176,7 @@ def _new_index(size=96,
     return [c + str(i) for c in chars for i in ints][:size]
 
 
-def _new_samplesheet():
+def _new_samplesheet() -> pandas.DataFrame:
     return pandas.DataFrame(
         index=_new_index(),
         # TODO (gdingle): use a MultiIndex?
