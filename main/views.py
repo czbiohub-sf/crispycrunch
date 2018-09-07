@@ -197,7 +197,7 @@ class PrimerDesignView(CreatePlusView):
         obj.guide_selection = guide_selection
 
         sheet = samplesheet.from_guide_selection(guide_selection)
-        batch = webscraperequest.CrisporPrimerBatchWebRequest(guide_selection)
+        batch = webscraperequest.CrisporPrimerBatchWebRequest(obj)
         largs = [[row['_crispor_batch_id'],
                   row['_crispor_pam_id'],
                   obj.max_amplicon_length,

@@ -81,6 +81,7 @@ class BaseBatchWebRequest:
             for args in largs
         ])
         self.model_instance.save()
+        # assert False, (self.model_instance.primer_data)
 
     def _request(self, args: list) -> Dict[str, Any]:
         # TODO (gdingle): how to ensure arg order correct?
