@@ -120,7 +120,7 @@ class GuideDesignView(CreatePlusView):
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
         largs = [[target_seq, obj.experiment.name, obj.genome, obj.pam, target]
                  for target_seq, target in zip(obj.target_seqs, obj.targets)]
-        batch.start(largs)
+        batch.start(largs, [-1])
 
         return obj
 
@@ -205,7 +205,7 @@ class PrimerDesignView(CreatePlusView):
                   guide_selection.guide_design.pam,
                   row['target_loc']]
                  for row in sheet.to_records()]
-        batch.start(largs)
+        batch.start(largs, [-1])
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
@@ -303,7 +303,7 @@ class AnalysisView(CreatePlusView):
             row['donor_seq'],
             row['well_name']
         ] for row in sheet.to_records()]
-        batch.start(largs)
+        batch.start(largs, [-1])
         return obj
 
 

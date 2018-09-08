@@ -29,8 +29,6 @@ class BaseBatchWebRequest:
 
     max_workers = 8  # Number of threads to use
 
-    request_key = ('success',)  # Key names that identify a request result
-
     def __init__(
             self,
             model_instance: models.Model) -> None:
@@ -48,9 +46,9 @@ class BaseBatchWebRequest:
     def field_name() -> str:
         """The field name of model_instance that should contain request results."""
 
-    def start(self, largs: List[list]) -> None:
+    def start(self, largs: List[list], keys: List[int] = []) -> None:
         """Start all requests, each in a thread, with the given list of args"""
-        self._init_instance_field(largs)
+        self._init_instance_field(largs, keys)
 
         pool = ThreadPoolExecutor(self.max_workers)
         for i, args in enumerate(largs):
@@ -62,7 +60,7 @@ class BaseBatchWebRequest:
         completed, running, errorred = [], [], []
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
-            key = (i,) + tuple(result[k] for k in self.request_key)
+            key = result['request_key'] + (result['success'],)
             if result['success'] is True:
                 completed.append(key)
             elif result['success'] is False:
@@ -74,11 +72,10 @@ class BaseBatchWebRequest:
 
         return BatchStatus(completed, errorred, running)
 
-    def _init_instance_field(self, largs: List[list]) -> None:
+    def _init_instance_field(self, largs: List[list], keys: List[int]) -> None:
         setattr(self.model_instance, str(self.field_name), [
-            # TODO (gdingle): use request_key
-            {'success': None, 'TODO': 'TODO'}
-            for args in largs
+            {'success': None, 'request_key': (i,) + tuple(args[k] for k in keys)}
+            for i, args in enumerate(largs)
         ])
         self.model_instance.save()
 
@@ -98,7 +95,7 @@ class BaseBatchWebRequest:
     def _insert(self, future, index=None) -> None:
         try:
             result = future.result()
-            self.model_instance.__dict__[str(self.field_name)][index] = result
+            self.model_instance.__dict__[str(self.field_name)][index].update(result)
             self.model_instance.save()
         except Exception as e:
             logger.error('Error inserting into index {} value {}: {}'
@@ -127,7 +124,7 @@ class BatchStatus:
 
     @property
     def percent_success(self):
-        return 100 * len(self.completed) // len(self.statuses) + 1
+        return 100 * len(self.completed) // len(self.statuses)
 
     @property
     def percent_error(self):
@@ -157,26 +154,22 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     field_name = 'guide_data'
     # More than 8 threads appears to cause a 'no output' Crispor error
     max_workers = 8
-    # TODO (gdingle):
-    # request_key = ('success',)
 
 
 class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     """
     >>> batch = CrisporPrimerBatchWebRequest(mock.Mock())
     >>> largs = [['9cJNEsbfWiSKa8wlaJMZ', 's185+']]
-    >>> batch.start(largs)
+    >>> batch.start(largs, [0, 1])
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, None)])
+    BatchStatus([], [], [(0, '9cJNEsbfWiSKa8wlaJMZ', 's185+', None)])
     >>> time.sleep(2)
     >>> print(batch.get_batch_status())
-    BatchStatus([(0, True)], [], [])
+    BatchStatus([(0, '9cJNEsbfWiSKa8wlaJMZ', 's185+', True)], [], [])
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
     max_workers = 16
-    # TODO (gdingle):
-    # request_key = ('success',)
 
 
 class CrispressoBatchWebRequest(BaseBatchWebRequest):
