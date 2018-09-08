@@ -60,7 +60,7 @@ class BaseBatchWebRequest:
         completed, running, errorred = [], [], []
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
-            key = result['request_key'] + (result['success'],)
+            key = tuple([i, result['success']] + result['request_key'])
             if result['success'] is True:
                 completed.append(key)
             elif result['success'] is False:
@@ -74,7 +74,7 @@ class BaseBatchWebRequest:
 
     def _init_instance_field(self, largs: List[list], keys: List[int]) -> None:
         setattr(self.model_instance, str(self.field_name), [
-            {'success': None, 'request_key': (i,) + tuple(args[k] for k in keys)}
+            {'success': None, 'request_key': [args[k] for k in keys]}
             for i, args in enumerate(largs)
         ])
         self.model_instance.save()
@@ -162,10 +162,10 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [['9cJNEsbfWiSKa8wlaJMZ', 's185+']]
     >>> batch.start(largs, [0, 1])
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, '9cJNEsbfWiSKa8wlaJMZ', 's185+', None)])
+    BatchStatus([], [], [(0, None, '9cJNEsbfWiSKa8wlaJMZ', 's185+')])
     >>> time.sleep(2)
     >>> print(batch.get_batch_status())
-    BatchStatus([(0, '9cJNEsbfWiSKa8wlaJMZ', 's185+', True)], [], [])
+    BatchStatus([(0, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+')], [], [])
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
