@@ -301,7 +301,7 @@ class AnalysisView(CreatePlusView):
             row['fastq_fwd'],
             row['fastq_rev'],
             row['donor_seq'],
-            row['well_name']
+            row.index
         ] for row in sheet.to_records()]
         batch.start(largs, [-1])
         return obj
