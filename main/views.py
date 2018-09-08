@@ -35,7 +35,7 @@ from main.models import *
 from main.validators import is_ensemble_transcript
 
 # TODO (gdingle): move this when crispresso1 not needed
-from crispresso.s3 import download_fastqs  # type: ignore
+from crispresso.s3 import download_fastqs
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
@@ -166,7 +166,6 @@ class GuideSelectionView(CreatePlusView):
                 for g in guide_design.guide_data),
             'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
                                     for g in guide_design.donor_data),
-            # TODO (gdingle): temp for debuggin
             'selected_guides_tagin': dict(
                 (g['metadata']['chr_loc'], self._slice(g['guide_seqs'], wells_per_target))
                 for g in guide_design.donor_data),
