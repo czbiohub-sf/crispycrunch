@@ -26,6 +26,7 @@ from django.views.generic import DetailView
 from django.views.generic.edit import CreateView
 from openpyxl import Workbook, writer  # noqa
 
+# TODO (gdingle): convert the below to relative imports?
 import webscraperequest
 
 from main import conversions

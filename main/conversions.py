@@ -52,8 +52,10 @@ def gene_to_chr_loc(gene: str, genome='hg38') -> str:
 
     >>> gene_to_chr_loc('ATL2')
     'chr2:38294880-38377262'
-    >>> gene_to_chr_loc('XXXX') is None
-    True
+    >>> gene_to_chr_loc('XXXX')
+    Traceback (most recent call last):
+    ...
+    ValueError: No chr location for XXXX
     """
     url = 'https://genome.ucsc.edu/cgi-bin/hgTracks'
     response = requests.get(url, params={

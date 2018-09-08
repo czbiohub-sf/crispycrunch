@@ -6,6 +6,8 @@ For tests, see main/tests.py.
 """
 import pandas
 
+from typing import Optional, Dict
+
 from main.models import *
 from main.validators import get_guide_loc
 
@@ -120,6 +122,10 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
 def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     primer_selection = PrimerSelection.objects.filter(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
+    return from_analysis_and_primer_selection(analysis, primer_selection)
+
+
+def from_analysis_and_primer_selection(analysis: Analysis, primer_selection: PrimerSelection) -> pandas.DataFrame:
     sheet = from_primer_selection(primer_selection)
 
     sheet._metadata = [
@@ -143,8 +149,7 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     sheet['report_url'] = [r.get('report_url') for r in reports]
     sheet['report_zip'] = [r.get('report_zip') for r in reports]
 
-    if any(sheet['report_url']):
-        sheet['report_stats'] = _drop_empty_report_stats(reports)
+    sheet['report_stats'] = _drop_empty_report_stats(reports)
 
     # TODO (gdingle): strangely, we lose the order of headers as when compared to...
     # sheet['report_stats'] = [r.get('report_stats') for r in reports]
@@ -155,11 +160,13 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     return sheet
 
 
-def _drop_empty_report_stats(reports: list):
+def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     """
     See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
     """
     report_stats = [r.get('report_stats', {}) for r in reports]
+    if not any(report_stats):
+        return None
     temp_sheet = pandas.DataFrame.from_records(report_stats)
     nonzero_cols = (temp_sheet != 0).any(axis='rows')
     temp_sheet = temp_sheet.loc[:, nonzero_cols]
@@ -225,9 +232,7 @@ def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
     for well_pos in sheet.index:
         matches = sorted([
             filename for filename in fastqs
-            # TODO (gdingle): temp override for testing!!!!
-            if 'A6' in os.path.basename(filename).split('-')
-            # if well_pos in os.path.basename(filename).split('-')
+            if well_pos in os.path.basename(filename).split('-')
         ])
         if len(matches) == 0:
             # TODO (gdingle): allow missing fastqs?
