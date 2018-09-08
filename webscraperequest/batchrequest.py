@@ -9,11 +9,10 @@ from unittest import mock  # noqa
 
 from django.db import models
 
-# For doctest. Unfortunately this appears to kill the mypy checking for the imported classes.
-# TODO (gdingle): fix me. see https://mypy.readthedocs.io/en/latest/running_mypy.html#how-imports-are-found
 try:
     from .scraperequest import *
 except ModuleNotFoundError:
+    # For doctest, which is not run in package context
     from scraperequest import *  # type: ignore # noqa
 
 
@@ -29,9 +28,7 @@ class BaseBatchWebRequest:
 
     max_workers = 8  # Number of threads to use
 
-    def __init__(
-            self,
-            model_instance: models.Model) -> None:
+    def __init__(self, model_instance: models.Model) -> None:
         self.model_instance = model_instance
 
     @property
@@ -80,14 +77,10 @@ class BaseBatchWebRequest:
         self.model_instance.save()
 
     def _request(self, args: list) -> Dict[str, Any]:
-        # TODO (gdingle): how to ensure arg order correct?
-        # TODO (gdingle): why not callable?
         try:
             return self.requester(*args).run()  # type: ignore
         except Exception as e:
             return {
-                # TODO (gdingle): how to get key here?
-                # 'target': target,
                 'success': False,
                 'error': getattr(e, 'message', str(e)),
             }
