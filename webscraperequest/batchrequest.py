@@ -1,4 +1,3 @@
-import datetime
 import doctest
 import functools
 import time  # noqa
@@ -48,11 +47,11 @@ class BaseBatchWebRequest:
         """Start all requests, each in a thread, with the given list of args"""
         self._init_instance_field(largs, keys)
 
-        pool = ThreadPoolExecutor(self.max_workers)
-        for i, args in enumerate(largs):
-            future = pool.submit(self._request, args)
-            future.add_done_callback(
-                functools.partial(self._insert, index=i))
+        with ThreadPoolExecutor(self.max_workers) as pool:
+            for i, args in enumerate(largs):
+                future = pool.submit(self._request, args)
+                future.add_done_callback(
+                    functools.partial(self._insert, index=i))
 
     def get_batch_status(self) -> 'BatchStatus':  # forward ref for typing
         completed, running, errorred = [], [], []
@@ -60,8 +59,7 @@ class BaseBatchWebRequest:
         for i, result in enumerate(current_results):
             key = tuple([i, result['in_cache'], result['success']] + result['request_key'])
             if result['success'] is True:
-                start_time = datetime.datetime.fromisoformat(result['start_time'])  # type: ignore
-                key += ((datetime.datetime.now() - start_time).total_seconds(),)
+                key += (int(time.time() - result['start_time']),)
                 completed.append(key)
             elif result['success'] is False:
                 errorred.append(key + (result['error'],))
@@ -78,7 +76,7 @@ class BaseBatchWebRequest:
             {'success': None,
              'request_key': [args[k] for k in keys],
              'in_cache': self.requester(*args).in_cache(),  # type: ignore
-             'start_time': datetime.datetime.now().isoformat()}
+             'start_time': time.time()}
             for i, args in enumerate(largs)
         ])
         self.model_instance.save()
@@ -145,10 +143,10 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [['chr1:11,130,540-11,130,751'], ['chr1:1-1']]
     >>> batch.start(largs)
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, None), (1, None)])
+    BatchStatus([(0, True, True, 0)], [(1, True, False, 'Crispor on chr1:1-1: Bad sequence size')], [])
     >>> time.sleep(4)
-    >>> print(batch.get_batch_status())
-    BatchStatus([(0, True)], [(1, False, 'Crispor on chr1:1-1: Bad sequence size')], [])
+    >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
+    BatchStatus([(0, True, True, ...)], [(1, True, False, 'Crispor on chr1:1-1: Bad sequence size')], [])
     """
     requester = CrisporGuideRequest
     field_name = 'guide_data'
@@ -162,10 +160,10 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [['9cJNEsbfWiSKa8wlaJMZ', 's185+']]
     >>> batch.start(largs, [0, 1])
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, None, '9cJNEsbfWiSKa8wlaJMZ', 's185+')])
+    BatchStatus([(0, True, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+', 0)], [], [])
     >>> time.sleep(2)
-    >>> print(batch.get_batch_status())
-    BatchStatus([(0, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+')], [], [])
+    >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
+    BatchStatus([(0, True, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+', 2)], [], [])
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
@@ -182,10 +180,10 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [[amplicon, sgRNA, fastq_r1, fastq_r2]]
     >>> batch.start(largs)
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, None)])
+    BatchStatus([(0, True, True, 0)], [], [])
     >>> time.sleep(2)
-    >>> print(batch.get_batch_status())
-    BatchStatus([(0, True)], [], [])
+    >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
+    BatchStatus([(0, True, True, ...)], [], [])
     """
     requester = CrispressoRequest
     field_name = 'results_data'
