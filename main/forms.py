@@ -72,9 +72,6 @@ class GuideSelectionForm(ModelForm):
             "selected_guides_tagin": 'Selected guides',
         }
 
-    # TODO:self.cleaned_data['filter']:
-    # def clean_selected_guides(self):
-
     # TODO (gdingle): HACK ALERT! Disabling selected_guides when tagin
     # Need to figure out how to get correct guides from Crispor from Tagin
     # while avoiding 2000 bp limit, or else use Primer3 myself
@@ -96,9 +93,6 @@ class PrimerDesignForm(ModelForm):
 
 
 class PrimerSelectionForm(ModelForm):
-
-    # TODO:self.cleaned_data['filter']:
-    # def clean_selected_guides(self):
 
     class Meta:
         model = PrimerSelection

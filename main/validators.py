@@ -1,5 +1,4 @@
 import doctest
-import os
 import re
 
 from django.core.exceptions import ValidationError
@@ -22,10 +21,6 @@ def validate_fastq(filename: str) -> None:
     """
     if (not filename.endswith('.fastq') and not filename.endswith('.fastq.gz')):
         raise ValidationError('"{}" is not a valid fastq file'.format(filename))
-    # TODO (gdingle): is checking file path too brittle?
-    path = os.path.join(os.path.dirname(__file__), '..', filename)
-    if not os.path.exists(path):
-        raise ValidationError('"{}" does not exist'.format(path))
 
 
 def validate_seq(value: str) -> None:

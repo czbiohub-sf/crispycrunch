@@ -5,19 +5,10 @@ services:
   db:
     image: postgres
 
-  # TODO (gdingle): remove
-  # crispresso:
-  #   build: crispresso
-  #   command: python app.py
-  #   volumes:
-  #     - ./crispresso:/code
-  #   ports:
-  #     - "5000:5000"
-
   web:
     build: .
     # TODO (gdingle): use gunicorn for prod
-    # TODO (gdingle): python3 manage.py migrate here??
+    # remeber to run: docker-compose exec web python manage.py migrate
     command: python3 manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/code
@@ -25,8 +16,6 @@ services:
       - "8000:8000"
     depends_on:
       - db
-      # TODO (gdingle): remove
-      # - crispresso
     # For pdb
     stdin_open: true
     tty: true

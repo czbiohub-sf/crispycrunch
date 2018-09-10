@@ -4,8 +4,6 @@ from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.db import models
 
-# TODO (gdingle): still needed?
-# from main.platelayout import Plate96Layout
 from main.validators import *
 
 # TODO (gdingle): mark some model fields as unique or unique_together, and some as editable=False
@@ -284,8 +282,6 @@ class Analysis(BaseModel):
     researcher = models.ForeignKey(
         Researcher, on_delete=models.PROTECT,
         help_text='The researcher doing the analysis')
-    # TODO (gdingle): remove me on next migration
-    name = models.CharField(max_length=40, blank=True)
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview

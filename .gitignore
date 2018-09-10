@@ -113,4 +113,4 @@ input/
 *.fai
 
 # requests_cache
-cache.sqlite
+*.sqlite

@@ -4,9 +4,11 @@ whereas the Django models represent contents per plate.
 
 For tests, see main/tests.py.
 """
-import pandas
+import os
 
-from typing import Optional, Dict
+from typing import Dict, Optional
+
+import pandas
 
 from main.models import *
 from main.validators import get_guide_loc
@@ -19,12 +21,12 @@ def from_experiment(experiment: Experiment) -> pandas.DataFrame:
     sheet._metadata = [
         'experiment_id',
         'experiment_name',
-        # TODO (gdingle): use when avail
-        # 'experiment_create_time',
+        'experiment_create_time',
         'experimenter_name',
     ]
     sheet.experiment_id = experiment.id
     sheet.experiment_name = experiment.name
+    sheet.experiment_create_time = experiment.create_time
     sheet.experimenter_name = experiment.researcher.full_name
 
     return sheet
@@ -49,17 +51,15 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
               for offset, seq in selected.items()]
 
     # For assigning to subset of rows of A1 to H12
-    # TODO: This looses ordering of input
     lg = slice(0, len(guides))
 
     sheet['target_genome'] = guide_design.genome
-    # TODO (gdingle): is this even worth having?
     sheet['target_pam'] = guide_design.pam
 
     sheet['target_loc'][lg] = [g[0] for g in guides]
     sheet['target_seq'][lg] = [g[4] for g in guides]
 
-    # TODO: good to assume always 20 bp with trailing PAM as in Crispor?
+    # TODO: assume always 20 bp with trailing PAM as in Crispor?
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g[2] for g in guides), 'Expecting trailing PAM'
     assert all(len(g[2]) == 24 for g in guides), 'Expecting 20bp guide'
@@ -71,7 +71,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     # TODO (gdingle): recompute from guide_seq
     sheet['guide_offset'][lg] = [int(g[1][1:-1]) for g in guides]
     sheet['guide_direction'][lg] = [
-        # TODO (gdingle): best naming?
         'fwd' if g[1][-1] == '+' else 'rev'
         for g in guides]
 
@@ -94,12 +93,11 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     sheet['_crispor_pam_id'][lg] = [g[1] for g in guides]
     # 'TODO_crispor_stats',
 
-    # TODO (gdingle): donors
+    # TODO (gdingle): donor dna
     # sheet['donor_seq'][lg] =
-    # TODO (gdingle): how to compute this? talk to Jason Li
+    # TODO (gdingle): how to compute this? wait for protospacex
     # sheet['donor_target_seq'][lg] =
 
-    # TODO (gdingle): is this wise to return subset?
     return sheet[lg]
 
 
@@ -113,7 +111,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
         sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0]
         sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1]
-    # TODO (gdingle): is this really the best way to reindex?
+
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     sheet.index = _new_index(size=len(sheet))
     return sheet
@@ -130,11 +128,11 @@ def from_analysis_and_primer_selection(analysis: Analysis, primer_selection: Pri
 
     sheet._metadata = [
         'analysis_id',
-        # TODO (gdingle): use when avail
-        # 'analysis_create_time',
+        'analysis_create_time',
         'analyst_name',
     ]
     sheet.analysis_id = analysis.id
+    sheet.analysis_create_time = analysis.create_time
     sheet.analyst_name = analysis.researcher.full_name
 
     sheet['s3_bucket'] = analysis.s3_bucket
@@ -179,14 +177,12 @@ def _new_index(size=96,
     chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
     ints = list(range(1, end_int + 1))
     assert len(chars) * len(ints) >= size
-    # TODO (gdingle): A01, A02 for easier sorting?
     return [c + str(i) for c in chars for i in ints][:size]
 
 
 def _new_samplesheet() -> pandas.DataFrame:
     return pandas.DataFrame(
         index=_new_index(),
-        # TODO (gdingle): use a MultiIndex?
         columns=[
             'target_genome',
             'target_pam',
@@ -199,17 +195,10 @@ def _new_samplesheet() -> pandas.DataFrame:
             'guide_pam',
             '_crispor_batch_id',
             '_crispor_pam_id',
-            # 'TODO_crispor_stats', off targets, etc
             'donor_seq',
             'donor_target_seq',
-            # TODO (gdingle): does primer_loc have any meaning?
-            # 'primer_loc',
             'primer_seq_fwd',
             'primer_seq_rev',
-            # 'primer_melt_temp', # TODO (gdingle): is this useful?
-            # TODO (gdingle): what's the source of truth for these?
-            # 'well_pos',
-            # 'well_num',
             'well_name',
             's3_bucket',
             's3_prefix',

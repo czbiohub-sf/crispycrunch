@@ -57,8 +57,8 @@ class BaseBatchWebRequest:
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
             key = tuple([i, result['in_cache'],
-                # result['cache_key'],
-                result['success']] + result['request_key'])
+                         # result['cache_key'],
+                         result['success']] + result['request_key'])
             if result['success'] is True:
                 key += (result['end_time'] - result['start_time'],)
                 completed.append(key)
@@ -96,6 +96,7 @@ class BaseBatchWebRequest:
         try:
             result = future.result()
             result['end_time'] = int(time.time())
+            result['success'] = True
             self.model_instance.__dict__[str(self.field_name)][index].update(result)
             self.model_instance.save()
             logger.debug('{} result inserted into database'.format(self.requester.__class__))
@@ -212,5 +213,7 @@ if __name__ == '__main__':
     # ]
     # batch.start(largs)
     # print(batch.get_batch_status())
-    # time.sleep(14)
+    # time.sleep(4)
+    # print(batch.get_batch_status())
+    # time.sleep(8)
     # print(batch.get_batch_status())

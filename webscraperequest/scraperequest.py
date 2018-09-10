@@ -144,7 +144,6 @@ class CrispressoRequest(AbstractScrapeRequest):
         stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
 
         return {
-            'success': True,
             'report_url': report_url,
             'report_zip': report_zip,
             'log_params': self._get_log_params(report_url),
@@ -210,7 +209,6 @@ class CrispressoRequest(AbstractScrapeRequest):
             'CRISPResso_RUNNING_LOG.txt',
             # TODO (gdingle): read pickle file and avoid "invalid start byte" error
             'CRISPResso2_info.pickle',  # contains figure captions
-
             'Alleles_frequency_table.txt',
             'CRISPResso_mapping_statistics.txt',
             'CRISPResso_quantification_of_editing_frequency.txt',
@@ -327,7 +325,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             raise ValueError('Crispor on {}: Bad sequence size'.format(
                 self.target))
 
-        # TODO (gdingle): this error occurs for too short seqs also
+        # TODO (gdingle): this error occurs for too short seqs also... differentiate
         if 'cannot handle sequences longer than 2000 bp' in soup.find(class_='contentcentral').get_text():
             raise ValueError('Crispor on {}: Bad sequence size'.format(
                 self.target))
@@ -370,58 +368,20 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
                                  for t in rows)
         return dict(
-            # TODO (gdingle): why is off by one from input?
+            # TODO (gdingle): why is this seq off by one from input seq?
             # seq=soup.find(class_='title').find('a').get_text(),
             target=self.target,
             seq=self.data['seq'],
             url=url,
             batch_id=batch_id,
             guide_seqs=guide_seqs,
+            # TODO (gdingle): are these links ever needed?
             primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, urllib.parse.quote(t['id']))) for t in rows),
-
-            # TODO (gdingle): remove unneeded
-            # min_freq=float(soup.find('input', {'name': 'minFreq'})['value']),
-            # title=soup.title.string,
-            # variant_database=soup.find('select', {'name': 'varDb'})
-            # .find('option', {'selected': 'selected'})
-            # .get_text(),
-
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
-            # TODO (gdingle): other formats?
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
             offtargets_url=self.endpoint + '?batchId={}&download=offtargets&format=tsv'.format(batch_id),
-            success=True,
         )
-
-
-class CrisporGuideRequestById(CrisporGuideRequest):
-    """
-    Given an existing Crispor batch, gets candidate guides.
-
-    # TODO (gdingle): fix doctests
-    > batch_id = 'aev3eGeG2aIZT1hdHIJ1'
-    > data = CrisporGuideRequestById(batch_id).run()
-    > data['batch_id'] == batch_id
-    True
-
-    > batch_id = '5JS3eHUiAeaV6eTSZ9av'
-    > data = CrisporGuideRequestById(batch_id).run()
-    Traceback (most recent call last):
-    ...
-    ValueError: Crispor on 5JS3eHUiAeaV6eTSZ9av: Query sequence, not present in the selected genome, Homo sapiens (hg38)
-    """
-
-    def __init__(self, batch_id) -> None:
-        self.endpoint = 'http://crispor.tefor.net/crispor.py?batchId=' + batch_id
-        self.data = {'seq': batch_id, 'pam_id': batch_id}  # hack for error messages
-
-    def run(self, retries: int=0) -> Dict[str, Any]:
-        logger.info('GET request to: {}'.format(self.endpoint))
-        response = requests.get(self.endpoint)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return self._extract_data(soup)
 
 
 class CrisporPrimerRequest(AbstractScrapeRequest):
@@ -474,8 +434,6 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
                 raise
 
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        # TODO (gdingle): all primers still wanted?
-        # primer_tables, primer_seqs = self._extract_tables(soup)
         if 'exceptions.ValueError' in soup.get_text():
             raise RuntimeError('Crispor exceptions.ValueError')
 
@@ -498,7 +456,6 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             # primer_tables=primer_tables,
             # primer_seqs=primer_seqs,
             ontarget_primers=self._extract_ontarget_primers(soup),
-            success=True,
         )
 
     def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, str]:
@@ -517,27 +474,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         rows = (row.find_all('td') for row in table.find_all('tr'))
         return dict((row[0].get_text().split('_')[-1], row[1].get_text()) for row in rows)
 
-    # TODO (gdingle): all primers still wanted?
-    def _extract_tables(self, soup: BeautifulSoup) -> Tuple[OrderedDict, OrderedDict]:
-        table_dict = OrderedDict([])  # type: OrderedDict[str, dict]
-        seq_dict = OrderedDict([])  # type: OrderedDict[str, str]
-        tables = soup.find_all(class_='primerTable')
-        for table in tables:
-            table_name = table.find_previous('h3').get_text()
-            rows = table.find_all('tr')
-            table_data = {}
-            for row in rows:
-                cells = row.find_all('td')
-                if len(cells):  # not all primerTable have data
-                    primer_id = cells[0].get_text()
-                    primer_id = primer_id.replace('(constant primer used for all guide RNAs)', '').strip()
-                    primer_seq = cells[1].get_text()
-                    table_data[primer_id] = primer_seq
-                    seq_dict[primer_id] = primer_seq
-            table_dict[table_name] = table_data
-        return table_dict, seq_dict
 
-
+# TODO (gdingle): remove me when protospacex is ready
 class TagInRequest(AbstractScrapeRequest):
     """
     Given an an Ensembl Transcript or a custom sequence, gets candidate sgRNAs

@@ -33,9 +33,13 @@ Build the docker images.
 
 This will also run `pip install -r requirements.txt`.
 
-Run the app.
+Start the app services.
 
 ```docker-compose up```
+
+Initialize the database.
+
+```docker-compose exec web python manage.py migrate```
 
 # Usage
 <!-- TODO: better homepage -->

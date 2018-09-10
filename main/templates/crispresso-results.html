@@ -1,0 +1,44 @@
+p{% extends 'base.html' %}
+
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+
+<p>
+  {{ analysis.name }} analysis of {{ analysis.experiment.name }}
+</p>
+
+<h2 class="d-inline-block">
+  Crispresso Reports
+</h2>
+<a class="d-inline-block align-top" target="_blank" href="http://crispresso.pinellolab.partners.org/help">
+  [?]
+</a>
+
+<table class="table">
+  <thead class="thead-light">
+    <tr>
+      <th>Well Position</th>
+      {# TODO: show target here? <th>Target</th> #}
+      <th>Report</th>
+      <th>Zip</th>
+      {% for stat_name in sheet.to_records.0.report_stats %}
+      <th title="{{ stat_name }}">{{ stat_name|truncatechars:32 }}</th>
+      {% endfor %}
+    </tr>
+  </thead>
+  {% for row in sheet.to_records %}
+  <tr>
+    <td>{{ row.index }}</td>
+    {# <td>{{ row.target_loc }}</td> #}
+    <td><a target="_blank" href="{{ row.report_url }}">open</a></td>
+    <td><a target="_blank" href="{{ row.report_zip }}">download</a></td>
+    {% for stat in row.report_stats.values %}
+    <td class="text-right">{{ stat|intcomma }}</td>
+    {% endfor %}
+  </tr>
+  {% endfor %}
+</table>
+
+{% endblock content %}

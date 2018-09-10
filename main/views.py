@@ -24,17 +24,14 @@ from django.views.generic import DetailView
 from django.views.generic.edit import CreateView
 from openpyxl import Workbook, writer  # noqa
 
-# TODO (gdingle): convert the below to relative imports?
 import webscraperequest
 
+from crispresso.s3 import download_fastqs
 from main import conversions
 from main import samplesheet
 from main.forms import *
 from main.models import *
 from main.validators import is_ensemble_transcript
-
-# TODO (gdingle): move this when crispresso1 not needed
-from crispresso.s3 import download_fastqs
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
@@ -382,5 +379,5 @@ class GuideOrderFormView(OrderFormView):
 class PrimerOrderFormView(OrderFormView):
 
     model = PrimerSelection
-    # TODO (gdingle): how to order fwd and reverse primer at once?
+    # TODO (gdingle): IMPORTANT: how to order fwd and reverse primer at once?
     seq_key = 'primer_seq_fwd'
