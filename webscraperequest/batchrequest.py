@@ -61,7 +61,7 @@ class BaseBatchWebRequest:
             key = tuple([i, result['in_cache'], result['success']] + result['request_key'])
             if result['success'] is True:
                 start_time = datetime.datetime.fromisoformat(result['start_time'])  # type: ignore
-                key += tuple((datetime.datetime.now() - start_time).total_seconds())
+                key += ((datetime.datetime.now() - start_time).total_seconds(),)
                 completed.append(key)
             elif result['success'] is False:
                 errorred.append(key + (result['error'],))

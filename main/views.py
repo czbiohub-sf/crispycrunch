@@ -17,8 +17,6 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import islice
 from typing import no_type_check
 
-import requests
-
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
@@ -111,6 +109,7 @@ class GuideDesignView(CreatePlusView):
 
         obj.targets = self._normalize_targets(obj.targets)
 
+        # TODO (gdingle): this does not appear to be cached
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
 
         # TODO (gdingle): ignore HDR for now
