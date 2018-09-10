@@ -85,6 +85,7 @@ class GuideDesignView(CreatePlusView):
 
         with ThreadPoolExecutor() as pool:
             normalized = list(pool.map(
+                # TODO (gdingle): this still needs some work to get best region of gene
                 conversions.gene_to_chr_loc,
                 targets,
             ))
@@ -239,6 +240,7 @@ class PrimerSelectionView(CreatePlusView):
 
         return {
             'selected_primers': dict(
+                # TODO (gdingle): is this the best way of identifying guides?
                 (p['target'] + ' ' + p['pam_id'],
                     get_fwd_and_rev_primers(p['ontarget_primers'])
                  if p['success'] else p['error'])

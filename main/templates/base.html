@@ -4,6 +4,8 @@
 <html lang="en">
 <head>
   <title>{% block title %}{{request.resolver_match.url_name}}{% endblock %}</title>
+  {# TODO: better favicon #}
+  <link rel="shortcut icon" href="/static/crispy-crunch-logo-small.png" />
   {% bootstrap_css %}
   {% bootstrap_javascript jquery='slim' %}
   {% block head %}{% endblock head %}

@@ -188,7 +188,8 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): is this default correct? it was taken from Jason Li sample sheet example
         default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt')
 
-    guide_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
+    guide_data = JSONField(default=list, blank=True,
+                           help_text='Data returned by external service')
     donor_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
@@ -212,7 +213,7 @@ class GuideSelection(BaseModel):
         default=dict,
         blank=True,
         validators=[validate_num_wells, _validate_selected_guides],
-        help_text='sgRNAs from crispor.tefor.net')
+        help_text='Guides returned by Crispor, sorted by number of off-targets')
     # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(default=dict, blank=True,
                                 help_text='ssDNAs from tagin.stembio.org')
@@ -260,7 +261,7 @@ class PrimerSelection(BaseModel):
             functools.partial(validate_num_wells, max=96 * 2),
             _validate_selected_primers,
         ],
-        help_text='Primers from crispor.tefor.net')
+        help_text='Primers returned by Crispor, grouped by guide, forward primer then reverse primer')
 
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)

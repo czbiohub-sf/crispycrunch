@@ -285,7 +285,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             'seq': seq,
             'org': org,
             'pam': pam,
-            'sortBy': 'spec',
+            'sortBy': 'offCount', # sort by number of off-targets
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
