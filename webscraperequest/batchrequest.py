@@ -15,6 +15,8 @@ except ModuleNotFoundError:
     # For doctest, which is not run in package context
     from scraperequest import *  # type: ignore # noqa
 
+logger = logging.getLogger(__name__)
+
 
 class BaseBatchWebRequest:
     """
@@ -49,9 +51,9 @@ class BaseBatchWebRequest:
 
         pool = ThreadPoolExecutor(self.max_workers)
         for i, args in enumerate(largs):
+            logger.debug('{} submitted to thread pool'.format(self.requester.__class__))
             pool.submit(self._request, args).add_done_callback(
                 functools.partial(self._insert, index=i))
-        # TODO (gdingle): why is this still blocking?
         pool.shutdown(wait=False)
 
     def get_batch_status(self) -> 'BatchStatus':  # forward ref for typing
@@ -72,7 +74,6 @@ class BaseBatchWebRequest:
         return BatchStatus(completed, errorred, running)
 
     def _init_instance_field(self, largs: List[list], keys: List[int]) -> None:
-        [self._request(args) for args in largs]
         setattr(self.model_instance, str(self.field_name), [
             {'success': None,
              'request_key': [args[k] for k in keys],
@@ -81,6 +82,7 @@ class BaseBatchWebRequest:
             for i, args in enumerate(largs)
         ])
         self.model_instance.save()
+        logger.debug('{} initial values saved'.format(self.requester.__class__))
 
     def _request(self, args: list) -> Dict[str, Any]:
         try:
@@ -97,6 +99,7 @@ class BaseBatchWebRequest:
             result['end_time'] = int(time.time())
             self.model_instance.__dict__[str(self.field_name)][index].update(result)
             self.model_instance.save()
+            logger.debug('{} result inserted into database'.format(self.requester.__class__))
         except Exception as e:
             logger.error('Error inserting into index {} value {}: {}'
                          .format(index, result, str(e)))
