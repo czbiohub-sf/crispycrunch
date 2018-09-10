@@ -1,3 +1,4 @@
+import datetime
 import doctest
 import functools
 import time  # noqa
@@ -57,8 +58,10 @@ class BaseBatchWebRequest:
         completed, running, errorred = [], [], []
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
-            key = tuple([i, result['success']] + result['request_key'])
+            key = tuple([i, result['in_cache'], result['success']] + result['request_key'])
             if result['success'] is True:
+                start_time = datetime.datetime.fromisoformat(result['start_time'])  # type: ignore
+                key += tuple((datetime.datetime.now() - start_time).total_seconds())
                 completed.append(key)
             elif result['success'] is False:
                 errorred.append(key + (result['error'],))
@@ -70,8 +73,12 @@ class BaseBatchWebRequest:
         return BatchStatus(completed, errorred, running)
 
     def _init_instance_field(self, largs: List[list], keys: List[int]) -> None:
+        [self._request(args) for args in largs]
         setattr(self.model_instance, str(self.field_name), [
-            {'success': None, 'request_key': [args[k] for k in keys]}
+            {'success': None,
+             'request_key': [args[k] for k in keys],
+             'in_cache': self.requester(*args).in_cache(),  # type: ignore
+             'start_time': datetime.datetime.now().isoformat()}
             for i, args in enumerate(largs)
         ])
         self.model_instance.save()
