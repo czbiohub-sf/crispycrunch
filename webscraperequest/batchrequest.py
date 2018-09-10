@@ -49,9 +49,9 @@ class BaseBatchWebRequest:
 
         pool = ThreadPoolExecutor(self.max_workers)
         for i, args in enumerate(largs):
-            future = pool.submit(self._request, args)
-            future.add_done_callback(
+            pool.submit(self._request, args).add_done_callback(
                 functools.partial(self._insert, index=i))
+        # TODO (gdingle): why is this still blocking?
         pool.shutdown(wait=False)
 
     def get_batch_status(self) -> 'BatchStatus':  # forward ref for typing
@@ -60,7 +60,7 @@ class BaseBatchWebRequest:
         for i, result in enumerate(current_results):
             key = tuple([i, result['in_cache'], result['success']] + result['request_key'])
             if result['success'] is True:
-                key += (int(time.time() - result['start_time']),)
+                key += (result['end_time'] - result['start_time'],)
                 completed.append(key)
             elif result['success'] is False:
                 errorred.append(key + (result['error'],))
@@ -94,6 +94,7 @@ class BaseBatchWebRequest:
     def _insert(self, future, index=None) -> None:
         try:
             result = future.result()
+            result['end_time'] = int(time.time())
             self.model_instance.__dict__[str(self.field_name)][index].update(result)
             self.model_instance.save()
         except Exception as e:
@@ -194,6 +195,7 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
 if __name__ == '__main__':
     doctest.testmod()
 
+    # TODO (gdingle): why is this so slow? it should be cached?
     # batch = CrisporGuideBatchWebRequest(mock.Mock())
     # largs = [
     #     ['chr1:11,130,540-11,130,751'],
@@ -207,4 +209,6 @@ if __name__ == '__main__':
     #     ['chr1:11,130,540-11,130,751'],
     # ]
     # batch.start(largs)
+    # print(batch.get_batch_status())
+    # time.sleep(14)
     # print(batch.get_batch_status())
