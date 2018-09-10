@@ -1,6 +1,6 @@
 """
 A collection of web clients that make requests to various websites. The clients
-return data extracted from the website HTML. The clients may make multiple
+return data extracted from the websidote HTML. The clients may make multiple
 dependent requests to get results. They may also retry in case of failure.
 
 Server responses are cached by default using requests_cache.
