@@ -6,10 +6,6 @@ import doctest
 import re
 
 import requests
-import requests_cache # type: ignore
-
-# TODO (gdingle): what's the best timeout?
-requests_cache.install_cache(expire_after=3600 * 12)
 
 # See also CHR_REGEX in validators.py
 CHR_REGEX = r'chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])'

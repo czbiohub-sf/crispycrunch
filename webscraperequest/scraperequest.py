@@ -10,7 +10,6 @@ Doctests will run slow on the first run before the cahce is warm.
 import json
 import logging
 import time
-
 import urllib.parse
 
 from abc import abstractmethod
@@ -25,8 +24,12 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
+# TODO (gdingle): IMPORTANT! Things seem to break if we install the cache simulatenously
+# in other modules.
+# TODO (gdingle): use one cache session per module
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
+    __name__ + '_cache',
     expire_after=3600 * 12,
     allowable_methods=('GET', 'POST'))
 CACHE = requests_cache.core.get_cache()
@@ -285,7 +288,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             'seq': seq,
             'org': org,
             'pam': pam,
-            'sortBy': 'offCount', # sort by number of off-targets
+            'sortBy': 'offCount',  # sort by number of off-targets
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'

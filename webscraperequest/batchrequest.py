@@ -33,11 +33,7 @@ class BaseBatchWebRequest:
     def __init__(self, model_instance: models.Model) -> None:
         self.model_instance = model_instance
 
-    @property
-    @staticmethod
-    @abstractmethod
-    def requester() -> Type[AbstractScrapeRequest]:
-        """The sub-class of AbstractScrapeRequest"""
+    requester: Type[AbstractScrapeRequest]
 
     @property
     @staticmethod
@@ -60,7 +56,9 @@ class BaseBatchWebRequest:
         completed, running, errorred = [], [], []
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
-            key = tuple([i, result['in_cache'], result['success']] + result['request_key'])
+            key = tuple([i, result['in_cache'],
+                # result['cache_key'],
+                result['success']] + result['request_key'])
             if result['success'] is True:
                 key += (result['end_time'] - result['start_time'],)
                 completed.append(key)
@@ -78,6 +76,7 @@ class BaseBatchWebRequest:
             {'success': None,
              'request_key': [args[k] for k in keys],
              'in_cache': self.requester(*args).in_cache(),  # type: ignore
+             'cache_key': self.requester(*args).cache_key,  # type: ignore
              'start_time': time.time()}
             for i, args in enumerate(largs)
         ])
@@ -149,7 +148,7 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     >>> batch.start(largs)
     >>> print(batch.get_batch_status())
     BatchStatus([], [], [(0, True, None), (1, True, None)])
-    >>> time.sleep(4)
+    >>> time.sleep(1)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
     BatchStatus([(0, True, True, ...)], [(1, True, False, 'Crispor on chr1:1-1: Bad sequence size')], [])
     """
@@ -166,9 +165,9 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     >>> batch.start(largs, [0, 1])
     >>> print(batch.get_batch_status())
     BatchStatus([], [], [(0, True, None, '9cJNEsbfWiSKa8wlaJMZ', 's185+')])
-    >>> time.sleep(2)
+    >>> time.sleep(1)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
-    BatchStatus([(0, True, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+', 2)], [], [])
+    BatchStatus([(0, True, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+', ...)], [], [])
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
@@ -186,7 +185,7 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
     >>> batch.start(largs)
     >>> print(batch.get_batch_status())
     BatchStatus([], [], [(0, True, None)])
-    >>> time.sleep(2)
+    >>> time.sleep(4)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
     BatchStatus([(0, True, True, ...)], [], [])
     """
