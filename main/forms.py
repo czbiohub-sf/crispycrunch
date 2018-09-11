@@ -106,3 +106,11 @@ class AnalysisForm(ModelForm):
         model = Analysis
         fields = '__all__'
         exclude = ['fastqs', 'results_data']
+
+    def clean_experiment(self):
+        experiment = self.cleaned_data['experiment']
+        primer_selection = PrimerSelection.objects.filter(
+            primer_design__guide_selection__guide_design__experiment=experiment)
+        if not primer_selection:
+            raise ValidationError('Experiment "{}" is not ready for analysis. Did you complete all setup steps?'.format(
+                experiment.name))

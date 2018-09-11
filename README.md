@@ -21,7 +21,7 @@ Crispycrunch calls out to several bioinformatics web services.
 * Django
 * Bootstrap
 
-## Installation
+# Installation
 
 Clone the repo. You must have czbiohub github access.
 
@@ -46,6 +46,6 @@ Initialize the database.
 
 Go to http://localhost:8000/main/experiment. Create a new experiment and follow the subsequent steps.
 
-# Admin
+## Admin
 
 To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/ . But first you must create an admin account with `python manage.py createsuperuser`.

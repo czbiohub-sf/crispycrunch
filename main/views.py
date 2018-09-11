@@ -20,9 +20,9 @@ from typing import no_type_check
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
-from django.views.generic import DetailView
+from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView
-from openpyxl import Workbook, writer  # noqa
+from openpyxl import Workbook, writer  # type: ignore
 
 import webscraperequest
 
@@ -38,6 +38,17 @@ CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
 CRISPRESSO_PUBLIC_ROOT_URL = 'http://0.0.0.0:5000/'
 
 logger = logging.getLogger(__name__)
+
+
+class IndexView(ListView):
+    model = Experiment
+    template_name = 'index.html'
+
+    # TODO (gdingle): fill in
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['analyses'] = Analysis.objects.all()
+        return context
 
 
 def index(request):
@@ -328,6 +339,7 @@ class ResultsView(View):
         return render(request, self.template_name, locals())
 
 
+# TODO (gdingle): is DetailView needed here?
 class OrderFormView(DetailView):
     """
     Produces a downloadable Excel order form for IDT. The model must have a
