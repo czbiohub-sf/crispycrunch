@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<h2>Experiments</h2>
+{% for experiment in object_list %}
+  {{ experiment }}
+{% endfor %}
+
+<h2>Analyses</h2>
+{% for analysis in analyses %}
+  {{ analysis }}
+{% endfor %}
+
+<hr></hr>
+{# TODO better footer #}
+<p>
+  <a href="/main/experiment">New experiment</a>
+</p>
+<p>
+  {# TODO: prefill experiment ID? #}
+  <a href="/main/analysis">Analysis</a>
+</p>
+
+{% endblock %}
