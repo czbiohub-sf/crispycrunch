@@ -19,6 +19,9 @@ urlpatterns = [
 
     path('primer-selection/<int:id>/experiment-summary/',
          views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
+    # Alternate path to summary
+    path('experiment/<int:id>/summary/',
+         views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
 
     path('analysis/', views.AnalysisView.as_view(), name='Analysis'),
     path('analysis/<int:id>/progress/', views.AnalysisProgressView.as_view(), name='Analysis Progress'),

@@ -107,6 +107,7 @@ class AnalysisForm(ModelForm):
         fields = '__all__'
         exclude = ['fastqs', 'results_data']
 
+    # TODO (gdingle): fetch only for display experiments that have status of "ready"
     def clean_experiment(self):
         experiment = self.cleaned_data['experiment']
         primer_selection = PrimerSelection.objects.filter(

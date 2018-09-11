@@ -4,12 +4,12 @@
 
 <h2>Experiments</h2>
 {% for experiment in object_list %}
-  {{ experiment }}
+  <a href="/main/experiment/{{ experiment.id }}/summary/">{{ experiment }}</a>
 {% endfor %}
 
 <h2>Analyses</h2>
 {% for analysis in analyses %}
-  {{ analysis }}
+  <a href="/main/analysis/{{ analysis.id }}/results/">{{ analysis }}</a>
 {% endfor %}
 
 <hr></hr>

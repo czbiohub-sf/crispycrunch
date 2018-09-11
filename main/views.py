@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import islice
 from typing import no_type_check
 
+from django.http import Http404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
@@ -270,7 +271,15 @@ class ExperimentSummaryView(View):
     template_name = 'experiment-summary.html'
 
     def get(self, request, *args, **kwargs):
-        primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
+        try:
+            primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
+        except PrimerSelection.DoesNotExist:
+            # Alternate path to summary
+            try:
+                primer_selection = PrimerSelection.objects.filter(
+                    primer_design__guide_selection__guide_design__experiment=kwargs['id'])[0]
+            except IndexError:
+                raise Http404('Experiment summary does not exist')
 
         sheet = samplesheet.from_primer_selection(primer_selection)
         sheet = self._prepare_sheet(sheet)
@@ -335,7 +344,10 @@ class ResultsView(View):
 
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
-        sheet = samplesheet.from_analysis(analysis)
+        try:
+            sheet = samplesheet.from_analysis(analysis)
+        except IndexError:
+            raise Http404('Analysis results do not exist')
         return render(request, self.template_name, locals())
 
 
