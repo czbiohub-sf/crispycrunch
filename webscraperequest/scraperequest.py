@@ -321,6 +321,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             raise ValueError('Crispor on {}: {}'.format(
                 self.target, title.get_text()))
 
+        # TODO (gdingle): use http://crispor-max.tefor.net/crispor.py dev version in this case?
         if 'retry with a sequence range shorter than 2000 bp' in soup.find(class_='contentcentral').get_text():
             raise ValueError('Crispor on {}: Bad sequence size'.format(
                 self.target))

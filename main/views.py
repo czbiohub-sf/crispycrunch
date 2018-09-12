@@ -90,6 +90,8 @@ class GuideDesignView(CreatePlusView):
     def _normalize_targets(self, targets):
         # TODO (gdingle): handle mix of target types
         if all(is_seq(t) for t in targets):
+            # TODO (gdingle): BLAST all seqs
+            # https://biopython.readthedocs.io/en/latest/Tutorial/chapter_blast.html
             return targets
 
         if not all(is_gene(t) for t in targets):

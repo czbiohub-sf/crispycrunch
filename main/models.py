@@ -184,7 +184,8 @@ class GuideDesign(BaseModel):
         blank=True,
         help_text='Sequence for Homology Directed Repair',
         # TODO (gdingle): is this default correct? it was taken from Jason Li sample sheet example
-        default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt')
+        # default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt'
+    )
 
     guide_data = JSONField(default=list, blank=True,
                            help_text='Data returned by external service')

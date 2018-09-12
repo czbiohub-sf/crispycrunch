@@ -138,6 +138,7 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
             is_gene(value))):
         raise ValidationError(
             '{}" is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
+    # TODO (gdingle): allow and use http://crispor-max.tefor.net/crispor.py ?
     if is_chr(value):
         # TODO (gdingle): why isn't error message displaying properly?
         validate_chr_length(value)
