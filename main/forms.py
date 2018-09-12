@@ -115,3 +115,4 @@ class AnalysisForm(ModelForm):
         if not primer_selection:
             raise ValidationError('Experiment "{}" is not ready for analysis. Did you complete all setup steps?'.format(
                 experiment.name))
+        return experiment

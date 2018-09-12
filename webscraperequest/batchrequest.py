@@ -96,7 +96,7 @@ class BaseBatchWebRequest:
         try:
             result = future.result()
             result['end_time'] = int(time.time())
-            result['success'] = True
+            result['success'] = result.get('success', True)
             self.model_instance.__dict__[str(self.field_name)][index].update(result)
             self.model_instance.save()
             logger.debug('{} result inserted into database'.format(self.requester.__class__))

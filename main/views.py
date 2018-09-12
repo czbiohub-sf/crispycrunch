@@ -89,6 +89,9 @@ class GuideDesignView(CreatePlusView):
 
     def _normalize_targets(self, targets):
         # TODO (gdingle): handle mix of target types
+        if all(is_seq(t) for t in targets):
+            return targets
+
         if not all(is_gene(t) for t in targets):
             return targets
 
@@ -103,6 +106,10 @@ class GuideDesignView(CreatePlusView):
         return normalized
 
     def _get_target_seqs(self, targets, genome):
+        if all(is_seq(t) for t in targets):
+            # TODO (gdingle): return chr locations for sequences?
+            return targets
+
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(
                 functools.partial(conversions.chr_loc_to_seq, genome=genome),

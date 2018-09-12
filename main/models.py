@@ -282,6 +282,7 @@ class Analysis(BaseModel):
     researcher = models.ForeignKey(
         Researcher, on_delete=models.PROTECT,
         help_text='The researcher doing the analysis')
+    # TODO (gdingle): add status as for experiment... maybe derive from results_data?
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
