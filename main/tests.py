@@ -66,8 +66,8 @@ class SampleSheetTestCase(TestCase):
             primer_design=self._primer_design,
             selected_primers={
                 "chr2:38377154-38377424 s28+": [
-                    "GGTTCTCCCAGCAGCTACTG",
-                    "GTTTGACGTCAGTGGGGAGT"
+                    ("GGTTCTCCCAGCAGCTACTG", "GGTTCTCCCAGCAGCTACTGGGTTCTCCCAGCAGCTACTG"),
+                    ("GTTTGACGTCAGTGGGGAGT", "GTTTGACGTCAGTGGGGAGTGTTTGACGTCAGTGGGGAGT"),
                 ]})
 
     @property

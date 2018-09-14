@@ -75,7 +75,7 @@ def validate_chr(value: str) -> None:
         raise ValidationError('"{}" is not a chromosome location'.format(value))
 
 
-def validate_chr_length(value: str, max_length: int = 10000) -> None:
+def validate_chr_length(value: str, max_length: int = 2000) -> None:
     """
     >>> validate_chr_length('chr1:11,130,540-11,130,751')
     >>> validate_chr_length('chr1:11,230,540-11,130,751')

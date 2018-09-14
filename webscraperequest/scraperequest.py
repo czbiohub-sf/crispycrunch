@@ -479,8 +479,12 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             else:
                 raise ValueError('Cripor at {}: "{}"'.format(self.endpoint, text))
 
-        rows = (row.find_all('td') for row in table.find_all('tr'))
-        return dict((row[0].get_text().split('_')[-1], row[1].get_text()) for row in rows)
+        rows = (row.find_all('td') for row in table.find_all('tr'))  # get primers
+        tts = ontargetPcr.find_next('div').find_all('tt')  # get products
+
+        return dict(
+            (row[0].get_text().split('_')[-1], (row[1].get_text(), tt.get_text()))
+            for row, tt in zip(rows, tts))
 
 
 # TODO (gdingle): remove me when protospacex is ready

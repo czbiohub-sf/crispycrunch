@@ -109,8 +109,10 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
         target_loc, _crispor_pam_id = primer_id.split(' ')
         mask1 = sheet['target_loc'] == target_loc
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
-        sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0]
-        sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1]
+        sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0][0]
+        sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1][0]
+        sheet['primer_product_fwd'][mask1 & mask2] = primer_pair[0][1]
+        sheet['primer_product_rev'][mask1 & mask2] = primer_pair[1][1]
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     sheet.index = _new_index(size=len(sheet))
@@ -199,6 +201,8 @@ def _new_samplesheet() -> pandas.DataFrame:
             'donor_target_seq',
             'primer_seq_fwd',
             'primer_seq_rev',
+            'primer_product_fwd',
+            'primer_product_rev',
             'well_name',
             's3_bucket',
             's3_prefix',

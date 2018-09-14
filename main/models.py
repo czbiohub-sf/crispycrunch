@@ -288,9 +288,13 @@ class Analysis(BaseModel):
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
     s3_bucket = models.CharField(max_length=80,
-                                 default='jasonli-bucket')
+                                 # default='jasonli-bucket',
+                                 default='ryan.leenay-bucket',
+                                 )
     s3_prefix = models.CharField(max_length=160,
-                                 default='JasonHDR/96wp1sorted-fastq/')
+                                 # default='JasonHDR/96wp1sorted-fastq/'
+                                 default='Greg_CXCR4_iPSC',
+                                 )
 
     results_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
     fastqs = fields.ArrayField(
