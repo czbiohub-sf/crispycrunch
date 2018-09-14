@@ -86,7 +86,8 @@ class BaseBatchWebRequest:
     def _request(self, args: list) -> Dict[str, Any]:
         try:
             return self.requester(*args).run()  # type: ignore
-        except Exception as e:
+        except (Exception) as e:
+            logger.exception(e)
             return {
                 'success': False,
                 'error': getattr(e, 'message', str(e)),
@@ -101,8 +102,8 @@ class BaseBatchWebRequest:
             self.model_instance.save()
             logger.debug('{} result inserted into database'.format(self.requester.__class__))
         except Exception as e:
-            logger.error('Error inserting into index {} value {}: {}'
-                         .format(index, result, str(e)))
+            logger.error('Error inserting into index {}: {}'
+                         .format(index, str(e)))
 
 
 class BatchStatus:

@@ -19,6 +19,9 @@ class PrettyJsonWidget(widgets.Textarea):
     # see https://stackoverflow.com/questions/23705304/can-json-loads-ignore-trailing-commas
 
 
+# TODO (gdingle): ArrayField is not showing full error messages, only first part
+# "Item 1 in the array did not validate:". See:
+# https://docs.djangoproject.com/en/2.1/_modules/django/contrib/postgres/forms/array/
 class NewlineArrayField(SimpleArrayField):
 
     def __init__(self, *args, **kwargs):

@@ -14,7 +14,7 @@ import urllib.parse
 
 from abc import abstractmethod
 from collections import OrderedDict
-from typing import Any, Dict, Tuple
+from typing import Any, Dict
 
 import requests
 import requests_cache  # type: ignore
@@ -321,17 +321,12 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             raise ValueError('Crispor on {}: {}'.format(
                 self.target, title.get_text()))
 
-        # TODO (gdingle): use http://crispor-max.tefor.net/crispor.py dev version in this case?
-        if 'retry with a sequence range shorter than 2000 bp' in soup.find(class_='contentcentral').get_text():
-            raise ValueError('Crispor on {}: Bad sequence size'.format(
-                self.target))
+        if 'Input sequence range too long' in soup.get_text() or \
+                'cannot handle sequences longer than 2000 bp' in soup.get_text():
+            raise ValueError('Crispor on {}: Bad sequence size: {}'.format(
+                self.target, len(self.data['seq'])))
 
-        # TODO (gdingle): this error occurs for too short seqs also... differentiate
-        if 'cannot handle sequences longer than 2000 bp' in soup.find(class_='contentcentral').get_text():
-            raise ValueError('Crispor on {}: Bad sequence size'.format(
-                self.target))
-
-        if 'This page will refresh every 10 seconds' in soup.find(class_='contentcentral').get_text():
+        if 'This page will refresh every 10 seconds' in soup.get_text():
             raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(
                 self.target))
 
