@@ -75,7 +75,7 @@ def validate_chr(value: str) -> None:
         raise ValidationError('"{}" is not a chromosome location'.format(value))
 
 
-def validate_chr_length(value: str, max_length: int = 2000) -> None:
+def validate_chr_length(value: str, max_length: int = 10000) -> None:
     """
     >>> validate_chr_length('chr1:11,130,540-11,130,751')
     >>> validate_chr_length('chr1:11,230,540-11,130,751')
@@ -138,9 +138,8 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
             is_gene(value))):
         raise ValidationError(
             '"{}" is not a chromosome location or nucleic acid sequence or a Ensembl transcript ID or a HGNC gene name'.format(value))
-    # TODO (gdingle): allow and use http://crispor-max.tefor.net/crispor.py ?
-    # if is_chr(value):
-        # validate_chr_length(value)
+    if is_chr(value):
+        validate_chr_length(value)
         # TODO (gdingle): length of other types
 
 

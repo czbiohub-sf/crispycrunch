@@ -322,9 +322,21 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 self.target, title.get_text()))
 
         if 'Input sequence range too long' in soup.get_text() or \
-                'cannot handle sequences longer than 2000 bp' in soup.get_text():
-            raise ValueError('Crispor on {}: Bad sequence size: {}'.format(
-                self.target, len(self.data['seq'])))
+                'cannot handle sequences longer than' in soup.get_text():
+
+            # This is a hack to re-route to the dev version of Crispor which has
+            # a higher bp limit.
+            # TODO (gdingle): unfortunately dev version does not have hg38!!!
+            # TODO (gdingle): split up input into mulitple requests
+            size = len(self.data['seq'])
+            if size <= 10000:
+                self.endpoint = 'http://crispor-max.tefor.net/crispor.py'
+                self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
+                raise TimeoutError('Large seq size {}. Retry on {}'.format(
+                    size, self.endpoint))
+            else:
+                raise TimeoutError('Crispor on {}: Bad sequence size: {}'.format(
+                    self.target, size))
 
         if 'This page will refresh every 10 seconds' in soup.get_text():
             raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(
@@ -354,7 +366,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     },
                 )
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
-                self.data['seq'], soup.find('body').get_text().strip()))
+                self.data['target'], soup.find('body').get_text().strip()))
 
         rows = output_table.find_all(class_='guideRow')
 
