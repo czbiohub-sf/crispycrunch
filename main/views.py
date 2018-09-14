@@ -322,7 +322,7 @@ class AnalysisView(CreatePlusView):
         sheet = samplesheet.from_analysis(obj)
         batch = webscraperequest.CrispressoBatchWebRequest(obj)
         largs = [[
-            row['target_seq'],
+            row['primer_product_fwd'], # reference amplicon
             row['guide_seq'],
             row['fastq_fwd'],
             row['fastq_rev'],

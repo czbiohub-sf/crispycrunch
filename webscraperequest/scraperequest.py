@@ -329,14 +329,14 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # TODO (gdingle): unfortunately dev version does not have hg38!!!
             # TODO (gdingle): split up input into mulitple requests
             size = len(self.data['seq'])
-            if size <= 10000:
-                self.endpoint = 'http://crispor-max.tefor.net/crispor.py'
-                self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
-                raise TimeoutError('Large seq size {}. Retry on {}'.format(
-                    size, self.endpoint))
-            else:
-                raise TimeoutError('Crispor on {}: Bad sequence size: {}'.format(
-                    self.target, size))
+            # if size <= 10000:
+            #     self.endpoint = 'http://crispor-max.tefor.net/crispor.py'
+            #     self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
+            #     raise TimeoutError('Large seq size {}. Retry on {}'.format(
+            #         size, self.endpoint))
+            # else:
+            raise ValueError('Crispor on {}: Bad sequence size: {}'.format(
+                self.target, size))
 
         if 'This page will refresh every 10 seconds' in soup.get_text():
             raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(

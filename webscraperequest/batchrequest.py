@@ -152,7 +152,7 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     BatchStatus([], [], [(0, True, None), (1, True, None)])
     >>> time.sleep(1)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
-    BatchStatus([(0, True, True, ...)], [(1, True, False, 'Crispor on chr1:1-1: Bad sequence size')], [])
+    BatchStatus([(0, True, True, ...)], [(1, True, False, 'Crispor on chr1:1-1: Bad sequence size: 8')], [])
     """
     requester = CrisporGuideRequest
     field_name = 'guide_data'
