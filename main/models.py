@@ -249,7 +249,7 @@ class PrimerSelection(BaseModel):
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
 
     def _validate_selected_primers(val):
-        return [validate_seq(seq)  # type: ignore
+        return [validate_seq(seq[0])  # type: ignore
                 for seqs in val.values()
                 for seq in seqs]
 

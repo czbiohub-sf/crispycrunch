@@ -152,7 +152,9 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     validate_chr(target_loc)
     matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
     start = int(matches[1]) + guide_offset
-    return 'chr{}:{}-{}'.format(matches[0], start, start + guide_len)
+    # Guide goes backwards from pam, right to left
+    # Minus one, for length inclusive
+    return 'chr{}:{}-{}'.format(matches[0], start - guide_len, start - 1)
 
 
 def validate_gene(value: str) -> None:

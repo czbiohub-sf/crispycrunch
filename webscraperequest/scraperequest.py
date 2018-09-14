@@ -481,9 +481,12 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
         rows = (row.find_all('td') for row in table.find_all('tr'))  # get primers
         tts = ontargetPcr.find_next('div').find_all('tt')  # get products
+        chr_loc = ontargetPcr.find_next('strong').get_text().split(' ')[2]  # get product chr loc
 
         return dict(
-            (row[0].get_text().split('_')[-1], (row[1].get_text(), tt.get_text()))
+            (row[0].get_text().split('_')[-1],
+                (row[1].get_text(), tt.get_text(), chr_loc)
+             )
             for row, tt in zip(rows, tts))
 
 
