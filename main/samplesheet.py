@@ -12,7 +12,7 @@ import pandas
 
 from main import conversions
 from main.models import *
-from main.validators import get_guide_loc
+from main.validators import get_guide_loc, get_primer_loc
 
 
 def from_experiment(experiment: Experiment) -> pandas.DataFrame:
@@ -111,18 +111,25 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
         mask1 = sheet['target_loc'] == target_loc
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
         sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0][0]
-        sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1][0]
+        # sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1][0]
         assert primer_pair[0][1].startswith(primer_pair[0][0]), 'Primer product should start with primer'
         # TODO (gdingle): do we need this after all?
-        # sheet['primer_product_fwd'][mask1 & mask2] = primer_pair[0][1]
+        sheet['primer_product'][mask1 & mask2] = primer_pair[0][1]
         # sheet['primer_product_rev'][mask1 & mask2] = primer_pair[1][1]
-        sheet['primer_loc'][mask1 & mask2] = primer_pair[0][2]
-        # TODO (gdingle): this is nearly the only IO in this file... do we need it here?
-        # TODO (gdingle): compute with correct offset
-        sheet['primer_product'][mask1 & mask2] = conversions.primer_to_seq(primer_pair[0][1], )
+        # sheet['primer_loc'][mask1 & mask2] = primer_pair[0][2]
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     sheet.index = _new_index(size=len(sheet))
+
+    # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
+    # only do it when crispor returns strange NNNN products???
+    sheet['primer_product'] = sheet.apply(
+        lambda row: conversions.chr_loc_to_seq(
+            get_primer_loc(row['primer_product'], row['guide_seq'], row['guide_loc']),
+            row['target_genome']),
+        axis=1,
+    )
+
     print(sheet['primer_product'])
     return sheet
 
@@ -212,7 +219,7 @@ def _new_samplesheet() -> pandas.DataFrame:
             # TODO (gdingle): do we need this after all? when crispor returns NNNs in product?
             # 'primer_product_fwd',
             # 'primer_product_rev',
-            'primer_loc',
+            # 'primer_loc',
             'primer_product',
             'well_name',
             's3_bucket',

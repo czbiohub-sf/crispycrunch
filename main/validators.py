@@ -36,7 +36,7 @@ def validate_seq(value: str) -> None:
     ...
     django.core.exceptions.ValidationError: ['"asdf" is not a nucleic acid sequence']
     """
-    if re.match(r'^[ACGTRYKMSWBDHV]+( [ACGTRYKMSWBDHV]{3})?$', value.upper()) is None:
+    if re.match(r'^[ACGTRYKMSWBDHVN]+( [ACGTRYKMSWBDHVN]{3})?$', value.upper()) is None:
         raise ValidationError('"{}" is not a nucleic acid sequence'.format(value))
 
 
@@ -147,7 +147,7 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     """
     # TODO (gdingle): is this actually correct def for guide_loc?
     >>> get_guide_loc('chr7:5569177-5569415', 191)
-    'chr7:5569368-5569388'
+    'chr7:5569348-5569367'
     """
     validate_chr(target_loc)
     matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
@@ -155,6 +155,36 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     # Guide goes backwards from pam, right to left
     # Minus one, for length inclusive
     return 'chr{}:{}-{}'.format(matches[0], start - guide_len, start - 1)
+
+
+def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
+    """
+    Returns the chr loc of a primer product seq based on the known position of
+    the guide within it.
+
+    >>> get_primer_loc('''TGCTGGCTGGCCATTTCTAAACTTCCATTTGAATTTAANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+    ... NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+    ... NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
+    ... NNNNNNNNNNNNNNNNNNNNNNNTATTACTTTTGTCTTCTACTAGCCAAAAGAATGTCAACAGAAATCAGAACATAACAC
+    ... TAAGTAAGTTTAACATGTACTTTTATTAACAACTTAATACAAGACTGTACACTGTAGGTGCTGAAATCAACCCACTCCT''',
+    ... 'AATACAAGACTGTACACTGTAGG', 'chr2:136114380-136114402')
+    'chr2:136114025-136114423'
+    """
+    primer_product = primer_product.replace('\n', '')
+    validate_seq(primer_product)
+    validate_seq(guide_seq)
+    validate_chr(guide_loc)
+    assert guide_seq in primer_product
+    chr_num, start, end = [int(i) for i in re.match(CHR_REGEX, guide_loc).groups()]  # type: ignore
+    assert end - start == len(guide_seq) - 1  # inclusive range
+
+    # TODO (gdingle): double check off-by-one-errors
+    primer_start = start - primer_product.index(guide_seq)
+    primer_end = primer_start + len(primer_product) - 1
+    assert primer_end - primer_start <= 500, 'Primers should always be less than 500 bp for paired reads'
+    assert primer_end - primer_start == len(primer_product) - 1
+
+    return 'chr{}:{}-{}'.format(chr_num, primer_start, primer_end)
 
 
 def validate_gene(value: str) -> None:
