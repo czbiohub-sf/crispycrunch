@@ -171,6 +171,7 @@ def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
     'chr2:136114025-136114423'
     """
     primer_product = primer_product.replace('\n', '')
+    # TODO (gdingle): time to start using seq objects? Biopython?
     validate_seq(primer_product)
     validate_seq(guide_seq)
     validate_chr(guide_loc)
@@ -178,7 +179,6 @@ def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
     chr_num, start, end = [int(i) for i in re.match(CHR_REGEX, guide_loc).groups()]  # type: ignore
     assert end - start == len(guide_seq) - 1  # inclusive range
 
-    # TODO (gdingle): double check off-by-one-errors
     primer_start = start - primer_product.index(guide_seq)
     primer_end = primer_start + len(primer_product) - 1
     assert primer_end - primer_start <= 500, 'Primers should always be less than 500 bp for paired reads'
