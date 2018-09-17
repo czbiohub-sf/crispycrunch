@@ -1,9 +1,10 @@
+Django>=2
 beautifulsoup4
 boto3
 django-bootstrap4
-Django>=2
 openpyxl
 pandas
 psycopg2-binary
 requests
 requests_cache
+sample_sheet

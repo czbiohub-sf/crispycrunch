@@ -17,6 +17,8 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import islice
 from typing import no_type_check
 
+import sample_sheet as illumina
+
 from django.http import Http404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
@@ -419,8 +421,36 @@ class PrimerOrderFormView(OrderFormView):
 class IlluminaSheetView(View):
 
     def get(self, request, **kwargs):
+        # TODO (gdingle): do we actually need primer selection here? or is guide enough?
+        primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
+        sheet = samplesheet.from_primer_selection(primer_selection)
+        experiment = primer_selection.primer_design.guide_selection.guide_design.experiment
+
+        illumina_sheet = illumina.SampleSheet()
+        for row in sheet.to_records():
+            # TODO (gdingle): preserve order here?
+            illumina_sheet.add_sample(illumina.Sample({
+                'Study_ID': experiment.name,
+                'Study_Description': experiment.description,
+                # 'BioSample_ID',
+                # 'BioSample_Description',
+                # 'Sample_ID',
+                # 'Sample_Name',
+                'Sample_Owner': experiment.researcher.full_name,
+                # 'Index_ID',
+                # TODO: index or Index?
+                # 'Index',
+                # 'Index2_ID',
+                # 'Index2',
+                # 'Organism',
+                # 'Host',
+                # 'Gender',
+                # 'Tissue_Source',
+                # 'FACS_Markers',
+            }))
+
         response = HttpResponse(
-            'TODO', content_type='application/json')
+            illumina_sheet.to_json(), content_type='application/json')
         # response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(title)
 
         return response

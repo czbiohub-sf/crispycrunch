@@ -19,16 +19,19 @@ def from_experiment(experiment: Experiment) -> pandas.DataFrame:
     sheet = _new_samplesheet()
 
     # Special pandas attribute for preserving metadata across transforms
-    sheet._metadata = [
-        'experiment_id',
-        'experiment_name',
-        'experiment_create_time',
-        'experimenter_name',
-    ]
-    sheet.experiment_id = experiment.id
-    sheet.experiment_name = experiment.name
-    sheet.experiment_create_time = experiment.create_time
-    sheet.experimenter_name = experiment.researcher.full_name
+    # TODO (gdingle): this is not actually working :'(
+    # sheet._metadata = [
+    #     'experiment_id',
+    #     'experiment_name',
+    #     'experiment_description',
+    #     'experiment_create_time',
+    #     'experimenter_name',
+    # ]
+    # sheet.experiment_id = experiment.id
+    # sheet.experiment_name = experiment.name
+    # sheet.experiment_description = experiment.description
+    # sheet.experiment_create_time = experiment.create_time
+    # sheet.experimenter_name = experiment.researcher.full_name
 
     return sheet
 
