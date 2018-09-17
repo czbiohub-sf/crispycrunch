@@ -448,6 +448,10 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         if soup is None:
             raise RuntimeError('Cannot parse HTML {}'.format(soup))
 
+        if 'Error:' in soup.get_text():
+            raise RuntimeError('Crispor error: {}'.format(
+                soup.get_text().split('Error:')[1].strip()))
+
         return dict(
             pam_id=self.pam_id,
             target=self.target,

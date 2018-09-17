@@ -322,7 +322,11 @@ class AnalysisView(CreatePlusView):
         sheet = samplesheet.from_analysis(obj)
         batch = webscraperequest.CrispressoBatchWebRequest(obj)
         largs = [[
-            row['primer_product'], # reference amplicon
+            # row['primer_product'], # reference amplicon
+            # TODO (gdingle): TEMP HACKK!!!!!
+            # ***********************************************************
+            # TODO; sample.get('')
+            'GCCAAAAGAATGTCAACAGAAATCAGAACATAACACTAAGTAAGTTTAACATGTACTTTTATTAACAACTTAATACAAGACTGTACACTGTAGGTGCTGAAATCAACCCACTCCTGAAAACTGAAAAACCAGCATTTCTATACCACTTTGGGCTTTGGTTATAAGTGCCATCTTCTACAGCAAAATCACGTCTTAAGAACAGGAAAAACGTTCCACGGGAATGGAGAGATTATCTATGCATAAACAGCTGGGGATCATTT',
             row['guide_seq'],
             row['fastq_fwd'],
             row['fastq_rev'],
