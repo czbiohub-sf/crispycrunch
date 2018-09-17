@@ -151,13 +151,18 @@ class CrispressoRequest(AbstractScrapeRequest):
             'report_stats': self._get_stats(stats_url),
         }
 
-    def _wait_for_success(self, report_id: str, retries: int = 5) -> None:
+    def _wait_for_success(self, report_id: str, retries: int = 3 * 96) -> None:
         """
         Poll for SUCCESS. Typically took 90 secs in testing.
+
+        Crispresso2 appears to support running only 1 report in parallel, so in
+        the worst case, 96 reports will take approx 3 hours.
+        # TODO (gdingle): upgrade crispresso somehow
         """
         total = 0
         while not self._check_report_status(report_id) and retries >= 0:
-            amount = 90 // (retries + 1)  # backoff
+            amount = 30
+            # amount = 90 // (retries + 1)  # backoff
             time.sleep(amount)
             retries -= 1
             total += amount
@@ -442,11 +447,11 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
                 raise
 
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        if 'exceptions.ValueError' in soup.get_text():
-            raise RuntimeError('Crispor exceptions.ValueError')
-
         if soup is None:
             raise RuntimeError('Cannot parse HTML {}'.format(soup))
+
+        if 'exceptions.ValueError' in soup.get_text():
+            raise RuntimeError('Crispor exceptions.ValueError')
 
         if 'Error:' in soup.get_text():
             raise RuntimeError('Crispor error: {}'.format(

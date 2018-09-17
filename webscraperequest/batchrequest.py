@@ -60,7 +60,8 @@ class BaseBatchWebRequest:
                          # result['cache_key'],
                          result['success']] + result['request_key'])
             if result['success'] is True:
-                key += (result['end_time'] - result['start_time'],)
+                duration = round(result['end_time'] - result['start_time'], 1)
+                key += (f'{duration}s',)
                 completed.append(key)
             elif result['success'] is False:
                 errorred.append(key + (result['error'],))
@@ -193,7 +194,9 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
     """
     requester = CrispressoRequest
     field_name = 'results_data'
-    max_workers = 8
+    # Crispresso appears to process only 1 (!) analysis simulatenously.
+    # TODO (gdingle): can we increase by talking to Luca Pinello?
+    max_workers = 4
 
 
 if __name__ == '__main__':

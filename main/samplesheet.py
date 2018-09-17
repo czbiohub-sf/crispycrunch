@@ -120,11 +120,12 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
     sheet.index = _new_index(size=len(sheet))
 
     # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
-    # only do it when crispor returns strange NNNN products???
     sheet['primer_product'] = sheet.apply(
         lambda row: conversions.chr_loc_to_seq(
             get_primer_loc(row['primer_product'], row['guide_seq'], row['guide_loc']),
-            row['target_genome']),
+            row['target_genome'])
+        # Only look up product from chr loc if crispor returns mysterious Ns
+        if 'N' in row['primer_product'] else row['primer_product'],
         axis=1,
     )
     return sheet
