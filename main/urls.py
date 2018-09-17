@@ -27,8 +27,11 @@ urlpatterns = [
     path('analysis/<int:id>/progress/', views.AnalysisProgressView.as_view(), name='Analysis Progress'),
     path('analysis/<int:id>/results/', views.ResultsView.as_view(), name='Results'),
 
+    # Downloads
     path('guide-selection/<int:id>/order-form',
          views.GuideOrderFormView.as_view()),
     path('primer-selection/<int:id>/order-form',
          views.PrimerOrderFormView.as_view()),
+    path('primer-selection/<int:id>/illumina-sheet',
+         views.IlluminaSheetView.as_view()),
 ]

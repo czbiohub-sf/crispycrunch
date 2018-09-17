@@ -414,3 +414,13 @@ class PrimerOrderFormView(OrderFormView):
     model = PrimerSelection
     # TODO (gdingle): IMPORTANT: how to order fwd and reverse primer at once?
     seq_key = 'primer_seq_fwd'
+
+
+class IlluminaSheetView(View):
+
+    def get(self, request, **kwargs):
+        response = HttpResponse(
+            'TODO', content_type='application/json')
+        # response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(title)
+
+        return response
