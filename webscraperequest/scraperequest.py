@@ -405,7 +405,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
     >>> req = CrisporPrimerRequest('9cJNEsbfWiSKa8wlaJMZ', 's185+')
     >>> data = req.run()
-    >>> len(data['ontarget_primers']) == 2
+    >>> len(data.ontarget_primers) == 2
     True
 
     >>> req.in_cache()
@@ -432,7 +432,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         return 'CrisporPrimerRequest({})'.format(self.endpoint)
 
     def run(self,
-            retries: int=1) -> Dict[str, Any]:
+            retries: int=1) -> dict:
         try:
             logger.info('GET request to: {}'.format(self.endpoint))
             response = requests.Session().send(self.request)  # type: ignore
@@ -446,7 +446,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             else:
                 raise
 
-    def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    def _extract_data(self, soup: BeautifulSoup) -> dict:
         if soup is None:
             raise RuntimeError('Cannot parse HTML {}'.format(soup))
 
@@ -475,7 +475,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             ontarget_primers=self._extract_ontarget_primers(soup),
         )
 
-    def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, str]:
+    def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, tuple]:
         ontargetPcr = soup.find(id='ontargetPcr')
         table = ontargetPcr.find_next(class_='primerTable')
 
@@ -498,8 +498,9 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
              )
             for row, tt in zip(rows, tts))
 
-
 # TODO (gdingle): remove me when protospacex is ready
+
+
 class TagInRequest(AbstractScrapeRequest):
     """
     Given an an Ensembl Transcript or a custom sequence, gets candidate sgRNAs

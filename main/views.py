@@ -14,11 +14,11 @@ import os
 import time
 
 from concurrent.futures import ThreadPoolExecutor
-from itertools import islice
-from typing import no_type_check
 from io import StringIO
+from itertools import islice
+from typing import Any
 
-import sample_sheet as illumina
+import sample_sheet as illumina  # type: ignore
 
 from django.http import Http404
 from django.http import HttpResponse, HttpResponseRedirect
@@ -421,7 +421,7 @@ class PrimerOrderFormView(OrderFormView):
 
 class IlluminaSheetView(View):
 
-    def _make_sample(self, experiment: Experiment, row: dict) -> illumina.Sample:
+    def _make_sample(self, experiment: Experiment, row: Any) -> illumina.Sample:
         return illumina.Sample({
             # A short ID assigned to the specific study and/or project based
             #  on the conventions used at your institution/group. Accepted
