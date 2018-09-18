@@ -11,7 +11,6 @@ import json
 import logging
 import time
 import urllib.parse
-import tempfile
 
 from abc import abstractmethod
 from collections import OrderedDict
@@ -30,7 +29,7 @@ logger = logging.getLogger(__name__)
 # TODO (gdingle): use one cache session per module
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
-    tempfile.gettempdir() + '/' + __name__ + '_cache',
+    __name__ + '_cache',
     expire_after=3600 * 12,
     allowable_methods=('GET', 'POST'))
 CACHE = requests_cache.core.get_cache()
@@ -406,7 +405,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
     >>> req = CrisporPrimerRequest('9cJNEsbfWiSKa8wlaJMZ', 's185+')
     >>> data = req.run()
-    >>> len(data.ontarget_primers) == 2
+    >>> len(data['ontarget_primers']) == 2
     True
 
     >>> req.in_cache()
