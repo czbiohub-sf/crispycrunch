@@ -27,6 +27,9 @@ Clone the repo. You must have czbiohub github access.
 
 ```git clone git@github.com:czbiohub/crispycrunch.git```
 
+<!-- TODO: fix me -->
+recommend https://postgresapp.com/
+
 Build the docker images.
 
 ```cd crispycrunch && docker-compose build```
