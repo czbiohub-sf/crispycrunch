@@ -74,9 +74,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     # See http://crispor.tefor.net/manual/.
     # TODO (gdingle): recompute from guide_seq
     sheet['guide_offset'][lg] = [int(g[1][1:-1]) for g in guides]
-    sheet['guide_direction'][lg] = [
-        'fwd' if g[1][-1] == '+' else 'rev'
-        for g in guides]
+    sheet['guide_direction'][lg] = [g[1][-1] for g in guides]
 
     # TODO (gdingle): is this correct? off by one?
     # TODO (gdingle): indicate direction by high to low for reverse?
@@ -86,10 +84,12 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     )
 
     # TODO (gdingle): is this really the best unique name?
-    # how about reverse by chr:high:low?
+    # Example: "hg38:chr2:136116735-136116754:-"
     sheet['well_name'][lg] = sheet[lg].apply(
         lambda row: '{}:{}:{}'.format(
-            row['target_loc'], row['guide_offset'], row['guide_direction']),
+            row['target_genome'],
+            row['guide_loc'],
+            row['guide_direction']),
         axis=1,
     )
 

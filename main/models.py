@@ -108,6 +108,14 @@ JASON_LI_EXAMPLE = [
     'chr20:58389364-58389613',
 ]
 
+# First 4 only
+RYAN_LEENAY_EXAMPLE = [
+    'chr2:136114360-136114419',
+    'chr2:136115613-136115672',
+    'chr2:136116738-136116797',
+    'chr2:136117544-136117603',
+]
+
 
 class BaseModel(models.Model):
 
@@ -170,7 +178,8 @@ class GuideDesign(BaseModel):
         # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
         # default=['ATL2', 'ATL3'],
-        default=JASON_LI_EXAMPLE,
+        # default=JASON_LI_EXAMPLE,
+        default=RYAN_LEENAY_EXAMPLE,
     )
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),
@@ -274,6 +283,10 @@ class PrimerSelection(BaseModel):
     @property
     def order_form_url(self):
         return '/main/primer-selection/{}/order-form'.format(self.id)
+
+    @property
+    def illumina_sheet_url(self):
+        return '/main/primer-selection/{}/illumina-sheet'.format(self.id)
 
 
 class Analysis(BaseModel):

@@ -16,6 +16,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from itertools import islice
 from typing import no_type_check
+from io import StringIO
 
 import sample_sheet as illumina
 
@@ -420,6 +421,117 @@ class PrimerOrderFormView(OrderFormView):
 
 class IlluminaSheetView(View):
 
+    def _make_sample(self, experiment: Experiment, row: dict) -> illumina.Sample:
+        return illumina.Sample({
+            # A short ID assigned to the specific study and/or project based
+            #  on the conventions used at your institution/group. Accepted
+            #  characters include numbers, letters, "-", and "_".
+            'Study_ID': experiment.name,
+
+            # Description of a project to which the current sequencing run
+            # belongs. Special characters and commas are not allowed.
+            # (Required)
+            # e.g. Understanding differences in RNA expression
+            # between pancreatic cells collected from healthy pancreas and
+            # patients with pancreatic cancer.
+            'Study_Description': experiment.description,
+
+            # Description (longer than 10 characters) of the specific
+            # biological sample. The description should be the same for all
+            # the samples derived from this BioSample. Special characters
+            # and commas are not allowed.
+            # (Required)
+            # e.g. Microbiome sample collected on Feb. 30 2017 from mouse 002.
+            # e.g. Liver tissue obtained on Feb. 30 2017 from patient 012.
+            # TODO (gdingle): is target_loc appropriate?
+            'BioSample_ID': row['target_loc'].replace(':', '_'),
+
+            # Description (longer than 10 characters) of the specific
+            # biological sample. The description should be the same for all
+            # the samples derived from this BioSample. Special characters
+            # and commas are not allowed.
+            # (Required) e.g. Microbiome sample
+            # collected on Feb. 30 2017 from mouse 002. e.g. Liver tissue
+            # obtained on Feb. 30 2017 from patient 012.
+            # 'BioSample_Description',
+
+            # A short ID assigned to the specific library based on the
+            # conventions used at your institution/group. Accepted
+            # characters include numbers, letters, "-", and "_". This field
+            # should be unique for each row. Sample_ID can be the same as
+            # Sample_Name
+            # (Required)
+            'Sample_ID': row.index,
+
+            # A distinct and descriptive name for each specific library.
+            # Accepted characters are numbers, letters, "-", and "_". Name
+            # must begin with a letter. This field should be unique for each
+            # row. The sample name will go into the final fastq file names.
+            # (Required) e.g. Mouse_Liver_SingleCell_plate02_A10_20171210
+            # TODO: Accepted chars?
+            'Sample_Name': row.well_name.replace(':', '_'),
+
+            # If people are combining samples to sequence on the same run,
+            # this column is used to keep track of to whom each sample
+            # belongs to. Please fill in following the format
+            # FirstName_LastName. If left blank, we will use submitter's
+            # information.
+            # e.g. Stephen_Quake
+            # TODO (gdingle): use experiment analyzer?
+            'Sample_Owner': experiment.researcher.full_name.replace(' ', '_'),
+
+            # Name of the first index. Accepted characters are numbers,
+            # letters, "-", and "_"
+            # (Required)
+            # e.g. Nextera - N700
+            # TODO (gdingle): what is an index???
+            'Index_ID': row.index[0],
+
+            # Sequence of the first index
+            # (Required)
+            # e.g. ATAGCGCT
+            # TODO: what are index values?
+            'index': row.primer_seq_fwd,
+
+            # Name of the second index. Accepted characters are numbers,
+            # letters, "-", and "_"
+            # (Required) e.g. Nextera - S500
+            'Index2_ID': row.index[1:],
+
+            # Sequence of the second index
+            # (Required) e.g. ATAGCGCT
+            'index2': row.primer_seq_rev,
+
+            # This field is used to record the organism the DNA comes from.
+            # Some examples are Human, Mouse, Mosquito, Yeast, Bacteria,
+            # etc.
+            # (Required)
+            # TODO (gdingle): translate to more organisms
+            'Organism': {
+                'hg38': 'Human',
+                'mm10': 'Mouse',
+            }[row['target_genome']],
+
+            # TODO (gdingle): will these below ever be useful?
+            # This field is used record the host of the organism where the
+            # DNA originated, if applicable. For example, if the Organism is
+            # Fungus and the Fungus is isolated from a Human fecal sample,
+            # then the Host is Human. If the organism is Human, then host is
+            # left blank.
+            # 'Host',
+
+            # Gender of the organism (if applicable) e.g. M or F
+            # 'Gender',
+
+            # Tissue origin of the particular sample (if applicable) e.g. Liver
+            # 'Tissue_Source',
+
+            # FACS markers used delimited by a semicolon ";" with no space.
+            # Accepted characters are numbers, letters, "-" and "_". e.g.
+            # Epcam;CD45
+            # 'FACS_Markers',
+        })
+
     def get(self, request, **kwargs):
         # TODO (gdingle): do we actually need primer selection here? or is guide enough?
         primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
@@ -428,29 +540,12 @@ class IlluminaSheetView(View):
 
         illumina_sheet = illumina.SampleSheet()
         for row in sheet.to_records():
-            # TODO (gdingle): preserve order here?
-            illumina_sheet.add_sample(illumina.Sample({
-                'Study_ID': experiment.name,
-                'Study_Description': experiment.description,
-                # 'BioSample_ID',
-                # 'BioSample_Description',
-                # 'Sample_ID',
-                # 'Sample_Name',
-                'Sample_Owner': experiment.researcher.full_name,
-                # 'Index_ID',
-                # TODO: index or Index?
-                # 'Index',
-                # 'Index2_ID',
-                # 'Index2',
-                # 'Organism',
-                # 'Host',
-                # 'Gender',
-                # 'Tissue_Source',
-                # 'FACS_Markers',
-            }))
+            illumina_sheet.add_sample(self._make_sample(experiment, row))
 
-        response = HttpResponse(
-            illumina_sheet.to_json(), content_type='application/json')
-        # response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(title)
+        csv = StringIO()
+        illumina_sheet.write(csv)
+        filename = f'Illumina sample sheet for experiment {experiment.name}'
+        response = HttpResponse(csv.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="{}.csv"'.format(filename)
 
         return response
