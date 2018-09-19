@@ -491,6 +491,7 @@ class IlluminaSheetView(View):
             # (Required)
             # e.g. ATAGCGCT
             # TODO: what are index values?
+            # TODO (gdingle): this is not unique enough!!!
             'index': row.primer_seq_fwd,
 
             # Name of the second index. Accepted characters are numbers,

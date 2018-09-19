@@ -16,8 +16,10 @@ Crispycrunch calls out to several bioinformatics web services.
 
 ## Tech stack
 
+Crispycrunch is built with the following technologies and frameworks.
+
 * Postgres
-* Python3
+* Python3.6+
 * Django
 * Bootstrap
 
@@ -27,28 +29,51 @@ Clone the repo. You must have czbiohub github access.
 
 ```git clone git@github.com:czbiohub/crispycrunch.git```
 
-<!-- TODO: fix me -->
-recommend https://postgresapp.com/
+Install python dependencies
 
-Build the docker images.
+```pip install -r requirements.txt```
 
-```cd crispycrunch && docker-compose build```
+Start postgres. The exact command will depend on how you installed it.
 
-This will also run `pip install -r requirements.txt`.
+```brew services start postgresql```
 
-Start the app services.
-
-```docker-compose up```
+Configure `DATABASES` in `settings.py` if needed.
 
 Initialize the database.
 
 ```docker-compose exec web python manage.py migrate```
+
+Create a superuser for admin.
+
+```python manage.py createsuperuser```
 
 # Usage
 <!-- TODO: better homepage -->
 
 Go to http://localhost:8000/main/experiment. Create a new experiment and follow the subsequent steps.
 
-## Admin
+# Admin
 
-To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/ . But first you must create an admin account with `python manage.py createsuperuser`.
+To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/.
+
+To inspect the source of fastq files, open https://console.aws.amazon.com/s3/buckets/czb-seqbot/.
+
+# Deployment
+
+Currently, Crispycrunch uses Amazon's Elasticbeanstalk for deployment and hosting. EB manages a web server (EC2) and a database (RDS) in one deployment environment (prod). Open the EB control panel at https://us-west-2.console.aws.amazon.com/elasticbeanstalk/home?region=us-west-2#/environment/dashboard?applicationName=crispycrunch&environmentId=e-vnvbedub4n.
+
+Install EB CLI.
+
+```pip install awsebcli```
+
+Commit any changes you wish to deploy.
+
+```git commit -a -m'fancy stuff'```
+
+Deploy to Amazon Elasticbeanstalk.
+
+```eb deploy```
+
+Wait for deployment to finish, then view the live site at http://crispycrunch.us-west-2.elasticbeanstalk.com/main/.
+
+For more info, see https://realpython.com/deploying-a-django-app-and-postgresql-to-aws-elastic-beanstalk/.
