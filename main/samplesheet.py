@@ -140,6 +140,7 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     return from_analysis_and_primer_selection(analysis, primer_selection)
 
 
+# TODO (gdingle): opportunity for multiple dispatch
 def from_analysis_and_primer_selection(analysis: Analysis, primer_selection: PrimerSelection) -> pandas.DataFrame:
     sheet = from_primer_selection(primer_selection)
 

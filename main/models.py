@@ -291,7 +291,8 @@ class PrimerSelection(BaseModel):
 
 class Analysis(BaseModel):
     experiment = models.ForeignKey(
-        Experiment, on_delete=models.PROTECT)
+        Experiment, on_delete=models.PROTECT,
+        help_text='The Crispycrunch experiment to be analyzed')
     # TODO (gdingle): default this to experiment researcher
     researcher = models.ForeignKey(
         Researcher, on_delete=models.PROTECT,
@@ -303,10 +304,12 @@ class Analysis(BaseModel):
     s3_bucket = models.CharField(max_length=80,
                                  # default='jasonli-bucket',
                                  default='ryan.leenay-bucket',
+                                 help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed'
                                  )
     s3_prefix = models.CharField(max_length=160,
                                  # default='JasonHDR/96wp1sorted-fastq/'
                                  default='Greg_CXCR4_iPSC',
+                                 help_text='The S3 directory that contains the FastQ files to be analyzed'
                                  )
 
     results_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
