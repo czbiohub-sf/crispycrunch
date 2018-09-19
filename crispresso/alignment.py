@@ -1,4 +1,5 @@
 import doctest
+import gzip
 
 from pathlib import Path
 from typing import Tuple
@@ -27,8 +28,13 @@ def in_fastq(fastq: str, primer_seq: str, guide_seq: str) -> bool:
     True
     >>> in_fastq(r1, guide_seq, primer_seq)
     False
+
+    >>> r1gz = 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz'
+    >>> in_fastq(r1gz, primer_seq, guide_seq)
+    True
     """
-    with open(fastq) as file:
+    file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
+    with file:
         seq_lines = [line for line in file.readlines()
                      if line[0] in 'ACGT']
     # TODO (gdingle): how long should primer_seq be?
@@ -72,7 +78,8 @@ def find_matching_pair(
         fastq_dir: str,
         primer_seq_fwd: str,
         primer_seq_rev: str,
-        guide_seq: str) -> Tuple[str, ...]:
+        guide_seq: str,
+        file_suffix='fastq') -> Tuple[str, ...]:
     """
     Find matching pair of fastq files in a dir based on primers and guide.
 
@@ -81,9 +88,12 @@ def find_matching_pair(
     >>> guide_seq = 'AATCGGTACAAGATGGCGGA'
     >>> find_matching_pair('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq)
     ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
+
+    >>> find_matching_pair('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq, 'fastq.gz')
+    ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz')
     """
-    fastq_r1s = Path(fastq_dir).glob('*_R1_*.fastq')
-    fastq_r2s = Path(fastq_dir).glob('*_R2_*.fastq')
+    fastq_r1s = Path(fastq_dir).glob('*_R1_*.' + file_suffix)
+    fastq_r2s = Path(fastq_dir).glob('*_R2_*.' + file_suffix)
     matches = [
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
         if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
