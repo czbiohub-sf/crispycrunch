@@ -323,6 +323,9 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): use predetermined s3 location of fastq
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         sheet = samplesheet.from_analysis(obj)
+
+        # TODO (gdingle): pair up fastqsg
+
         batch = webscraperequest.CrispressoBatchWebRequest(obj)
         largs = [[
             row['primer_product'],  # reference amplicon
