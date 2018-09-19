@@ -1,5 +1,8 @@
 import doctest
 
+from pathlib import Path
+from typing import Tuple
+
 """
 Matches fastq files to designed guides and primers so we can avoid relying
 on brittle file naming conventions or mutable sample sheets.
@@ -63,6 +66,32 @@ def matches_fastq_pair(
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq))
     return in_r1 and in_r2
+
+
+def find_matching_pair(
+        fastq_dir: str,
+        primer_seq_fwd: str,
+        primer_seq_rev: str,
+        guide_seq: str) -> Tuple[str, ...]:
+    """
+    Find matching pair of fastq files in a dir based on primers and guide.
+
+    >>> primer_seq_fwd = 'CGAGGAGATACAGGCGGAG'
+    >>> primer_seq_rev = 'GTGGACGAGACGTGGTTAA'
+    >>> guide_seq = 'AATCGGTACAAGATGGCGGA'
+    >>> find_matching_pair('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq)
+    ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
+    """
+    fastq_r1s = Path(fastq_dir).glob('*_R1_*.fastq')
+    fastq_r2s = Path(fastq_dir).glob('*_R2_*.fastq')
+    matches = [
+        (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
+        if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
+    assert len(matches) <= 1, 'More than one match'
+    if matches:
+        return matches[0]
+    else:
+        return tuple()
 
 
 def reverse_complement(seq: str) -> str:
