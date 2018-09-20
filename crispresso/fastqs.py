@@ -5,59 +5,47 @@ from pathlib import Path
 from typing import Iterable, Tuple
 
 """
-Matches fastq files to designed guides and primers so we can avoid relying
-on brittle file naming conventions or mutable sample sheets.
+Matches fastq files to designed guides and primers so we can avoid relying on
+brittle file naming conventions or mutable sample sheets.
 
-The matching works on the assumption that primer sequences appear always at the beginning
-of sequence lines in a fastq, guides are somewhere following, and there will always be a "high"
-number of such matches in a "matching" file.
+The matching works on the assumption that primer sequences appear always at the
+beginning of sequence lines in a fastq, guides are somewhere following, and
+there will always be a "high" number of such matches in a "matching" file.
 
 An added benefit is validating fastqs before full alignment by Crispresso.
 """
 
 
-def in_fastq(fastq: str, primer_seq: str, guide_seq: str) -> bool:
+def in_fastq(fastq: str, primer_seq: str, guide_seq: str
+             ) -> Tuple[int, int, int]:
     """
-    Determines whether a fastq contains a primer sequence and guide sequence in the expected locations.
+    Counts lines of a fastq that contain a primer sequence and guide sequence
+    in the expected locations.
 
     >>> r1 = 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq'
     >>> primer_seq = 'CGAGGAGATACAGGCGGAG'
     >>> guide_seq = 'AATCGGTACAAGATGGCGGA'
 
     >>> in_fastq(r1, primer_seq, guide_seq)
-    True
+    (18897, 11490, 11019)
     >>> in_fastq(r1, guide_seq, primer_seq)
-    False
+    (18897, 0, 0)
 
     >>> r1gz = 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz'
     >>> in_fastq(r1gz, primer_seq, guide_seq)
-    True
+    (18897, 11490, 11019)
     """
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
     with file:
-        seq_lines = [line for line in file.readlines()
-                     if line[0] in 'ACGT']
-    # TODO (gdingle): how long should primer_seq be?
+        seq_lines = [line for line in file if line[0] in 'ACGT']
     primer_matches = [line for line in seq_lines
                       if line.startswith(primer_seq)]
-    # TODO (gdingle): should we always expect a full guide? what about break location?
-    # empirally only the first 16 chars have matches
+    # Only the first 16 chars have matches because of cut site
+    # TODO (gdingle): verify CRISPR logic
     guide_matches = [line for line in primer_matches
                      if guide_seq[0:16] in line]
 
-    # TODO (gdingle):
-    print(
-        fastq,
-        len(seq_lines), len(primer_matches), len(guide_matches),
-        (len(primer_matches) > len(seq_lines) * 0.4 and
-         len(guide_matches) > len(primer_matches) * 0.0001)
-    )
-
-    return (
-        # TODO (gdingle): are these thresholds good?
-        len(primer_matches) > len(seq_lines) * 0.4 and
-        len(guide_matches) > len(primer_matches) * 0.0001
-    )
+    return (len(seq_lines), len(primer_matches), len(guide_matches))
 
 
 def matches_fastq_pair(
@@ -82,6 +70,14 @@ def matches_fastq_pair(
     """
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq))
+
+    return (
+        # TODO (gdingle): are these thresholds good?
+        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.4 and
+        # TODO (gdingle): why does guide_seq appear so infrequently sometimes?
+        in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.0001
+    )
+
     return in_r1 and in_r2
 
 
@@ -138,4 +134,8 @@ def reverse_complement(seq: str) -> str:
 
 
 if __name__ == '__main__':
+    # print(reverse_complement('TTGCATAGGAAGTTCCCAAAGTACCAGTTTGCCACGGCATCAACTGCCCAGAAGGGAAGCGTGATGACAAAGAGGAGGTCGGCCACTGACAGGTGCAGCCTGTACTTGTCCGTCATGCTTCTCAGTTTCTTCTGGTAACCCATGACCAGGATGACCAATCCATTGCCCACAATGCCAGTTAAGAAGATGATGGAGTAGATGGTGGG'))
     doctest.testmod()
+    # import cProfile
+    # from pstats import SortKey
+    # cProfile.run('doctest.testmod()', sort=SortKey.TIME)
