@@ -323,10 +323,10 @@ class AnalysisView(CreatePlusView):
     def plus(self, obj):
         # TODO (gdingle): use predetermined s3 location of fastq
         fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
+        assert len(fastqs) <= 384, 'Fastqs should be from max one plate'
         sheet = samplesheet.from_analysis(obj)
 
         # TODO (gdingle): create dir per download, as in seqbot
-        # or adapt find_matching_pair to download_fastqs
         obj.fastq_data = [find_matching_pair(
             (f for f in fastqs if '_R1_' in f),
             (f for f in fastqs if '_R2_' in f),

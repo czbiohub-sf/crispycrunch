@@ -111,6 +111,7 @@ def find_matching_pair(
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
         if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
     assert len(matches) <= 1, 'More than one match'
+
     if matches:
         return matches[0]
     else:
@@ -130,7 +131,7 @@ def reverse_complement(seq: str) -> str:
     return ''.join(complement[base] for base in reversed(seq))
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=1024)
 def _get_seq_lines(fastq: str) -> List[str]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
     with file:
@@ -139,8 +140,4 @@ def _get_seq_lines(fastq: str) -> List[str]:
 
 
 if __name__ == '__main__':
-    # print(reverse_complement('TTGCATAGGAAGTTCCCAAAGTACCAGTTTGCCACGGCATCAACTGCCCAGAAGGGAAGCGTGATGACAAAGAGGAGGTCGGCCACTGACAGGTGCAGCCTGTACTTGTCCGTCATGCTTCTCAGTTTCTTCTGGTAACCCATGACCAGGATGACCAATCCATTGCCCACAATGCCAGTTAAGAAGATGATGGAGTAGATGGTGGG'))
     doctest.testmod()
-    # import cProfile
-    # from pstats import SortKey
-    # cProfile.run('doctest.testmod()', sort=SortKey.TIME)
