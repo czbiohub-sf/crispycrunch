@@ -318,6 +318,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             logger.warning(str(e))
             # IMPORTANT: Delete cache of unexpected output
             CACHE.delete(self.cache_key)
+            raise
         raise RuntimeError('unknown error')
 
     def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
@@ -370,8 +371,11 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                         'invalid chromosome range': 'invalid chromosome range'
                     },
                 )
+            if 'An error occured during processing' in soup.get_text():
+                raise RuntimeError('Crispor: An error occured during processing.')
+
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
-                self.data['target'], soup.find('body').get_text().strip()))
+                self.target, soup.find('body').get_text().strip()))
 
         rows = output_table.find_all(class_='guideRow')
 

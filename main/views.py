@@ -30,6 +30,7 @@ from openpyxl import Workbook, writer  # type: ignore
 
 import webscraperequest
 
+from crispresso.fastqs import find_matching_pair
 from crispresso.s3 import download_fastqs
 from main import conversions
 from main import samplesheet
@@ -324,7 +325,24 @@ class AnalysisView(CreatePlusView):
         obj.fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         sheet = samplesheet.from_analysis(obj)
 
-        # TODO (gdingle): pair up fastqsg
+        # TODO (gdingle): create dir per download, as in seqbot
+        # or adapt find_matching_pair to download_fastqs
+        matches = [find_matching_pair(
+            (f.replace('.gz', '') for f in obj.fastqs[:96] if '_R1_' in f),
+            (f.replace('.gz', '') for f in obj.fastqs[:96] if '_R2_' in f),
+            row['primer_seq_fwd'],
+            row['primer_seq_rev'],
+            row['guide_seq'])
+            for row in sheet.to_records()]
+        # TODO (gdingle): optimize speed by unzipping all first
+        # TODO (gdingle): investigate why R2 is not matching
+        # or else base match just on startswith primer
+        # /input/A2-RL384-00071_B03_S410_R1_001.fastq 68477 34108 17 True
+        # /input/A2-RL384-00071_B03_S410_R2_001.fastq 66863 32698 0 False
+
+
+
+        assert False, matches
 
         batch = webscraperequest.CrispressoBatchWebRequest(obj)
         largs = [[

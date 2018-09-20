@@ -2,7 +2,7 @@ import doctest
 import gzip
 
 from pathlib import Path
-from typing import Tuple
+from typing import Iterable, Tuple
 
 """
 Matches fastq files to designed guides and primers so we can avoid relying
@@ -41,12 +41,22 @@ def in_fastq(fastq: str, primer_seq: str, guide_seq: str) -> bool:
     primer_matches = [line for line in seq_lines
                       if line.startswith(primer_seq)]
     # TODO (gdingle): should we always expect a full guide? what about break location?
+    # empirally only the first 16 chars have matches
     guide_matches = [line for line in primer_matches
-                     if guide_seq in line[len(primer_seq):]]
+                     if guide_seq[0:16] in line]
+
+    # TODO (gdingle):
+    print(
+        fastq,
+        len(seq_lines), len(primer_matches), len(guide_matches),
+        (len(primer_matches) > len(seq_lines) * 0.4 and
+         len(guide_matches) > len(primer_matches) * 0.0001)
+    )
+
     return (
         # TODO (gdingle): are these thresholds good?
-        len(primer_matches) > len(seq_lines) * 0.5 and
-        len(guide_matches) > len(primer_matches) * 0.9
+        len(primer_matches) > len(seq_lines) * 0.4 and
+        len(guide_matches) > len(primer_matches) * 0.0001
     )
 
 
@@ -75,7 +85,7 @@ def matches_fastq_pair(
     return in_r1 and in_r2
 
 
-def find_matching_pair(
+def find_matching_pair_from_dir(
         fastq_dir: str,
         primer_seq_fwd: str,
         primer_seq_rev: str,
@@ -87,14 +97,23 @@ def find_matching_pair(
     >>> primer_seq_fwd = 'CGAGGAGATACAGGCGGAG'
     >>> primer_seq_rev = 'GTGGACGAGACGTGGTTAA'
     >>> guide_seq = 'AATCGGTACAAGATGGCGGA'
-    >>> find_matching_pair('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq)
+    >>> find_matching_pair_from_dir('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq)
     ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
 
-    >>> find_matching_pair('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq, 'fastq.gz')
+    >>> find_matching_pair_from_dir('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq, 'fastq.gz')
     ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz')
     """
     fastq_r1s = Path(fastq_dir).glob('*_R1_*.' + file_suffix)
     fastq_r2s = Path(fastq_dir).glob('*_R2_*.' + file_suffix)
+    return find_matching_pair(fastq_r1s, fastq_r2s, primer_seq_fwd, primer_seq_rev, guide_seq)
+
+
+def find_matching_pair(
+        fastq_r1s: Iterable,
+        fastq_r2s: Iterable,
+        primer_seq_fwd: str,
+        primer_seq_rev: str,
+        guide_seq: str) -> Tuple[str, ...]:
     matches = [
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
         if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
