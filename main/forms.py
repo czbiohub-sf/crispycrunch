@@ -108,7 +108,7 @@ class AnalysisForm(ModelForm):
     class Meta:
         model = Analysis
         fields = '__all__'
-        exclude = ['fastqs', 'results_data']
+        exclude = ['fastq_data', 'results_data']
 
     # TODO (gdingle): fetch only for display experiments that have status of "ready"
     def clean_experiment(self):

@@ -156,7 +156,13 @@ def from_analysis_and_primer_selection(analysis: Analysis, primer_selection: Pri
     sheet['s3_bucket'] = analysis.s3_bucket
     sheet['s3_prefix'] = analysis.s3_prefix
 
-    sheet = _insert_fastqs(sheet, analysis.fastqs)
+    # TODO (gdingle): remove _insert_fastqs when new method proved
+    # sheet = _insert_fastqs(sheet, analysis.fastqs)
+    if not analysis.fastq_data:
+        return sheet
+
+    sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
+    sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
 
     reports = [r for r in analysis.results_data]
     if not any(reports):

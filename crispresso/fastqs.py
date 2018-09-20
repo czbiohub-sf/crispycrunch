@@ -1,8 +1,9 @@
 import doctest
 import gzip
 
+from functools import lru_cache
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Iterable, List, Tuple
 
 """
 Matches fastq files to designed guides and primers so we can avoid relying on
@@ -35,9 +36,7 @@ def in_fastq(fastq: str, primer_seq: str, guide_seq: str
     >>> in_fastq(r1gz, primer_seq, guide_seq)
     (18897, 11490, 11019)
     """
-    file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
-    with file:
-        seq_lines = [line for line in file if line[0] in 'ACGT']
+    seq_lines = _get_seq_lines(fastq)
     primer_matches = [line for line in seq_lines
                       if line.startswith(primer_seq)]
     # Only the first 16 chars have matches because of cut site
@@ -77,8 +76,6 @@ def matches_fastq_pair(
         # TODO (gdingle): why does guide_seq appear so infrequently sometimes?
         in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.0001
     )
-
-    return in_r1 and in_r2
 
 
 def find_matching_pair_from_dir(
@@ -131,6 +128,14 @@ def reverse_complement(seq: str) -> str:
     """
     complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
     return ''.join(complement[base] for base in reversed(seq))
+
+
+@lru_cache(maxsize=None)
+def _get_seq_lines(fastq: str) -> List[str]:
+    file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
+    with file:
+        seq_lines = [line for line in file if line[0] in 'ACGT']
+    return seq_lines
 
 
 if __name__ == '__main__':
