@@ -2,14 +2,12 @@
 
 {% block intro_content %}
 <p>
-  Upload a custom Excel or CSV in the expected format.
+  Upload a custom sample sheet in the expected format.
   <a href="TODO">Download an example</a>.
 </p>
-<p>
-  The appropriate FastQ file for each row in
+<p>FastQ files will be copied from
   <a target="_blank" href="{{ analysis.s3_url }}">
     {{ analysis.s3_address }}
-  </a>
-  will be determined by matching primers to reads.
+  </a> and matched to rows in the sample sheet by primer and guide sequence.
 </p>
 {% endblock intro_content %}

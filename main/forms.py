@@ -124,7 +124,7 @@ class AnalysisForm(ModelForm):
 
 
 class CustomAnalysisForm(Form):
-    file = FileField(help_text='Upload your custom sample sheet')
+    file = FileField(help_text='Excel or CSV file', label='')
 
     def clean_file(self):
         valid = (
