@@ -6,7 +6,12 @@
 {% block content %}
 
 <p>
+  {% if analysis.is_custom %}
+  Analysis of uploaded sample sheet
+  {# TODO: show more of custom analysis? #}
+  {% else %}
   Analysis of experiment {{ analysis.experiment.name }}
+  {% endif %}
 </p>
 
 <h2 class="d-inline-block">
