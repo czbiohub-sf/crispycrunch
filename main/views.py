@@ -322,17 +322,19 @@ class CustomAnalysisView(View):
     form = CustomAnalysisForm
 
     def get(self, request, **kwargs):
-        kwargs['form'] = self.form()
-        return render(request, self.template_name, kwargs)
+        analysis = Analysis.objects.get(id=kwargs['id'])
+        return render(request, self.template_name, {
+            **kwargs,
+            'form': self.form(),
+            'analysis': analysis,
+        })
 
     def post(self, request, **kwargs):
+        analysis = Analysis.objects.get(id=kwargs['id'])
         form = self.form(request.POST, request.FILES)
         if form.is_valid():
             file = form.cleaned_data['file']
             sheet = self._parse_excel(file)
-
-            analysis = Analysis.objects.get(id=kwargs['id'])
-
             # fastq_data is temporarily a flat list
             fastqs = analysis.fastq_data
             assert len(fastqs), 'No fastqs'
@@ -371,7 +373,7 @@ class CustomAnalysisView(View):
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
         else:
-            return render(request, self.template_name, {**kwargs, 'form': form})
+            return render(request, self.template_name, {**kwargs, 'form': form, 'analysis': analysis})
 
     def _parse_excel(self, file):
         # TODO (gdingle): handle csv as well
