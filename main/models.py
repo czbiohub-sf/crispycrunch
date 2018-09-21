@@ -326,3 +326,12 @@ class Analysis(BaseModel):
     @property
     def is_custom(self):
         return self.experiment.is_custom_analysis
+
+    @property
+    def s3_url(self):
+        return 'https://console.aws.amazon.com/s3/buckets/{}/{}/'.format(
+            self.s3_bucket, self.s3_prefix)
+
+    @property
+    def s3_address(self):
+        return f's3://{self.s3_bucket}/{self.s3_prefix}'

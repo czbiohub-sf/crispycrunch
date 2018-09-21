@@ -12,6 +12,10 @@
   {% else %}
   Analysis of experiment {{ analysis.experiment.name }}
   {% endif %}
+  . FastQ files from
+  <a target="_blank" href="{{ analysis.s3_url }}">
+    {{ analysis.s3_address }}
+  </a>.
 </p>
 
 <h2 class="d-inline-block">
