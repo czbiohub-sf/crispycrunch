@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block intro_content %}
+<p>
+  Upload a custom Excel or CSV in the expected format.
+  <a href="TODO">Download an example</a>.
+</p>
+<p>
+  The appropriate FastQ file for each row in
+  <a href="TODO">
+    s3://{{ analysis.s3_bucket }}/{{ analysis.s3_prefix }}
+  </a>
+  will be determined by matching primers to reads.
+</p>
+{% endblock intro_content %}
