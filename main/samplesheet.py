@@ -10,6 +10,8 @@ from typing import Dict, Optional
 
 import pandas
 
+from django.core.files import UploadedFile
+
 from main import conversions
 from main.models import *
 from main.validators import get_guide_loc, get_primer_loc
@@ -144,6 +146,17 @@ def from_analysis(analysis: Analysis) -> pandas.DataFrame:
 def from_custom_analysis(analysis: Analysis) -> pandas.DataFrame:
     sheet = from_experiment(analysis.experiment)[:len(analysis.fastq_data)]
     return _from_analysis(analysis, sheet)
+
+
+def from_excel(file: UploadedFile) -> pandas.DataFrame:
+    # TODO (gdingle): handle csv as well
+    if file.content_type in (
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'):
+        sheet = pandas.read_excel(file, sheet_name=0)
+    else:
+        sheet = pandas.read_csv(file)
+    return sheet
 
 
 def _from_analysis(analysis: Analysis, sheet: pandas.DataFrame) -> pandas.DataFrame:

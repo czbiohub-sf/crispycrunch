@@ -3,7 +3,7 @@ import gzip
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import Iterable, List, Mapping, Sequence, Tuple
 
 """
 Matches fastq files to designed guides and primers so we can avoid relying on
@@ -64,9 +64,10 @@ def matches_fastq_pair(
 
     >>> matches_fastq_pair(r1, r2, primer_seq_fwd, primer_seq_rev, guide_seq)
     True
-    >>> matches_fastq_pair(r2, r1, primer_seq_fwd, primer_seq_rev, guide_seq)
-    False
     """
+    assert fastq_r1.replace('_R1_', '') == fastq_r2.replace('_R2_', ''), \
+        'FastQ filenames should match: {} {}'.format(fastq_r1, fastq_r2)
+
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq))
 
@@ -101,12 +102,33 @@ def find_matching_pair_from_dir(
     return find_matching_pair(fastq_r1s, fastq_r2s, primer_seq_fwd, primer_seq_rev, guide_seq)
 
 
+def find_matching_pairs(
+        fastqs: Iterable,
+        records: Iterable[Mapping[str, str]]) -> Sequence[Tuple[str, str]]:
+    """
+    >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
+    >>> records = [{
+    ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
+    ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA',
+    ... 'guide_seq': 'AATCGGTACAAGATGGCGGA'}]
+    >>> find_matching_pairs(fastqs, records) == [fastqs]
+    True
+    """
+    return [find_matching_pair(
+        (f for f in fastqs if '_R1_' in f),
+        (f for f in fastqs if '_R2_' in f),
+        row['primer_seq_fwd'],
+        row['primer_seq_rev'],
+        row['guide_seq'])
+        for row in records]
+
+
 def find_matching_pair(
         fastq_r1s: Iterable,
         fastq_r2s: Iterable,
         primer_seq_fwd: str,
         primer_seq_rev: str,
-        guide_seq: str) -> Tuple[str, ...]:
+        guide_seq: str) -> Tuple[str, str]:
     matches = [
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
         if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
@@ -115,7 +137,7 @@ def find_matching_pair(
     if matches:
         return matches[0]
     else:
-        return tuple()
+        return tuple()  # type: ignore
 
 
 def reverse_complement(seq: str) -> str:

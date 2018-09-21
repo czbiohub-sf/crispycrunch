@@ -4,7 +4,7 @@ import time  # noqa
 
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Sequence, Tuple, Type
+from typing import Any, Dict, List, Sequence, Tuple, Type, Iterable, Mapping
 from unittest import mock  # noqa
 
 from django.db import models
@@ -197,6 +197,22 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
     # Crispresso appears to process only 1 (!) analysis simulatenously.
     # TODO (gdingle): can we increase by talking to Luca Pinello?
     max_workers = 4
+
+    @staticmethod
+    def start_analysis(
+            analysis: models.Model,
+            records: Iterable[Mapping[str, str]]) -> None:
+
+        batch = CrispressoBatchWebRequest(analysis)
+        largs = [[
+            row['primer_product'],  # reference amplicon
+            row['guide_seq'],
+            row['fastq_fwd'],
+            row['fastq_rev'],
+            row['donor_seq'],
+            str(row['index']),
+        ] for row in records]
+        return batch.start(largs, [-1])
 
 
 if __name__ == '__main__':

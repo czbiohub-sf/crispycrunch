@@ -30,7 +30,7 @@ from django.views.generic.edit import CreateView
 
 import webscraperequest
 
-from crispresso.fastqs import find_matching_pair
+from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
 from main import conversions
 from main import samplesheet
@@ -332,58 +332,32 @@ class CustomAnalysisView(View):
     def post(self, request, **kwargs):
         analysis = Analysis.objects.get(id=kwargs['id'])
         form = self.form(request.POST, request.FILES)
-        if form.is_valid():
-            file = form.cleaned_data['file']
-            sheet = self._parse_excel(file)
-            # fastq_data is temporarily a flat list
-            fastqs = analysis.fastq_data
-            assert len(fastqs), 'No fastqs'
-            if isinstance(fastqs[0], str):
-                # TODO (gdingle): refactor below with AnalysisView
-                analysis.fastq_data = [find_matching_pair(
-                    (f for f in fastqs if '_R1_' in f),
-                    (f for f in fastqs if '_R2_' in f),
-                    row['primer_seq_fwd'],
-                    row['primer_seq_rev'],
-                    row['guide_seq'])
-                    for row in sheet.to_records()]
-                analysis.save()
 
-            # TODO (gdingle): show result before submitting?
-            # return render(request, self.template_name, {**kwargs, 'form': form})
+        if not form.is_valid():
+            return render(request, self.template_name, {
+                **kwargs,
+                'form': self.form(),
+                'analysis': analysis,
+            })
 
-            # TODO (gdingle): refactor with from_custom_analysis
-            sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
-            sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
+        file = form.cleaned_data['file']
+        sheet = samplesheet.from_excel(file)
+        fastqs = analysis.fastq_data
+        assert len(fastqs), 'Fastqs must be present for a custom analysis'
+        # fastq_data is initially a flat list. Process only on initial post
+        # because find_matching_pairs is expensive.
+        if isinstance(fastqs[0], str):
+            analysis.fastq_data = find_matching_pairs(fastqs, sheet.to_records())
+            analysis.save()
 
-            batch = webscraperequest.CrispressoBatchWebRequest(analysis)
-            largs = [[
-                row['primer_product'],  # reference amplicon
-                row['guide_seq'],
-                row['fastq_fwd'],
-                row['fastq_rev'],
-                # # TODO (gdingle): row['donor_seq'],
-                None,
-                # TODO (gdingle): better ID val
-                str(row.index),
-            ] for row in sheet.to_records()]
+        sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
+        sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
 
-            batch.start(largs, [-1])
+        webscraperequest.CrispressoBatchWebRequest.start_analysis(
+            analysis, sheet.to_records())
 
-            return HttpResponseRedirect(
-                self.success_url.format(id=self.kwargs['id']))
-        else:
-            return render(request, self.template_name, {**kwargs, 'form': form, 'analysis': analysis})
-
-    def _parse_excel(self, file):
-        # TODO (gdingle): handle csv as well
-        if file.content_type in (
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.ms-excel'):
-            sheet = samplesheet.pandas.read_excel(file, sheet_name=0)
-        else:
-            sheet = samplesheet.pandas.read_csv(file)
-        return sheet
+        return HttpResponseRedirect(
+            self.success_url.format(id=self.kwargs['id']))
 
 
 class AnalysisView(CreatePlusView):
@@ -405,26 +379,12 @@ class AnalysisView(CreatePlusView):
         sheet = samplesheet.from_analysis(obj)
 
         # TODO (gdingle): create dir per download, as in seqbot
-        obj.fastq_data = [find_matching_pair(
-            (f for f in fastqs if '_R1_' in f),
-            (f for f in fastqs if '_R2_' in f),
-            row['primer_seq_fwd'],
-            row['primer_seq_rev'],
-            row['guide_seq'])
-            for row in sheet.to_records()]
+        obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records())
 
         sheet = samplesheet.from_analysis(obj)
 
-        batch = webscraperequest.CrispressoBatchWebRequest(obj)
-        largs = [[
-            row['primer_product'],  # reference amplicon
-            row['guide_seq'],
-            row['fastq_fwd'],
-            row['fastq_rev'],
-            row['donor_seq'],
-            row.index
-        ] for row in sheet.to_records()]
-        batch.start(largs, [-1])
+        webscraperequest.CrispressoBatchWebRequest.start_analysis(
+            obj, sheet.to_records())
         return obj
 
 
