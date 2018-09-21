@@ -16,6 +16,8 @@ from main import conversions
 from main.models import *
 from main.validators import get_guide_loc, get_primer_loc
 
+from crispresso.fastqs import reverse_complement
+
 
 def from_experiment(experiment: Experiment) -> pandas.DataFrame:
     sheet = _new_samplesheet()
@@ -124,16 +126,30 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     sheet.index = _new_index(size=len(sheet))
 
-    # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
-    sheet['primer_product'] = sheet.apply(
-        lambda row: conversions.chr_loc_to_seq(
-            get_primer_loc(row['primer_product'], row['guide_seq'], row['guide_loc']),
-            row['target_genome'])
-        # Only look up product from chr loc if crispor returns mysterious Ns
-        if 'N' in row['primer_product'] else row['primer_product'],
-        axis=1,
-    )
+    # sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
     return sheet
+
+
+def _transform_primer_product(row) -> str:
+    # Only look up product from chr loc if crispor returns mysterious Ns
+    if 'N' not in row['primer_product']:
+        return row['primer_product']
+
+    if row['guide_direction'] == '+':
+        guide_seq = row['guide_seq']
+    else:
+        guide_seq = reverse_complement(row['guide_seq'])
+
+    if guide_seq not in row['primer_product']:
+        return 'not found'
+
+    # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
+    primer_loc = get_primer_loc(
+        row['primer_product'],
+        guide_seq,
+        row['guide_loc'])
+    primer_product = conversions.chr_loc_to_seq(primer_loc, row['target_genome'])
+    return primer_product
 
 
 def from_analysis(analysis: Analysis) -> pandas.DataFrame:

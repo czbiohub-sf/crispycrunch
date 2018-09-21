@@ -2,15 +2,25 @@
 
 
 {% block intro_content %}
-
 <ol>
-  <li>Open Crispor Primer Page for each guide, such as for
-      <a target="_blank" href={{ example_crispor_url }}>
-        {{ example_pam_id }}
-      </a>.
+  <li>Review
+
+    <a href="#collapsibleLinks" data-toggle="collapse">
+      Crispor recommended primers
+    </a>
+      {# TODO: wrap into two cols #}
+      <ul id="collapsibleLinks" class="small collapse">
+        {% for target, url in crispor_urls.items %}
+        <li>
+          <a target="_blank" href="{{ url }}">
+            {{ target }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
   </li>
   <li>
-    Confirm primers, or replace with custom primers.
+    Replace all "<strong>not found</strong>" with custom primers or remove
   </li>
 </ol>
 

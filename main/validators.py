@@ -176,7 +176,8 @@ def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
     validate_seq(guide_seq)
     validate_chr(guide_loc)
     assert guide_seq in primer_product
-    chr_num, start, end = [int(i) for i in re.match(CHR_REGEX, guide_loc).groups()]  # type: ignore
+    chr_num, start, end = re.match(CHR_REGEX, guide_loc).groups()  # type: ignore
+    start, end = int(start), int(end)
     assert end - start == len(guide_seq) - 1  # inclusive range
 
     primer_start = start - primer_product.index(guide_seq)

@@ -494,6 +494,13 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
     def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, tuple]:
         ontargetPcr = soup.find(id='ontargetPcr')
         table = ontargetPcr.find_next(class_='primerTable')
+        message = ontargetPcr.find_next('strong')
+        if message and 'Warning: No primers were found' in message.get_text():
+            return {'not found': 'not found'}
+            # TODO (gdingle): better to raise exception?
+            # raise ValueError('Cripor at {}: "{}"'.format(
+            #     self.endpoint,
+            #     message.get_text()))
 
         if table is None:
             text = ontargetPcr.find_next('div').get_text()
@@ -506,11 +513,10 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
         rows = (row.find_all('td') for row in table.find_all('tr'))  # get primers
         tts = ontargetPcr.find_next('div').find_all('tt')  # get products
-        chr_loc = ontargetPcr.find_next('strong').get_text().split(' ')[2]  # get product chr loc
 
         return dict(
             (row[0].get_text().split('_')[-1],
-                (row[1].get_text(), tt.get_text(), chr_loc)
+                (row[1].get_text(), tt.get_text())
              )
             for row, tt in zip(rows, tts))
 
@@ -629,8 +635,8 @@ class TagInRequest(AbstractScrapeRequest):
 
 
 if __name__ == '__main__':
-    import doctest  # noqa
-    doctest.testmod()
+    # import doctest  # noqa
+    # doctest.testmod()
 
     # seq = 'chr2:150500625-150500725'
     # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
@@ -639,3 +645,7 @@ if __name__ == '__main__':
     # req = CrisporGuideRequestByBatchId('FvePVuqmeBJeBZoT6Erd')
     # data = req.run()
     # print(data)
+
+    req = CrisporPrimerRequest('i3lXnUhde2fkPeieqizz', 's45-')
+    data = req.run()
+    print(data)

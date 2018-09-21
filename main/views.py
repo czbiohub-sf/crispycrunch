@@ -224,7 +224,8 @@ class PrimerDesignView(CreatePlusView):
                   obj.max_amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
-                  row['target_loc']]
+                  # TODO (gdingle): is this the best way of identifying guides?
+                  row['target_loc'] + ' ' + row['_crispor_pam_id']]
                  for row in sheet.to_records()]
         batch.start(largs, [-1])
 
@@ -258,13 +259,14 @@ class PrimerSelectionView(CreatePlusView):
 
         def get_fwd_and_rev_primers(ontarget_primers: dict):
             values = list(ontarget_primers.values())
+            if not values or values[0] == 'not found':
+                return 'not found'
+            # TODO (gdingle): _transform_primer_product here instead of later?
             return values[0], values[1]
 
         return {
             'selected_primers': dict(
-                # TODO (gdingle): is this the best way of identifying guides?
-                (p['target'] + ' ' + p['pam_id'],
-                    get_fwd_and_rev_primers(p['ontarget_primers'])
+                (p['target'], get_fwd_and_rev_primers(p['ontarget_primers'])
                  if p['success'] else p['error'])
                 for p in primer_data)
         }
@@ -275,8 +277,8 @@ class PrimerSelectionView(CreatePlusView):
 
     def get_context_data(self, **kwargs):
         primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
-        kwargs['example_crispor_url'] = primer_data[0]['url']
-        kwargs['example_pam_id'] = primer_data[0]['pam_id']
+        kwargs['crispor_urls'] = dict(
+            (p['target'], p['url']) for p in primer_data)
         return super().get_context_data(**kwargs)
 
 

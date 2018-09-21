@@ -163,3 +163,4 @@ def _get_seq_lines(fastq: str) -> List[str]:
 
 if __name__ == '__main__':
     doctest.testmod()
+    # print(reverse_complement('ACTGTTTTAGAGGTAAACTA'))
