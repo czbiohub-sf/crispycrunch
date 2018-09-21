@@ -350,7 +350,9 @@ class CustomAnalysisView(View):
             # TODO (gdingle): show result before submitting?
             # return render(request, self.template_name, {**kwargs, 'form': form})
 
-            sheet = samplesheet.from_custom_analysis(analysis)
+            # TODO (gdingle): refactor with from_custom_analysis
+            sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
+            sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
 
             batch = webscraperequest.CrispressoBatchWebRequest(analysis)
             largs = [[
@@ -363,6 +365,7 @@ class CustomAnalysisView(View):
                 # TODO (gdingle): better ID val
                 str(row.index),
             ] for row in sheet.to_records()]
+
             batch.start(largs, [-1])
 
             return HttpResponseRedirect(
