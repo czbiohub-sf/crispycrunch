@@ -1,9 +1,12 @@
 import doctest
 import gzip
+import logging
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Iterable, List, Mapping, Sequence, Tuple
+from typing import Iterable, List, Mapping, Sequence, Set, Tuple
+
+logger = logging.getLogger(__name__)
 
 """
 Matches fastq files to designed guides and primers so we can avoid relying on
@@ -71,11 +74,15 @@ def matches_fastq_pair(
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq))
 
+    if in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.4:
+        print(in_r1, in_r2)
     return (
         # TODO (gdingle): are these thresholds good?
-        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.4 and
+        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.4
+        # and
         # TODO (gdingle): why does guide_seq appear so infrequently sometimes?
-        in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.0001
+        # are the guides being broken up across forward and reverse?
+        # in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.0001
     )
 
 
@@ -114,13 +121,21 @@ def find_matching_pairs(
     >>> find_matching_pairs(fastqs, records) == [fastqs]
     True
     """
-    return [find_matching_pair(
-        (f for f in fastqs if '_R1_' in f),
-        (f for f in fastqs if '_R2_' in f),
-        row['primer_seq_fwd'],
-        row['primer_seq_rev'],
-        row['guide_seq'])
-        for row in records]
+    seen: Set[str] = set()
+    pairs: List[Tuple[str, str]] = []
+    for row in records:
+        pair = find_matching_pair(
+            (f for f in fastqs if '_R1_' in f and f not in seen),
+            (f for f in fastqs if '_R2_' in f and f not in seen),
+            row['primer_seq_fwd'],
+            row['primer_seq_rev'],
+            row['guide_seq'])
+        if pair:
+            pairs.append(pair)
+            seen.add(pair[0])
+            seen.add(pair[1])
+
+    return pairs
 
 
 def find_matching_pair(
@@ -132,12 +147,21 @@ def find_matching_pair(
     matches = [
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
         if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
-    assert len(matches) <= 1, 'More than one match'
+
+    # assert len(matches) <= 1, 'More than one match'
 
     if matches:
+        if len(matches) > 1:
+            logger.warning('More than one match: {}'.format(matches))
+            # Return the first match on the assumption that inputs rows and files are
+            # ordered similarly.
+            # TODO (gdingle): deal with multi matches better
+
         return matches[0]
     else:
-        return tuple()  # type: ignore
+        raise ValueError(
+            'Cannot find matching pair in {} candidate FastQ files for primer_seq_fwd {}'.format(
+                len(list(fastq_r1s)), primer_seq_fwd))
 
 
 def reverse_complement(seq: str) -> str:

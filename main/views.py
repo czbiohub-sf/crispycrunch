@@ -372,16 +372,19 @@ class CustomAnalysisView(View):
 
         file = form.cleaned_data['file']
         sheet = samplesheet.from_excel(file)
-        fastqs = analysis.fastq_data
-        assert len(fastqs), 'Fastqs must be present for a custom analysis'
+        fastq_data = analysis.fastq_data
+        assert len(fastq_data), 'Fastqs must be present for a custom analysis'
+
         # fastq_data is initially a flat list. Process only on initial post
         # because find_matching_pairs is expensive.
-        if isinstance(fastqs[0], str):
-            analysis.fastq_data = find_matching_pairs(fastqs, sheet.to_records())
-            analysis.save()
+        if isinstance(fastq_data[0], str):
+            fastq_data = find_matching_pairs(fastq_data, sheet.to_records())
 
-        sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
-        sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
+        sheet['fastq_fwd'] = [pair[0] for pair in fastq_data]
+        sheet['fastq_rev'] = [pair[1] for pair in fastq_data]
+
+        analysis.fastq_data = fastq_data
+        analysis.save()
 
         webscraperequest.CrispressoBatchWebRequest.start_analysis(
             analysis, sheet.to_records())
