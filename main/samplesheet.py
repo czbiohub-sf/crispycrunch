@@ -254,6 +254,7 @@ def _new_samplesheet() -> pandas.DataFrame:
         ])
 
 
+# TODO (gdingle): remove me when matching proven
 def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
     """
     Insert pairs of fastq sequence files into their corresponding rows.

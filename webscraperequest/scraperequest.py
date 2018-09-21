@@ -291,7 +291,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             'seq': seq,
             'org': org,
             'pam': pam,
-            'sortBy': 'offCount',  # sort by number of off-targets
+            # TODO (gdingle): this is failing in the case of all low specificity guides
+            # 'sortBy': 'offCount',  # sort by number of off-targets
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
@@ -374,6 +375,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if 'An error occured during processing' in soup.get_text():
                 raise RuntimeError('Crispor: An error occured during processing.')
 
+            print(soup)
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
                 self.target, soup.find('body').get_text().strip()))
 
@@ -388,7 +390,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # TODO (gdingle): why is this seq off by one from input seq?
             # seq=soup.find(class_='title').find('a').get_text(),
             target=self.target,
-            seq=self.data['seq'],
             url=url,
             batch_id=batch_id,
             guide_seqs=guide_seqs,
@@ -399,6 +400,17 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
             offtargets_url=self.endpoint + '?batchId={}&download=offtargets&format=tsv'.format(batch_id),
         )
+
+
+class CrisporGuideRequestByBatchId(CrisporGuideRequest):
+    """
+    For debugging Crispor errors.
+    """
+
+    def __init__(self, batch_id: str) -> None:
+        self.endpoint = 'http://crispor.tefor.net/crispor.py?batchId=' + batch_id
+        self.request = requests.Request('GET', self.endpoint).prepare()  # type: ignore
+        self.target = batch_id
 
 
 class CrisporPrimerRequest(AbstractScrapeRequest):
@@ -619,3 +631,11 @@ class TagInRequest(AbstractScrapeRequest):
 if __name__ == '__main__':
     import doctest  # noqa
     doctest.testmod()
+
+    # seq = 'chr2:150500625-150500725'
+    # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
+    # data = req.run()
+
+    # req = CrisporGuideRequestByBatchId('FvePVuqmeBJeBZoT6Erd')
+    # data = req.run()
+    # print(data)

@@ -315,6 +315,34 @@ class ExperimentSummaryView(View):
         return sheet
 
 
+class AnalysisView(CreatePlusView):
+    template_name = 'analysis.html'
+    form_class = AnalysisForm
+    success_url = '/main/analysis/{id}/progress/'
+
+    def plus(self, obj):
+        # TODO (gdingle): use predetermined s3 location of fastq
+        fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
+        assert len(fastqs) <= 384, 'Fastqs should be from max one plate'
+
+        # Redirect to intermediate page if custom analysis
+        if obj.is_custom:
+            self.success_url = '/main/analysis/{id}/custom/'
+            obj.fastq_data = fastqs
+            return obj
+
+        sheet = samplesheet.from_analysis(obj)
+
+        # TODO (gdingle): create dir per download, as in seqbot
+        obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records())
+
+        sheet = samplesheet.from_analysis(obj)
+
+        webscraperequest.CrispressoBatchWebRequest.start_analysis(
+            obj, sheet.to_records())
+        return obj
+
+
 class CustomAnalysisView(View):
 
     template_name = 'custom-analysis.html'
@@ -358,34 +386,6 @@ class CustomAnalysisView(View):
 
         return HttpResponseRedirect(
             self.success_url.format(id=self.kwargs['id']))
-
-
-class AnalysisView(CreatePlusView):
-    template_name = 'analysis.html'
-    form_class = AnalysisForm
-    success_url = '/main/analysis/{id}/progress/'
-
-    def plus(self, obj):
-        # TODO (gdingle): use predetermined s3 location of fastq
-        fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
-        assert len(fastqs) <= 384, 'Fastqs should be from max one plate'
-
-        # Redirect to intermediate page if custom analysis
-        if obj.is_custom:
-            self.success_url = '/main/analysis/{id}/custom/'
-            obj.fastq_data = fastqs
-            return obj
-
-        sheet = samplesheet.from_analysis(obj)
-
-        # TODO (gdingle): create dir per download, as in seqbot
-        obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records())
-
-        sheet = samplesheet.from_analysis(obj)
-
-        webscraperequest.CrispressoBatchWebRequest.start_analysis(
-            obj, sheet.to_records())
-        return obj
 
 
 class AnalysisProgressView(View):
