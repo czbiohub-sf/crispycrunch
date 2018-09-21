@@ -201,23 +201,3 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
 
 if __name__ == '__main__':
     doctest.testmod()
-
-    # TODO (gdingle): why is this so slow? it should be cached?
-    # batch = CrisporGuideBatchWebRequest(mock.Mock())
-    # largs = [
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    #     ['chr1:11,130,540-11,130,751'],
-    # ]
-    # batch.start(largs)
-    # print(batch.get_batch_status())
-    # time.sleep(4)
-    # print(batch.get_batch_status())
-    # time.sleep(8)
-    # print(batch.get_batch_status())

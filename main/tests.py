@@ -6,7 +6,7 @@ from main import conversions, validators
 
 from main.models import *
 from main.samplesheet import *
-from main.samplesheet import _insert_fastqs, _new_samplesheet
+from main.samplesheet import _insert_fastqs, _new_samplesheet, _from_analysis
 
 
 def load_tests(loader, tests, ignore):
@@ -102,8 +102,9 @@ class SampleSheetTestCase(TestCase):
         sheet = from_primer_selection(self._primer_selection)
         self.assertTrue(len(sheet))
 
-    def test_from_analysis_and_primer_selection(self):
-        sheet = from_analysis_and_primer_selection(self._analysis, self._primer_selection)
+    def test_from_analysis(self):
+        sheet = from_primer_selection(self._primer_selection)
+        sheet = _from_analysis(self._analysis, sheet)
         self.assertTrue(len(sheet))
 
     def test_insert_fastqs(self):

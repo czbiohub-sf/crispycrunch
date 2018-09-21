@@ -8,3 +8,4 @@ psycopg2-binary
 requests
 requests_cache
 sample_sheet
+xlrd

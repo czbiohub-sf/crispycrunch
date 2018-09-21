@@ -26,6 +26,7 @@ urlpatterns = [
     path('analysis/', views.AnalysisView.as_view(), name='Analysis'),
     path('analysis/<int:id>/progress/', views.AnalysisProgressView.as_view(), name='Analysis Progress'),
     path('analysis/<int:id>/results/', views.ResultsView.as_view(), name='Results'),
+    path('analysis/<int:id>/custom/', views.CustomAnalysisView.as_view(), name='Custom Analysis'),
 
     # Downloads
     path('guide-selection/<int:id>/order-form',

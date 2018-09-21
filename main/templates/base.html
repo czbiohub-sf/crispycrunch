@@ -29,7 +29,12 @@
   {% endblock intro_content %}
 
   {% block content %}
+
+  {% if form.is_multipart %}
+  <form enctype="multipart/form-data" method="post" class="form col-sm-8">
+  {% else %}
   <form method="post" class="form col-sm-8">
+  {% endif %}
     {% csrf_token %}
     {% bootstrap_form form %}
     {% buttons %}

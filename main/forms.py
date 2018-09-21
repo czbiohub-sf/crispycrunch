@@ -1,7 +1,7 @@
 import json
 
 from django.contrib.postgres.forms import SimpleArrayField
-from django.forms import ModelForm, widgets
+from django.forms import FileField, Form, ModelForm, widgets
 from main.models import *
 
 
@@ -113,9 +113,28 @@ class AnalysisForm(ModelForm):
     # TODO (gdingle): fetch only for display experiments that have status of "ready"
     def clean_experiment(self):
         experiment = self.cleaned_data['experiment']
+        if experiment.is_custom_analysis:
+            return experiment
         primer_selection = PrimerSelection.objects.filter(
             primer_design__guide_selection__guide_design__experiment=experiment)
         if not primer_selection:
             raise ValidationError('Experiment "{}" is not ready for analysis. Did you complete all setup steps?'.format(
                 experiment.name))
         return experiment
+
+
+class CustomAnalysisForm(Form):
+    file = FileField(help_text='Upload your custom sample sheet')
+
+    def clean_file(self):
+        valid = (
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel',
+            'text/csv',
+        )
+        file = self.cleaned_data['file']
+        if file.content_type not in valid:
+            raise ValidationError(
+                'Cannot handle file format: "{}". Must be one of: {}'.format(
+                    file.content_type, valid))
+        return file

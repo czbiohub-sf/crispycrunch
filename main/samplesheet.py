@@ -137,13 +137,18 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
 def from_analysis(analysis: Analysis) -> pandas.DataFrame:
     primer_selection = PrimerSelection.objects.filter(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
-    return from_analysis_and_primer_selection(analysis, primer_selection)
-
-
-# TODO (gdingle): opportunity for multiple dispatch
-def from_analysis_and_primer_selection(analysis: Analysis, primer_selection: PrimerSelection) -> pandas.DataFrame:
     sheet = from_primer_selection(primer_selection)
+    return _from_analysis(analysis, sheet)
 
+
+def from_custom_analysis(analysis: Analysis) -> pandas.DataFrame:
+    sheet = from_experiment(analysis.experiment)[:len(analysis.fastq_data)]
+    return _from_analysis(analysis, sheet)
+
+
+def _from_analysis(analysis: Analysis, sheet: pandas.DataFrame) -> pandas.DataFrame:
+
+    # TODO (gdingle): does this metadata stick?
     sheet._metadata = [
         'analysis_id',
         'analysis_create_time',

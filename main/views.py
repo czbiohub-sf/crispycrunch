@@ -18,6 +18,7 @@ from io import StringIO
 from itertools import islice
 from typing import Any
 
+import openpyxl  # type: ignore
 import sample_sheet as illumina  # type: ignore
 
 from django.http import Http404
@@ -26,7 +27,6 @@ from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView
-from openpyxl import Workbook, writer  # type: ignore
 
 import webscraperequest
 
@@ -315,6 +315,72 @@ class ExperimentSummaryView(View):
         return sheet
 
 
+class CustomAnalysisView(View):
+
+    template_name = 'custom-analysis.html'
+    success_url = '/main/analysis/{id}/progress/'
+    form = CustomAnalysisForm
+
+    def get(self, request, **kwargs):
+        kwargs['form'] = self.form()
+        return render(request, self.template_name, kwargs)
+
+    def post(self, request, **kwargs):
+        form = self.form(request.POST, request.FILES)
+        if form.is_valid():
+            file = form.cleaned_data['file']
+            sheet = self._parse_excel(file)
+
+            analysis = Analysis.objects.get(id=kwargs['id'])
+
+            # fastq_data is temporarily a flat list
+            fastqs = analysis.fastq_data
+            assert len(fastqs), 'No fastqs'
+            if isinstance(fastqs[0], str):
+                # TODO (gdingle): refactor below with AnalysisView
+                analysis.fastq_data = [find_matching_pair(
+                    (f for f in fastqs if '_R1_' in f),
+                    (f for f in fastqs if '_R2_' in f),
+                    row['primer_seq_fwd'],
+                    row['primer_seq_rev'],
+                    row['guide_seq'])
+                    for row in sheet.to_records()]
+                analysis.save()
+
+            # TODO (gdingle): show result before submitting?
+            # return render(request, self.template_name, {**kwargs, 'form': form})
+
+            sheet = samplesheet.from_custom_analysis(analysis)
+
+            batch = webscraperequest.CrispressoBatchWebRequest(analysis)
+            largs = [[
+                row['primer_product'],  # reference amplicon
+                row['guide_seq'],
+                row['fastq_fwd'],
+                row['fastq_rev'],
+                # # TODO (gdingle): row['donor_seq'],
+                None,
+                # TODO (gdingle): better ID val
+                str(row.index),
+            ] for row in sheet.to_records()]
+            batch.start(largs, [-1])
+
+            return HttpResponseRedirect(
+                self.success_url.format(id=self.kwargs['id']))
+        else:
+            return render(request, self.template_name, {**kwargs, 'form': form})
+
+    def _parse_excel(self, file):
+        # TODO (gdingle): handle csv as well
+        if file.content_type in (
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel'):
+            sheet = samplesheet.pandas.read_excel(file, sheet_name=0)
+        else:
+            sheet = samplesheet.pandas.read_csv(file)
+        return sheet
+
+
 class AnalysisView(CreatePlusView):
     template_name = 'analysis.html'
     form_class = AnalysisForm
@@ -324,6 +390,13 @@ class AnalysisView(CreatePlusView):
         # TODO (gdingle): use predetermined s3 location of fastq
         fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
         assert len(fastqs) <= 384, 'Fastqs should be from max one plate'
+
+        # Redirect to intermediate page if custom analysis
+        if obj.is_custom:
+            self.success_url = '/main/analysis/{id}/custom/'
+            obj.fastq_data = fastqs
+            return obj
+
         sheet = samplesheet.from_analysis(obj)
 
         # TODO (gdingle): create dir per download, as in seqbot
@@ -371,7 +444,10 @@ class ResultsView(View):
     def get(self, request, *args, **kwargs):
         analysis = Analysis.objects.get(id=self.kwargs['id'])
         try:
-            sheet = samplesheet.from_analysis(analysis)
+            if analysis.is_custom:
+                sheet = samplesheet.from_custom_analysis(analysis)
+            else:
+                sheet = samplesheet.from_analysis(analysis)
         except IndexError:
             raise Http404('Analysis results do not exist')
         return render(request, self.template_name, locals())
@@ -388,7 +464,8 @@ class OrderFormView(DetailView):
     seq_key: str
 
     def _create_excel_file(self, sheet: samplesheet.pandas.DataFrame, title: str):
-        wb = Workbook()
+        # TODO (gdingle): use pandas to_excel here instead?
+        wb = openpyxl.Workbook()
         ws = wb.active
 
         ws.title = title[0:31]  # Excel limits to 30 chars
@@ -404,7 +481,7 @@ class OrderFormView(DetailView):
             ws['B' + index] = '{}{}'.format(row.guide_offset, row.guide_direction)
             ws['C' + index] = row[self.seq_key]
 
-        return writer.excel.save_virtual_workbook(wb)
+        return openpyxl.writer.excel.save_virtual_workbook(wb)
 
     def get(self, request, *args, **kwargs):
         instance = self.model.objects.get(id=kwargs['id'])

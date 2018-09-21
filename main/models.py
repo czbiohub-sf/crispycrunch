@@ -153,6 +153,11 @@ class Experiment(BaseModel):
     def __str__(self):
         return 'Experiment({}, ...)'.format(self.name)
 
+    @property
+    def is_custom_analysis(self):
+        # TODO (gdingle): change to special id=1 value when ready
+        return self.name == 'No experiment -- Custom analysis'
+
 
 class GuideDesign(BaseModel):
     experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
@@ -317,3 +322,7 @@ class Analysis(BaseModel):
 
     def __str__(self):
         return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
+
+    @property
+    def is_custom(self):
+        return self.experiment.is_custom_analysis
