@@ -10,7 +10,7 @@ from typing import Dict, Optional
 
 import pandas
 
-from django.core.files import UploadedFile
+from django.core.files.uploadedfile import UploadedFile
 
 from main import conversions
 from main.models import *
