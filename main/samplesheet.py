@@ -141,6 +141,8 @@ def _transform_primer_product(row) -> str:
         guide_seq = reverse_complement(row['guide_seq'])
 
     if guide_seq not in row['primer_product']:
+        # TODO (gdingle): use yellow highlighting of crispor to determine
+        # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
         return 'not found'
 
     # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
