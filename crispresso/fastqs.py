@@ -43,7 +43,7 @@ def in_fastq(fastq: str, primer_seq: str, guide_seq: str
     primer_matches = [line for line in seq_lines
                       if line.startswith(primer_seq)]
     # Only the first 16 chars have matches because of cut site
-    # TODO (gdingle): verify CRISPR logic
+    # TODO (gdingle): verify CRISPR logic, read https://www.addgene.org/crispr/guide/
     guide_matches = [line for line in primer_matches
                      if guide_seq[0:16] in line]
 
@@ -74,14 +74,14 @@ def matches_fastq_pair(
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq))
 
-    if in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.4:
-        print(in_r1, in_r2)
     return (
         # TODO (gdingle): are these thresholds good?
-        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.4
+        # The lowest seen so far has been 29%
+        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25
         # and
-        # TODO (gdingle): why does guide_seq appear so infrequently sometimes?
-        # are the guides being broken up across forward and reverse?
+        # TODO (gdingle): why does guide_seq appear so infrequently
+        # or not at all sometimes?
+        # are the guides being broken up across forward and reverse reads?
         # in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.0001
     )
 
@@ -125,11 +125,11 @@ def find_matching_pairs(
     pairs: List[Tuple[str, str]] = []
     for row in records:
         pair = find_matching_pair(
-            (f for f in fastqs if '_R1_' in f and f not in seen),
-            (f for f in fastqs if '_R2_' in f and f not in seen),
-            row['primer_seq_fwd'],
-            row['primer_seq_rev'],
-            row['guide_seq'])
+            [f for f in fastqs if '_R1_' in f and f not in seen],
+            [f for f in fastqs if '_R2_' in f and f not in seen],
+            row['primer_seq_fwd'].strip(),
+            row['primer_seq_rev'].strip(),
+            row['guide_seq'].strip())
         if pair:
             pairs.append(pair)
             seen.add(pair[0])
@@ -156,7 +156,6 @@ def find_matching_pair(
             # Return the first match on the assumption that inputs rows and files are
             # ordered similarly.
             # TODO (gdingle): deal with multi matches better
-
         return matches[0]
     else:
         raise ValueError(

@@ -496,7 +496,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         table = ontargetPcr.find_next(class_='primerTable')
         message = ontargetPcr.find_next('strong')
         if message and 'Warning: No primers were found' in message.get_text():
-            return {'not found': 'not found'}
+            return {}  # will be interpreted as 'not found'
             # TODO (gdingle): better to raise exception?
             # raise ValueError('Cripor at {}: "{}"'.format(
             #     self.endpoint,

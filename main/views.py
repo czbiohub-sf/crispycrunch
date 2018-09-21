@@ -259,7 +259,7 @@ class PrimerSelectionView(CreatePlusView):
 
         def get_fwd_and_rev_primers(ontarget_primers: dict):
             values = list(ontarget_primers.values())
-            if not values or values[0] == 'not found':
+            if not values:
                 return 'not found'
             # TODO (gdingle): _transform_primer_product here instead of later?
             return values[0], values[1]
@@ -383,6 +383,7 @@ class CustomAnalysisView(View):
         sheet['fastq_fwd'] = [pair[0] for pair in fastq_data]
         sheet['fastq_rev'] = [pair[1] for pair in fastq_data]
 
+        # Save only after sheet is validated above
         analysis.fastq_data = fastq_data
         analysis.save()
 

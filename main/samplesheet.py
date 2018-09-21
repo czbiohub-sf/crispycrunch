@@ -167,13 +167,13 @@ def from_custom_analysis(analysis: Analysis) -> pandas.DataFrame:
 
 
 def from_excel(file: UploadedFile) -> pandas.DataFrame:
-    # TODO (gdingle): handle csv as well
     if file.content_type in (
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-excel'):
         sheet = pandas.read_excel(file, sheet_name=0)
     else:
         sheet = pandas.read_csv(file)
+    # TODO (gdingle): trim and validate all cells?
     return sheet
 
 
