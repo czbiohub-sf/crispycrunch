@@ -199,10 +199,10 @@ class GuideSelectionView(CreatePlusView):
 
     def get_context_data(self, **kwargs):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        kwargs['crispor_urls'] = [
-            gd['url']
+        kwargs['crispor_urls'] = dict(
+            (gd['target'], gd['url'])
             for gd in guide_design.guide_data
-            if gd.get('url')]
+            if gd.get('url'))
         if guide_design.donor_data:
             kwargs['tagin_url'] = guide_design.donor_data[0]['url']
         return super().get_context_data(**kwargs)

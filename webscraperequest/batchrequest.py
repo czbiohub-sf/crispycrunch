@@ -4,7 +4,7 @@ import time  # noqa
 
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Sequence, Tuple, Type, Iterable, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple, Type
 from unittest import mock  # noqa
 
 from django.db import models
@@ -56,9 +56,10 @@ class BaseBatchWebRequest:
         completed, running, errorred = [], [], []
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
-            key = tuple([i, result['in_cache'],
+            key = tuple([i, 'in cache' if result['in_cache'] else '',
                          # result['cache_key'],
-                         result['success']] + result['request_key'])
+                         # result['success']
+                         ] + result['request_key'])
             if result['success'] is True:
                 duration = round(result['end_time'] - result['start_time'], 1)
                 key += (f'{duration}s',)

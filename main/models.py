@@ -226,7 +226,7 @@ class GuideSelection(BaseModel):
         default=dict,
         blank=True,
         validators=[validate_num_wells, _validate_selected_guides],
-        help_text='Guides returned by Crispor, sorted by number of off-targets')
+        help_text='Guides returned by Crispor')
     # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(default=dict, blank=True,
                                 help_text='ssDNAs from tagin.stembio.org')

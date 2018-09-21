@@ -7,10 +7,17 @@
 {# TODO: remove this hack for donor dna #}
 {% if form.selected_guides_tagin.is_hidden %}
 <ol>
-  <li>Open
-      <a target="_blank" href={{ crispor_urls.0 }}>
-        Crispor Guides Page
-      </a>
+  <li>Review Crispor recommended guides
+      {# TODO: wrap into two cols #}
+      <ul class="small">
+        {% for target, url in crispor_urls.items %}
+        <li>
+          <a target="_blank" href="{{ url }}">
+            {{ target }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
   </li>
   <li>
     Decide which guides to use
@@ -19,7 +26,7 @@
     Modify sets of guides below as needed
   </li>
   <li>
-    Replace all "not found" with custom guides or remove
+    Replace all "<strong>not found</strong>" with custom guides or remove
   </li>
 </ol>
 {% else %}
