@@ -24,14 +24,16 @@ from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
 
+CACHE_ARGS = dict(
+    cache_name=__name__ + '_cache',
+    # TODO (gdingle): what's the best timeout?
+    expire_after=3600 * 24 * 14,
+    allowable_methods=('GET', 'POST'),
+)
 # TODO (gdingle): IMPORTANT! Things seem to break if we install the cache simulatenously
 # in other modules.
 # TODO (gdingle): use one cache session per module
-requests_cache.install_cache(
-    # TODO (gdingle): what's the best timeout?
-    __name__ + '_cache',
-    expire_after=3600 * 24 * 14,
-    allowable_methods=('GET', 'POST'))
+requests_cache.install_cache(**CACHE_ARGS)
 CACHE = requests_cache.core.get_cache()
 # CACHE.clear()
 
@@ -82,6 +84,8 @@ class CrispressoRequest(AbstractScrapeRequest):
     True
     """
 
+    base_url = 'http://crispresso.pinellolab.partners.org'
+
     def __init__(self,
                  amplicon: str,
                  sgRNA: str,
@@ -89,7 +93,7 @@ class CrispressoRequest(AbstractScrapeRequest):
                  fastq_r2: str,
                  hdr_seq: str='',
                  optional_name: str='') -> None:
-        self.endpoint = 'http://crispresso.pinellolab.partners.org/submit'
+        self.endpoint = self.base_url + '/submit'
         # TODO (gdingle): compare crispresso2 values to chosen crispresso1 values
         self.data = {
             # NOTE: all post vars are required, even if empty
@@ -130,17 +134,20 @@ class CrispressoRequest(AbstractScrapeRequest):
 
     def run(self) -> Dict[str, Any]:
         logger.info('POST request to: {}'.format(self.endpoint))
-        response = requests.Session().send(self.request)  # type: ignore
-        response.raise_for_status()
+        # This is necessary because of multiple threads and .disabled() call below
+        # TODO (gdingle): is this thread-safe enough?
+        with requests_cache.enabled(**CACHE_ARGS):
+            response = requests.Session().send(self.request)  # type: ignore
+            response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
         self._wait_for_success(report_id)
 
-        report_data_url = 'http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun{}'.format(report_id)
+        report_data_url = self.base_url + '/reports_data/CRISPRessoRun{}'.format(report_id)
         report_files_url = '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
-        report_url = 'http://crispresso.pinellolab.partners.org/view_report/' + report_id
+        report_url = self.base_url + '/view_report/' + report_id
         stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
 
         return {
@@ -196,7 +203,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         return soup.find(id='log_params').get_text()
 
     def _check_report_status(self, report_id: str) -> bool:
-        status_endpoint = 'http://crispresso.pinellolab.partners.org/status/'
+        status_endpoint = self.base_url + '/status/'
         status_url = status_endpoint + report_id
         with requests_cache.disabled():
             logger.info('GET request to: {}'.format(status_url))
@@ -205,6 +212,15 @@ class CrispressoRequest(AbstractScrapeRequest):
             raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
         elif report_status['state'] == 'SUCCESS':
             return True
+        elif report_status['state'] == 'PENDING':
+            # TODO (gdingle): report bug to Luca Pinello
+            # Sometimes pending status is never set to success though the report exists.
+            report_url = self.base_url + '/view_report/' + report_id
+            response = requests.get(report_url)
+            if response.status_code == 200:
+                return True
+            else:
+                return False
         else:
             return False
 

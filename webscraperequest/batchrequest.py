@@ -98,14 +98,17 @@ class BaseBatchWebRequest:
     def _insert(self, future, index=None) -> None:
         try:
             result = future.result()
-            result['end_time'] = int(time.time())
             result['success'] = result.get('success', True)
-            self.model_instance.__dict__[str(self.field_name)][index].update(result)
-            self.model_instance.save()
             logger.debug('{} result inserted into database'.format(self.requester.__class__))
         except Exception as e:
             logger.error('Error inserting into index {}: {}'
                          .format(index, str(e)))
+            result['success'] = result.get('success', False)
+            result['error'] = getattr(e, 'message', str(e))
+        finally:
+            result['end_time'] = int(time.time())
+            self.model_instance.__dict__[str(self.field_name)][index].update(result)
+            self.model_instance.save()
 
 
 class BatchStatus:
