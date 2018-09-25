@@ -20,7 +20,7 @@ An added benefit is validating fastqs before full alignment by Crispresso.
 """
 
 
-def in_fastq(fastq: str, primer_seq: str, guide_seq: str
+def in_fastq(fastq: str, primer_seq: str, guide_seq: str, guide_match_len: int = 4,
              ) -> Tuple[int, int, int]:
     """
     Counts lines of a fastq that contain a primer sequence and guide sequence
@@ -30,22 +30,22 @@ def in_fastq(fastq: str, primer_seq: str, guide_seq: str
     >>> primer_seq = 'CGAGGAGATACAGGCGGAG'
     >>> guide_seq = 'AATCGGTACAAGATGGCGGA'
 
-    >>> in_fastq(r1, primer_seq, guide_seq)
+    >>> in_fastq(r1, primer_seq, guide_seq, 16)
     (18897, 11490, 11019)
-    >>> in_fastq(r1, guide_seq, primer_seq)
+    >>> in_fastq(r1, guide_seq, primer_seq, 16)
     (18897, 0, 0)
 
     >>> r1gz = 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz'
-    >>> in_fastq(r1gz, primer_seq, guide_seq)
+    >>> in_fastq(r1gz, primer_seq, guide_seq, 16)
     (18897, 11490, 11019)
     """
     seq_lines = _get_seq_lines(fastq)
     primer_matches = [line for line in seq_lines
                       if line.startswith(primer_seq)]
-    # Only the first 16 chars have matches because of cut site
+    # Use only a subset of the guide to match because most target seqs are modified after cutting.
     # TODO (gdingle): verify CRISPR logic, read https://www.addgene.org/crispr/guide/
     guide_matches = [line for line in primer_matches
-                     if guide_seq[0:16] in line]
+                     if guide_seq[0:guide_match_len] in line]
 
     return (len(seq_lines), len(primer_matches), len(guide_matches))
 
@@ -71,18 +71,14 @@ def matches_fastq_pair(
     assert fastq_r1.replace('_R1_', '') == fastq_r2.replace('_R2_', ''), \
         'FastQ filenames should match: {} {}'.format(fastq_r1, fastq_r2)
 
-    in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq)
-    in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq))
+    in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq, 4)
+    in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
 
     return (
-        # TODO (gdingle): are these thresholds good?
         # The lowest seen so far has been 29% ... for a single file
-        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25
-        # and
-        # TODO (gdingle): why does guide_seq appear so infrequently
-        # or not at all sometimes?
-        # are the guides being broken up across forward and reverse reads?
-        # in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.0001
+        in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25 and
+        # The lowest seen so far has been 0.004 at 4bp of guide match
+        in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.001
     )
 
 
@@ -147,8 +143,6 @@ def find_matching_pair(
     matches = [
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
         if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
-
-    # assert len(matches) <= 1, 'More than one match'
 
     if matches:
         if len(matches) > 1:
