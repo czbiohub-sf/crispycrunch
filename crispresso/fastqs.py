@@ -119,6 +119,7 @@ def find_matching_pairs(
     """
     seen: Set[str] = set()
     pairs: List[Tuple[str, str]] = []
+    match_keys: Set[tuple] = set()
     for row in records:
         pair = find_matching_pair(
             [f for f in fastqs if '_R1_' in f and f not in seen],
@@ -130,6 +131,11 @@ def find_matching_pairs(
             pairs.append(pair)
             seen.add(pair[0])
             seen.add(pair[1])
+        match_key = (row['primer_seq_fwd'], row['primer_seq_rev'], row['guide_seq'])
+        if match_key in match_keys:
+            logger.warning('Duplicate detected: {}. Results may be unexpected.'.format(
+                match_key))
+        match_keys.add(match_key)
 
     return pairs
 
