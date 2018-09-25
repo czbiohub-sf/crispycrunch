@@ -488,7 +488,7 @@ class IlluminaSheetView(View):
             # A short ID assigned to the specific study and/or project based
             #  on the conventions used at your institution/group. Accepted
             #  characters include numbers, letters, "-", and "_".
-            'Study_ID': experiment.name,
+            'Study_ID': experiment.short_name,
 
             # Description of a project to which the current sequencing run
             # belongs. Special characters and commas are not allowed.
@@ -505,8 +505,8 @@ class IlluminaSheetView(View):
             # (Required)
             # e.g. Microbiome sample collected on Feb. 30 2017 from mouse 002.
             # e.g. Liver tissue obtained on Feb. 30 2017 from patient 012.
-            # TODO (gdingle): is target_loc appropriate?
-            'BioSample_ID': row['target_loc'].replace(':', '_'),
+            # Leave blank, to be filled in by researcher
+            'BioSample_ID': None,
 
             # Description (longer than 10 characters) of the specific
             # biological sample. The description should be the same for all
@@ -515,7 +515,8 @@ class IlluminaSheetView(View):
             # (Required) e.g. Microbiome sample
             # collected on Feb. 30 2017 from mouse 002. e.g. Liver tissue
             # obtained on Feb. 30 2017 from patient 012.
-            # 'BioSample_Description',
+            # Leave blank, to be filled in by researcher
+            'BioSample_Description': None,
 
             # A short ID assigned to the specific library based on the
             # conventions used at your institution/group. Accepted
@@ -523,15 +524,14 @@ class IlluminaSheetView(View):
             # should be unique for each row. Sample_ID can be the same as
             # Sample_Name
             # (Required)
-            'Sample_ID': row.index,
+            'Sample_ID': experiment.short_name + '-' + row.index,
 
             # A distinct and descriptive name for each specific library.
             # Accepted characters are numbers, letters, "-", and "_". Name
             # must begin with a letter. This field should be unique for each
             # row. The sample name will go into the final fastq file names.
             # (Required) e.g. Mouse_Liver_SingleCell_plate02_A10_20171210
-            # TODO: Accepted chars?
-            'Sample_Name': row.well_name.replace(':', '_'),
+            'Sample_Name': experiment.short_name + '-' + row.index,
 
             # If people are combining samples to sequence on the same run,
             # this column is used to keep track of to whom each sample
@@ -539,41 +539,37 @@ class IlluminaSheetView(View):
             # FirstName_LastName. If left blank, we will use submitter's
             # information.
             # e.g. Stephen_Quake
-            # TODO (gdingle): use experiment analyzer?
             'Sample_Owner': experiment.researcher.full_name.replace(' ', '_'),
 
             # Name of the first index. Accepted characters are numbers,
             # letters, "-", and "_"
             # (Required)
             # e.g. Nextera - N700
-            # TODO (gdingle): what is an index???
-            'Index_ID': row.index[0],
+            # Leave blank, to be filled in by researcher
+            'Index_ID': None,
 
             # Sequence of the first index
             # (Required)
             # e.g. ATAGCGCT
-            # TODO: what are index values?
-            # TODO (gdingle): this is not unique enough!!!
-            'index': row.primer_seq_fwd,
+            # Leave blank, to be filled in by researcher
+            'Index': None,
 
             # Name of the second index. Accepted characters are numbers,
             # letters, "-", and "_"
             # (Required) e.g. Nextera - S500
-            'Index2_ID': row.index[1:],
+            # Leave blank, to be filled in by researcher
+            'Index2_ID': None,
 
             # Sequence of the second index
             # (Required) e.g. ATAGCGCT
-            'index2': row.primer_seq_rev,
+            # Leave blank, to be filled in by researcher
+            'Index2': None,
 
             # This field is used to record the organism the DNA comes from.
             # Some examples are Human, Mouse, Mosquito, Yeast, Bacteria,
             # etc.
             # (Required)
-            # TODO (gdingle): translate to more organisms
-            'Organism': {
-                'hg38': 'Human',
-                'mm10': 'Mouse',
-            }[row['target_genome']],
+            'Organism': GuideDesign.GENOME_TO_ORGANISM[row['target_genome']],
 
             # TODO (gdingle): will these below ever be useful?
             # This field is used record the host of the organism where the
@@ -581,18 +577,18 @@ class IlluminaSheetView(View):
             # Fungus and the Fungus is isolated from a Human fecal sample,
             # then the Host is Human. If the organism is Human, then host is
             # left blank.
-            # 'Host',
+            'Host': None,
 
             # Gender of the organism (if applicable) e.g. M or F
-            # 'Gender',
+            'Gender': None,
 
             # Tissue origin of the particular sample (if applicable) e.g. Liver
-            # 'Tissue_Source',
+            'Tissue_Source': None,
 
             # FACS markers used delimited by a semicolon ";" with no space.
             # Accepted characters are numbers, letters, "-" and "_". e.g.
             # Epcam;CD45
-            # 'FACS_Markers',
+            'FACS_Markers': None,
         })
 
     def get(self, request, **kwargs):
@@ -602,6 +598,8 @@ class IlluminaSheetView(View):
         experiment = primer_selection.primer_design.guide_selection.guide_design.experiment
 
         illumina_sheet = illumina.SampleSheet()
+        # TODO (gdingle): Add link to Biohub submission form
+        illumina_sheet.Header['Crispycrunch'] = 'Please fill in the following required columns: BioSample_ID, BioSample_Description, Index_ID, Index, Index2_ID, Index2.'
         for row in sheet.to_records():
             illumina_sheet.add_sample(self._make_sample(experiment, row))
 

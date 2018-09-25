@@ -3,6 +3,7 @@ import functools
 from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.db import models
+from django.utils.text import slugify
 
 from main.validators import *
 
@@ -158,16 +159,26 @@ class Experiment(BaseModel):
         # TODO (gdingle): change to special id=1 value when ready
         return self.name == 'No experiment -- Custom analysis'
 
+    @property
+    def short_name(self):
+        return slugify(self.name)
+
 
 class GuideDesign(BaseModel):
+    GENOMES = [
+        ('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38)'),
+        ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19)'),
+        ('todo', 'TODO: more genomes'),
+    ]
+    GENOME_TO_ORGANISM = {
+        'hg38': 'Human',
+        'hg19': 'Human',
+    }
+
     experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
 
     # TODO (gdingle): make sure this works for TagIn as well
-    genome = models.CharField(max_length=80, choices=[
-        ('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38) + SNPs: dbSNP148, Kaviar'),
-        ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'),
-        ('todo', 'TODO: more genomes'),
-    ], default='hg38')
+    genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
 
     pam = models.CharField(max_length=80, choices=[
         # TODO (gdingle): what does this description all mean?

@@ -76,7 +76,7 @@ def matches_fastq_pair(
 
     return (
         # TODO (gdingle): are these thresholds good?
-        # The lowest seen so far has been 29%
+        # The lowest seen so far has been 29% ... for a single file
         in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25
         # and
         # TODO (gdingle): why does guide_seq appear so infrequently
@@ -127,9 +127,9 @@ def find_matching_pairs(
         pair = find_matching_pair(
             [f for f in fastqs if '_R1_' in f and f not in seen],
             [f for f in fastqs if '_R2_' in f and f not in seen],
-            row['primer_seq_fwd'].strip(),
-            row['primer_seq_rev'].strip(),
-            row['guide_seq'].strip())
+            row['primer_seq_fwd'].strip().upper(),
+            row['primer_seq_rev'].strip().upper(),
+            row['guide_seq'].strip().upper())
         if pair:
             pairs.append(pair)
             seen.add(pair[0])

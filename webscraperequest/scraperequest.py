@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 requests_cache.install_cache(
     # TODO (gdingle): what's the best timeout?
     __name__ + '_cache',
-    expire_after=3600 * 12,
+    expire_after=3600 * 24 * 14,
     allowable_methods=('GET', 'POST'))
 CACHE = requests_cache.core.get_cache()
 # CACHE.clear()
