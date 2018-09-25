@@ -417,6 +417,10 @@ class ResultsView(View):
         try:
             if analysis.is_custom:
                 sheet = samplesheet.from_custom_analysis(analysis)
+                input_data = [
+                    (d['input_data'],
+                        [f.split('/')[-1] for f in d['input_files']])
+                    for d in analysis.results_data]
             else:
                 sheet = samplesheet.from_analysis(analysis)
         except IndexError:

@@ -75,7 +75,7 @@ def matches_fastq_pair(
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
 
     return (
-        # The lowest seen so far has been 29% ... for a single file
+        # The lowest seen so far has been 29% ... for a single correct file
         in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25 and
         # The lowest seen so far has been 0.004 at 4bp of guide match
         in_r1[2] + in_r2[2] > (in_r1[1] + in_r1[1]) * 0.001

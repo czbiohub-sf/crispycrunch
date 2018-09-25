@@ -28,7 +28,9 @@
 <table class="table">
   <thead class="thead-light">
     <tr>
+      {% if not analysis.is_custom %}
       <th>Well Position</th>
+      {% endif %}
       {# TODO: show target here? <th>Target</th> #}
       <th>Report</th>
       <th>Zip</th>
@@ -39,7 +41,9 @@
   </thead>
   {% for row in sheet.to_records %}
   <tr>
+    {% if not analysis.is_custom %}
     <td>{{ row.index }}</td>
+    {% endif %}
     {# <td>{{ row.target_loc }}</td> #}
     <td><a target="_blank" href="{{ row.report_url }}">open</a></td>
     <td><a target="_blank" href="{{ row.report_zip }}">download</a></td>
@@ -49,5 +53,31 @@
   </tr>
   {% endfor %}
 </table>
+
+<h4>
+  <a href="#inputsTable" data-toggle="collapse">Crispresso Inputs</a>
+</h4>
+<div id="inputsTable" class="small collapse">
+  <table class="table">
+    <thead class="thead-light">
+      <tr>
+        <th>fastq_r1</th>
+        <th>fastq_r2</th>
+        <th>amplicon</th>
+        <th>sgRNA</th>
+        <th>hdr_seq</th>
+      </tr>
+    </thead>
+    {% for input, files in input_data %}
+    <tr>
+      <td>{{ files.0 }}</td>
+      <td>{{ files.1 }}</td>
+      <td title={{ input.amplicon }}>{{ input.amplicon|truncatechars:64 }}</td>
+      <td>{{ input.sgRNA }}</td>
+      <td>{{ input.hdr_seq|truncatechars:32 }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
 
 {% endblock content %}
