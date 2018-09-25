@@ -121,7 +121,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             'seq_design': 'paired',
             'sgRNA': sgRNA,
         }
-        files = {
+        self.files = {
             'fastq_r1': open(fastq_r1, 'rb'),
             'fastq_r2': open(fastq_r2, 'rb'),
         }
@@ -129,7 +129,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             'POST',
             self.endpoint,
             data=self.data,
-            files=files,
+            files=self.files,
         ).prepare()
 
     def run(self) -> Dict[str, Any]:
@@ -156,6 +156,8 @@ class CrispressoRequest(AbstractScrapeRequest):
             'log_params': self._get_log_params(report_url),
             'report_files': [report_files_url + file for file in self.report_files],
             'report_stats': self._get_stats(stats_url),
+            'input_data': self.data,
+            'input_files': [f.name for f in self.files.values()],
         }
 
     def _wait_for_success(self, report_id: str, retries: int = 3 * 96) -> None:
