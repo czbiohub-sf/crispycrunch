@@ -58,6 +58,13 @@ To inspect the state of the app, use the built-in Django admin interface at http
 
 To inspect the source of fastq files, open https://console.aws.amazon.com/s3/buckets/czb-seqbot/.
 
+To read the error logs:
+
+```
+eb ssh
+tail /opt/python/log/django.log
+```
+
 # Deployment
 
 Currently, Crispycrunch uses Amazon's Elasticbeanstalk for deployment and hosting. EB manages a web server (EC2) and a database (RDS) in one deployment environment (prod). Open the EB control panel at https://us-west-2.console.aws.amazon.com/elasticbeanstalk/home?region=us-west-2#/environment/dashboard?applicationName=crispycrunch&environmentId=e-vnvbedub4n.
