@@ -2,7 +2,8 @@ import doctest
 import gzip
 import logging
 
-from functools import lru_cache
+from concurrent.futures import ProcessPoolExecutor
+from functools import lru_cache, partial
 from pathlib import Path
 from typing import Iterable, List, Mapping, Sequence, Set, Tuple
 
@@ -51,11 +52,11 @@ def in_fastq(fastq: str, primer_seq: str, guide_seq: str, guide_match_len: int =
 
 
 def matches_fastq_pair(
-        fastq_r1: str,
-        fastq_r2: str,
         primer_seq_fwd: str,
         primer_seq_rev: str,
-        guide_seq: str) -> bool:
+        guide_seq: str,
+        fastq_r1: str,
+        fastq_r2: str) -> bool:
     """
     Determines whether a pair of fastq files, r1 and r2, contain the given primers and guide.
 
@@ -65,12 +66,13 @@ def matches_fastq_pair(
     >>> primer_seq_rev = 'GTGGACGAGACGTGGTTAA'
     >>> guide_seq = 'AATCGGTACAAGATGGCGGA'
 
-    >>> matches_fastq_pair(r1, r2, primer_seq_fwd, primer_seq_rev, guide_seq)
+    >>> matches_fastq_pair(primer_seq_fwd, primer_seq_rev, guide_seq, r1, r2)
     True
     """
     assert fastq_r1.replace('_R1_', '') == fastq_r2.replace('_R2_', ''), \
         'FastQ filenames should match: {} {}'.format(fastq_r1, fastq_r2)
 
+    # TODO (gdingle): parallelize in two processes
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq, 4)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
 
@@ -146,9 +148,17 @@ def find_matching_pair(
         primer_seq_fwd: str,
         primer_seq_rev: str,
         guide_seq: str) -> Tuple[str, str]:
+
     matches = [
         (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
-        if matches_fastq_pair(str(r1), str(r2), primer_seq_fwd, primer_seq_rev, guide_seq)]
+        if matches_fastq_pair(primer_seq_fwd, primer_seq_rev, guide_seq, str(r1), str(r2))]
+
+    # TODO (gdingle): parallelize
+    # with ProcessPoolExecutor() as pool:
+    #     bools = pool.map(
+    #         partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev, guide_seq),
+    #         fastq_r1s,
+    #         fastq_r2s)
 
     if matches:
         if len(matches) > 1:
