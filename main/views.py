@@ -178,6 +178,7 @@ class GuideSelectionView(CreatePlusView):
         from collections import OrderedDict
         scores = guide_data['scores']
         guide_seqs = guide_data['guide_seqs'].items()
+        # First score should be the MIT specificity score
         guide_seqs = sorted(guide_seqs, key=lambda t: scores[t[0]][0], reverse=True)
         return OrderedDict(islice(guide_seqs, top))
 
