@@ -296,6 +296,9 @@ class CrisporGuideRequest(AbstractScrapeRequest):
     >>> len(data['primer_urls']) > 3
     True
 
+    >>> len(data['scores']) > 3
+    True
+
     Responses are cached. Use in_cache to check status when many requests
     are in flight.
 
@@ -393,7 +396,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if 'An error occured during processing' in soup.get_text():
                 raise RuntimeError('Crispor: An error occured during processing.')
 
-            print(soup)
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
                 self.target, soup.find('body').get_text().strip()))
 
@@ -404,6 +406,9 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
                                  for t in rows)
+        scores = OrderedDict((t['id'],
+            [cell.get_text().strip() for cell in t.find_all('td')[2:7]])
+            for t in rows)
         return dict(
             # TODO (gdingle): why is this seq off by one from input seq?
             # seq=soup.find(class_='title').find('a').get_text(),
@@ -411,6 +416,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             url=url,
             batch_id=batch_id,
             guide_seqs=guide_seqs,
+            scores=scores,
             # TODO (gdingle): are these links ever needed?
             primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, urllib.parse.quote(t['id']))) for t in rows),
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
@@ -653,8 +659,8 @@ class TagInRequest(AbstractScrapeRequest):
 
 
 if __name__ == '__main__':
-    # import doctest  # noqa
-    # doctest.testmod()
+    import doctest  # noqa
+    doctest.testmod()
 
     # seq = 'chr2:150500625-150500725'
     # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
@@ -664,6 +670,6 @@ if __name__ == '__main__':
     # data = req.run()
     # print(data)
 
-    req = CrisporPrimerRequest('i3lXnUhde2fkPeieqizz', 's45-')
-    data = req.run()
-    print(data)
+    # req = CrisporPrimerRequest('i3lXnUhde2fkPeieqizz', 's45-')
+    # data = req.run()
+    # print(data)
