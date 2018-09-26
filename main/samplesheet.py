@@ -231,8 +231,10 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     return temp_sheet.to_dict(orient='records')
 
 
-def _new_index(size=96,
-               end_char='H',
+# We actually assume a larger well-plate here so we can assign more than
+# 96 wells before there have been any drop-outs.
+def _new_index(size=192,
+               end_char='P',
                end_int=12) -> list:
     chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
     ints = list(range(1, end_int + 1))

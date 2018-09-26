@@ -179,12 +179,14 @@ class GuideSelectionView(CreatePlusView):
         scores = guide_data['scores']
         guide_seqs = guide_data['guide_seqs'].items()
         guide_seqs = sorted(guide_seqs, key=lambda t: scores[t[0]][0], reverse=True)
-        return OrderedDict(guide_seqs, top)
+        return OrderedDict(islice(guide_seqs, top))
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         # TODO (gdingle): maybe make this a guide design option to "fit to plate"
         wells_per_target = max(1, 96 // len(guide_design.targets))
+        # Add two because we expect some drop-outs from missing primers
+        wells_per_target += 2
         return {
             'selected_guides': dict(
                 (g['target'], self._slice(g, wells_per_target))

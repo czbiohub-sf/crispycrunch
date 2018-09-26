@@ -236,7 +236,9 @@ class GuideSelection(BaseModel):
     selected_guides = JSONField(
         default=dict,
         blank=True,
-        validators=[validate_num_wells, _validate_selected_guides],
+        validators=[
+            functools.partial(validate_num_wells, max=96 * 2),
+            _validate_selected_guides],
         help_text='Guides returned by Crispor')
     # TODO (gdingle): best name: donor or HDR?
     selected_donors = JSONField(default=dict, blank=True,
