@@ -58,7 +58,7 @@ To inspect the state of the app, use the built-in Django admin interface at http
 
 To inspect the source of fastq files, open https://console.aws.amazon.com/s3/buckets/czb-seqbot/.
 
-To read the error logs:
+To read the error logs in prod:
 
 ```
 eb ssh
@@ -84,3 +84,10 @@ Deploy to Amazon Elasticbeanstalk.
 Wait for deployment to finish, then view the live site at http://crispycrunch.us-west-2.elasticbeanstalk.com/main/.
 
 For more info, see https://realpython.com/deploying-a-django-app-and-postgresql-to-aws-elastic-beanstalk/.
+
+To download fastq files stored in s3, you must configure
+```
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+```
+See https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-softwaresettings.html and https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#environment-variable-configuration.
