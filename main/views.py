@@ -168,8 +168,6 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
-    # TODO (gdingle): this is nearly useless because postgres
-    # saves dict in alphabetical order by key name
     @staticmethod
     def _slice(guide_data, top=3):
         """

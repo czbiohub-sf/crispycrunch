@@ -13,6 +13,7 @@ import time
 import urllib.parse
 
 from abc import abstractmethod
+# TODO (gdingle): OrderedDict no longer needed in python3.7
 from collections import OrderedDict
 from typing import Any, Dict
 
