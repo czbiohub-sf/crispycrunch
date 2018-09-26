@@ -171,14 +171,17 @@ class GuideSelectionView(CreatePlusView):
     # TODO (gdingle): this is nearly useless because postgres
     # saves dict in alphabetical order by key name
     @staticmethod
-    def _slice(odict, top=3):
+    def _slice(guide_data, top=3):
         """
         OrderedDict does not support slicing :(
         See https://stackoverflow.com/a/30975520.
         """
         from itertools import islice
         from collections import OrderedDict
-        return OrderedDict(islice(odict.items(), top))
+        scores = guide_data['scores']
+        guide_seqs = guide_data['guide_seqs'].items()
+        guide_seqs = sorted(guide_seqs, key=lambda t: scores[t[0]][0], reverse=True)
+        return OrderedDict(guide_seqs, top)
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
@@ -186,7 +189,7 @@ class GuideSelectionView(CreatePlusView):
         wells_per_target = max(1, 96 // len(guide_design.targets))
         return {
             'selected_guides': dict(
-                (g['target'], self._slice(g['guide_seqs'], wells_per_target))
+                (g['target'], self._slice(g, wells_per_target))
                 for g in guide_design.guide_data),
             'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
                                     for g in guide_design.donor_data),
