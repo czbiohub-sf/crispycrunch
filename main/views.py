@@ -176,10 +176,15 @@ class GuideSelectionView(CreatePlusView):
         """
         from itertools import islice
         from collections import OrderedDict
-        scores = guide_data['scores']
-        guide_seqs = guide_data['guide_seqs'].items()
         # First score should be the MIT specificity score
-        guide_seqs = sorted(guide_seqs, key=lambda t: scores[t[0]][0], reverse=True)
+        # Filter out 'Not found'
+        scores = dict((k, int(s[0]))
+                      for k, s in guide_data['scores'].items()
+                      if s[0].isdigit())
+        # Filter out zero scores
+        guide_seqs = (t for t in guide_data['guide_seqs'].items()
+                      if scores[t[0]] > 0)
+        guide_seqs = sorted(guide_seqs, key=lambda t: int(scores[t[0]]), reverse=True)
         return OrderedDict(islice(guide_seqs, top))
 
     def get_initial(self):
