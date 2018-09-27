@@ -183,7 +183,7 @@ class GuideSelectionView(CreatePlusView):
                       if s[0].isdigit())
         # Filter out zero scores
         guide_seqs = (t for t in guide_data['guide_seqs'].items()
-                      if scores[t[0]] > 0)
+                      if scores.get(t[0]))
         guide_seqs = sorted(guide_seqs, key=lambda t: int(scores[t[0]]), reverse=True)
         return OrderedDict(islice(guide_seqs, top))
 
