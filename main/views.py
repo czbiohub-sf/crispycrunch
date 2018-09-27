@@ -316,6 +316,7 @@ class ExperimentSummaryView(View):
         experiment = guide_design.experiment
 
         if request.GET.get('download') == 'xls':
+            del sheet['Well Pos']  # already contained in index
             excel_file = samplesheet.to_excel(sheet)
             title = experiment.name + ' summary'
             return _excel_download_response(excel_file, title)
@@ -329,8 +330,6 @@ class ExperimentSummaryView(View):
         sheet = sheet.loc[:, 'target_loc':]  # type: ignore
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
         sheet = sheet.dropna(axis=1, how='all')
-        # TODO (gdingle): are these really desired? also redundant in excel download
-        # put them in summary html template only
         sheet.insert(0, 'well_pos', sheet.index)
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
         sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
