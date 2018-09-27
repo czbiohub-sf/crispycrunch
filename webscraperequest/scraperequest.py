@@ -408,8 +408,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
                                  for t in rows)
         scores = OrderedDict((t['id'],
-            [cell.get_text().strip() for cell in t.find_all('td')[2:7]])
-            for t in rows)
+                              [cell.get_text().strip() for cell in t.find_all('td')[2:7]])
+                             for t in rows)
         return dict(
             # TODO (gdingle): why is this seq off by one from input seq?
             # seq=soup.find(class_='title').find('a').get_text(),
@@ -538,7 +538,10 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
         rows = (row.find_all('td') for row in table.find_all('tr'))  # get primers
         tts = ontargetPcr.find_next('div').find_all('tt')  # get products
-
+        # TODO (gdingle): figure out why both products are sometimes not grabbed
+        # see http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=oI0f65TEwlZdrH9NMAat&pamId=s97-&pam=NGG
+        # Temp fix because we know both are always the same
+        tts = (list(tts)[0], list(tts)[0])
         return dict(
             (row[0].get_text().split('_')[-1],
                 (row[1].get_text(), tt.get_text())
@@ -660,8 +663,8 @@ class TagInRequest(AbstractScrapeRequest):
 
 
 if __name__ == '__main__':
-    import doctest  # noqa
-    doctest.testmod()
+    # import doctest  # noqa
+    # doctest.testmod()
 
     # seq = 'chr2:150500625-150500725'
     # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
@@ -671,6 +674,6 @@ if __name__ == '__main__':
     # data = req.run()
     # print(data)
 
-    # req = CrisporPrimerRequest('i3lXnUhde2fkPeieqizz', 's45-')
-    # data = req.run()
-    # print(data)
+    req = CrisporPrimerRequest('oI0f65TEwlZdrH9NMAat', 's97-')
+    data = req.run()
+    print(data)

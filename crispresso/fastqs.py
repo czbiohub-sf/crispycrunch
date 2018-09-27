@@ -77,7 +77,7 @@ def matches_fastq_pair(
 
     # TODO (gdingle): evaluate whether this is actually faster
     if parallelize:
-        with ProcessPoolExecutor() as pool:
+        with ProcessPoolExecutor(2) as pool:
             f1 = pool.submit(partial(in_fastq, fastq_r1, primer_seq_fwd, guide_seq, 4))
             f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_fwd, reverse_complement(guide_seq), 4))
         in_r1 = f1.result()
