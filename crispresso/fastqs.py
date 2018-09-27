@@ -56,7 +56,8 @@ def matches_fastq_pair(
         primer_seq_rev: str,
         guide_seq: str,
         fastq_r1: str,
-        fastq_r2: str) -> bool:
+        fastq_r2: str,
+        parallelize: bool = False) -> bool:
     """
     Determines whether a pair of fastq files, r1 and r2, contain the given primers and guide.
 
@@ -69,12 +70,21 @@ def matches_fastq_pair(
     >>> matches_fastq_pair(primer_seq_fwd, primer_seq_rev, guide_seq, r1, r2)
     True
     """
+    fastq_r1 = str(fastq_r1)
+    fastq_r2 = str(fastq_r2)
     assert fastq_r1.replace('_R1_', '') == fastq_r2.replace('_R2_', ''), \
         'FastQ filenames should match: {} {}'.format(fastq_r1, fastq_r2)
 
-    # TODO (gdingle): parallelize in two processes
-    in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq, 4)
-    in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
+    # TODO (gdingle): evaluate whether this is actually faster
+    if parallelize:
+        with ProcessPoolExecutor() as pool:
+            f1 = pool.submit(partial(in_fastq, fastq_r1, primer_seq_fwd, guide_seq, 4))
+            f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_fwd, reverse_complement(guide_seq), 4))
+        in_r1 = f1.result()
+        in_r2 = f2.result()
+    else:
+        in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq, 4)
+        in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
 
     return (
         # The lowest seen so far has been 29% ... for a single correct file
@@ -102,8 +112,8 @@ def find_matching_pair_from_dir(
     >>> find_matching_pair_from_dir('fastqs', primer_seq_fwd, primer_seq_rev, guide_seq, 'fastq.gz')
     ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz')
     """
-    fastq_r1s = Path(fastq_dir).glob('*_R1_*.' + file_suffix)
-    fastq_r2s = Path(fastq_dir).glob('*_R2_*.' + file_suffix)
+    fastq_r1s = list(Path(fastq_dir).glob('*_R1_*.' + file_suffix))
+    fastq_r2s = list(Path(fastq_dir).glob('*_R2_*.' + file_suffix))
     return find_matching_pair(fastq_r1s, fastq_r2s, primer_seq_fwd, primer_seq_rev, guide_seq)
 
 
@@ -147,18 +157,22 @@ def find_matching_pair(
         fastq_r2s: Iterable,
         primer_seq_fwd: str,
         primer_seq_rev: str,
-        guide_seq: str) -> Tuple[str, str]:
+        guide_seq: str,
+        parallelize: bool = False) -> Tuple[str, str]:
 
-    matches = [
-        (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
-        if matches_fastq_pair(primer_seq_fwd, primer_seq_rev, guide_seq, str(r1), str(r2))]
-
-    # TODO (gdingle): parallelize
-    # with ProcessPoolExecutor() as pool:
-    #     bools = pool.map(
-    #         partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev, guide_seq),
-    #         fastq_r1s,
-    #         fastq_r2s)
+    if parallelize:
+        with ProcessPoolExecutor() as pool:
+            bools = pool.map(
+                partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev, guide_seq),
+                fastq_r1s,
+                fastq_r2s)
+        matches = [
+            (str(r1), str(r2)) for r1, r2, is_match in zip(fastq_r1s, fastq_r2s, bools)
+            if is_match]
+    else:
+        matches = [
+            (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
+            if matches_fastq_pair(primer_seq_fwd, primer_seq_rev, guide_seq, r1, r2)]
 
     if matches:
         if len(matches) > 1:
@@ -195,5 +209,5 @@ def _get_seq_lines(fastq: str) -> List[str]:
 
 
 if __name__ == '__main__':
-    doctest.testmod()
+    doctest.testmod(optionflags=doctest.FAIL_FAST)
     # print(reverse_complement('ACTGTTTTAGAGGTAAACTA'))
