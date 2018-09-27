@@ -14,7 +14,7 @@ import os
 import time
 
 from concurrent.futures import ThreadPoolExecutor
-from io import StringIO
+from io import StringIO, IOBase
 from itertools import islice
 from typing import Any
 
@@ -315,6 +315,13 @@ class ExperimentSummaryView(View):
         guide_design = guide_selection.guide_design
         experiment = guide_design.experiment
 
+        if request.GET.get('download') == 'xls':
+            excel_file = samplesheet.to_excel(sheet)
+            title = experiment.name + ' summary'
+            return _excel_download_response(excel_file, title)
+
+        # TODO (gdingle): download csv
+
         return render(request, self.template_name, locals())
 
     def _prepare_sheet(self, sheet):
@@ -474,12 +481,7 @@ class OrderFormView(DetailView):
         # TODO (gdingle): friendlier title?
         title = request.path.replace('/', ' ').replace('main ', '')
         excel_file = self._create_excel_file(instance.samplesheet, title)
-
-        response = HttpResponse(
-            excel_file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(title)
-
-        return response
+        return _excel_download_response(excel_file, title)
 
 
 class GuideOrderFormView(OrderFormView):
@@ -625,3 +627,10 @@ class IlluminaSheetView(View):
         response['Content-Disposition'] = 'attachment; filename="{}.csv"'.format(filename)
 
         return response
+
+
+def _excel_download_response(excel_file: IOBase, title: str) -> HttpResponse:
+    response = HttpResponse(
+        excel_file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(title)
+    return response

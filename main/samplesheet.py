@@ -7,6 +7,7 @@ For tests, see main/tests.py.
 import os
 
 from typing import Dict, Optional
+from io import BytesIO
 
 import pandas
 
@@ -300,6 +301,12 @@ def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
     return sheet
 
 
-def to_illumina_sheet(samplesheet):
-    # TODO (gdingle):
-    return
+def to_excel(sheet: pandas.DataFrame) -> BytesIO:
+    # Workaround for saving in-memory. See:
+    # https://stackoverflow.com/questions/28058563/write-to-stringio-object-using-pandas-excelwriter
+    excel_file = BytesIO()
+    xlw = pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
+    sheet.to_excel(xlw)
+    xlw.book.save(excel_file)
+    excel_file.seek(0)
+    return excel_file
