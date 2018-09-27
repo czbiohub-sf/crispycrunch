@@ -90,13 +90,14 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
 
     # TODO (gdingle): is this really the best unique name?
     # Example: "hg38:chr2:136116735-136116754:-"
-    sheet['well_name'][lg] = sheet[lg].apply(
-        lambda row: '{}:{}:{}'.format(
-            row['target_genome'],
-            row['guide_loc'],
-            row['guide_direction']),
-        axis=1,
-    )
+    # TODO (gdingle): ever useful?
+    # sheet['well_name'][lg] = sheet[lg].apply(
+    #     lambda row: '{}:{}:{}'.format(
+    #         row['target_genome'],
+    #         row['guide_loc'],
+    #         row['guide_direction']),
+    #     axis=1,
+    # )
 
     sheet['_crispor_batch_id'][lg] = [g[3] for g in guides]
     sheet['_crispor_pam_id'][lg] = [g[1] for g in guides]
@@ -264,7 +265,8 @@ def _new_samplesheet() -> pandas.DataFrame:
             'primer_seq_rev',
             # TODO (gdingle): rename to reference amplicon?
             'primer_product',
-            'well_name',
+            # TODO (gdingle): ever useful
+            # 'well_name',
             's3_bucket',
             's3_prefix',
             'fastq_fwd',

@@ -14,7 +14,7 @@ import os
 import time
 
 from concurrent.futures import ThreadPoolExecutor
-from io import StringIO, IOBase
+from io import IOBase, StringIO
 from itertools import islice
 from typing import Any
 
@@ -329,6 +329,8 @@ class ExperimentSummaryView(View):
         sheet = sheet.loc[:, 'target_loc':]  # type: ignore
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
         sheet = sheet.dropna(axis=1, how='all')
+        # TODO (gdingle): are these really desired? also redundant in excel download
+        # put them in summary html template only
         sheet.insert(0, 'well_pos', sheet.index)
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
         sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
