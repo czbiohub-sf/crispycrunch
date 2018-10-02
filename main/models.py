@@ -7,9 +7,6 @@ from django.utils.text import slugify
 
 from main.validators import *
 
-# TODO (gdingle): mark some model fields as unique or unique_together, and some as editable=False
-# TODO (gdingle): review on_delete behaviors
-
 # TODO (gdingle): temp
 JASON_LI_EXAMPLE = [
     'chr2:38377424-38377154',
@@ -146,7 +143,7 @@ class Researcher(BaseModel):
 class Experiment(BaseModel):
     # TODO (gdingle): help_text and naming convention
     name = models.CharField(max_length=40, unique=True)
-    researcher = models.ForeignKey(Researcher, on_delete=models.PROTECT)
+    researcher = models.ForeignKey(Researcher, on_delete=models.CASCADE)
     description = models.CharField(max_length=65536, blank=True)
     # TODO (gdingle): status field
 
@@ -174,7 +171,7 @@ class GuideDesign(BaseModel):
         'hg19': 'Human',
     }
 
-    experiment = models.ForeignKey(Experiment, on_delete=models.PROTECT)
+    experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
 
     # TODO (gdingle): make sure this works for TagIn as well
     genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
@@ -221,7 +218,7 @@ class GuideDesign(BaseModel):
 
 
 class GuideSelection(BaseModel):
-    guide_design = models.ForeignKey(GuideDesign, on_delete=models.PROTECT)
+    guide_design = models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
     selected_guides_tagin = JSONField(
         default=dict,
         blank=True,
@@ -259,7 +256,7 @@ class GuideSelection(BaseModel):
 
 class PrimerDesign(BaseModel):
     guide_selection = models.ForeignKey(
-        GuideSelection, on_delete=models.PROTECT)
+        GuideSelection, on_delete=models.CASCADE)
     # TODO (gdingle): any point in specifying temp?
     primer_temp = models.IntegerField(default=60)
     # TODO (gdingle): this needs to change based on HDR
@@ -272,7 +269,7 @@ class PrimerDesign(BaseModel):
 
 class PrimerSelection(BaseModel):
 
-    primer_design = models.ForeignKey(PrimerDesign, on_delete=models.PROTECT)
+    primer_design = models.ForeignKey(PrimerDesign, on_delete=models.CASCADE)
 
     def _validate_selected_primers(val):
         return [validate_seq(seq[0])  # type: ignore
@@ -309,11 +306,11 @@ class PrimerSelection(BaseModel):
 
 class Analysis(BaseModel):
     experiment = models.ForeignKey(
-        Experiment, on_delete=models.PROTECT,
+        Experiment, on_delete=models.CASCADE,
         help_text='The Crispycrunch experiment to be analyzed')
     # TODO (gdingle): default this to experiment researcher
     researcher = models.ForeignKey(
-        Researcher, on_delete=models.PROTECT,
+        Researcher, on_delete=models.CASCADE,
         help_text='The researcher doing the analysis')
     # TODO (gdingle): add status as for experiment... maybe derive from results_data?
 
