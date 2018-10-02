@@ -23,8 +23,55 @@
   <dd class="col-sm-9">{{ primer_design.max_amplicon_length }}</dd>
   <dt class="col-sm-3">Number of Wells</dt>
   <dd class="col-sm-9">{{ sheet|length }}</dd>
+
+  <dt class="col-sm-12">&nbsp;</dt>
+
+  <dt class="col-sm-3">
+    IDT Guide order form
+  </dt>
+  <dd class="col-sm-9">
+    <a target="_blank" href="{{ guide_selection.order_form_url }}">
+      Download
+    </a>
+    &rarr;
+    <a target="_blank" href="https://www.idtdna.com/site/order/plate/index/crispr">
+      Upload
+    </a>
+  </dd>
+
+  <dt class="col-sm-3">
+    IDT Primer order form
+  </dt>
+  <dd class="col-sm-9">
+    <a target="_blank" href="{{ primer_selection.order_form_url }}">
+      Download
+    </a>
+    &rarr;
+    {# TODO (gdingle): primer upload URL #}
+    <a target="_blank" href="TODO">
+      Upload
+    </a>
+  </dd>
+
+  <dt class="col-sm-3">
+    Illumina Sample Sheet
+  </dt>
+  <dd class="col-sm-9">
+    <a target="_blank" href="{{ primer_selection.illumina_sheet_url }}">
+      Download
+    </a>
+    &rarr;
+    {# TODO (gdingle): illumina_sheet_url upload URL #}
+    <a target="_blank" href="TODO">
+      Upload
+    </a>
+  </dd>
+
 </dl>
 
+<small>
+  <a href="./?download=xls">Download table as Excel</a>
+</small>
 <table class="table">
   <thead class="thead-light">
     <tr>
@@ -45,50 +92,5 @@
     {% endfor %}
   </tbody>
 </table>
-
-<strong>
-  <a href="./?download=xls">Download as Excel</a>
-</strong>
-
-<hr></hr>
-
-{# TODO: link to upload page #}
-<h2>Ordering</h2>
-<dl class="row">
-  <dt class="col-sm-3">
-    <a target="_blank" href="{{ guide_selection.order_form_url }}">
-      Guide order form
-    </a>
-    &rarr;
-    <a target="_blank" href="https://www.idtdna.com/site/order/plate/index/crispr">
-      Upload page
-    </a>
-  </dt>
-  <dt class="col-sm-3">
-    {# TODO: upload page for primers... don't see it at https://www.idtdna.com/pages/products/crispr-genome-editing/alt-r-crispr-cas9-system #}
-    <a target="_blank" href="{{ primer_selection.order_form_url }}">
-      Primer order form
-    </a>
-    &rarr;
-    <a target="_blank" href="TODO">
-      Upload page
-    </a>
-  </dt>
-</dl>
-
-<hr></hr>
-
-<h2>Sequencing</h2>
-<dl class="row">
-  <dt class="col-sm-3">
-    <a target="_blank" href="{{ primer_selection.illumina_sheet_url }}">
-      Illumina sample sheet
-    </a>
-    &rarr;
-    <a target="_blank" href="TODO">
-      Upload page
-    </a>
-  </dt>
-</dl>
 
 {% endblock %}
