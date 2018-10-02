@@ -20,6 +20,8 @@
     {{request.resolver_match.url_name}}
   </h1>
 
+  <hr />
+
   <!-- TODO: messages on success and failure -->
   {% bootstrap_messages %}
 
@@ -46,5 +48,12 @@
 
   {% block optional_content %}
   {% endblock %}
+
+  <hr />
+  <footer class="text-center">
+    <a class="col-sm-2" href="/main/">Home</a>
+    <a class="col-sm-2" href="/main/experiment">Experiment</a>
+    <a class="col-sm-2" href="/main/analysis">Analysis</a>
+  </footer>
 </body>
 </html>
