@@ -12,5 +12,5 @@ urlpatterns = [
     path('main/', include('main.urls')),
 
     # See https://stackoverflow.com/questions/9371378/warning-not-found-favicon-ico
-    path('favicon.ico', RedirectView.as_view(url='/static/crispy-crunch-logo-small.png')),
+    path('favicon.ico', RedirectView.as_view(url='/static/biohub-icon.png')),
 ]
