@@ -7,15 +7,15 @@
 
 <p>
   {% if analysis.is_custom %}
-  Analysis of uploaded sample sheet
+  Analysis of uploaded sample sheet.
   {# TODO: show more of custom analysis? #}
   {% else %}
-  Analysis of experiment {{ analysis.experiment.name }}
+  Analysis of experiment {{ analysis.experiment.name }}.
   {% endif %}
-  . FastQ files from
+  FastQ files from
   <a target="_blank" href="{{ analysis.s3_url }}">
-    {{ analysis.s3_address }}
-  </a>.
+    {{ analysis.s3_address }}.
+  </a>
 </p>
 
 <h2 class="d-inline-block">

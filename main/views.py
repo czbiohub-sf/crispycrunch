@@ -442,6 +442,7 @@ class ResultsView(View):
                     for d in analysis.results_data]
             else:
                 sheet = samplesheet.from_analysis(analysis)
+            # TODO (gdingle): mode to show each stat col as % of total?
         except IndexError:
             raise Http404('Analysis results do not exist')
         return render(request, self.template_name, locals())

@@ -194,7 +194,7 @@ class GuideDesign(BaseModel):
         # default=['ENST00000330949'],
         # default=['ATL2', 'ATL3'],
         # default=JASON_LI_EXAMPLE,
-        default=RYAN_LEENAY_EXAMPLE,
+        # default=RYAN_LEENAY_EXAMPLE,
     )
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),
@@ -283,6 +283,7 @@ class PrimerSelection(BaseModel):
         default=dict,
         blank=True,
         validators=[
+            # TODO (gdingle): check explicitly for "not found" or else different user instructions
             functools.partial(validate_num_wells, max=96 * 2),
             _validate_selected_primers,
         ],
