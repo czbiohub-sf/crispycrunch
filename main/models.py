@@ -140,8 +140,7 @@ class Researcher(BaseModel):
         return self.first_name + ' ' + self.last_name
 
     def __str__(self):
-        return 'Researcher({}, {}, ...)'.format(
-            self.first_name, self.last_name)
+        return self.full_name
 
 
 class Experiment(BaseModel):
@@ -152,7 +151,7 @@ class Experiment(BaseModel):
     # TODO (gdingle): status field
 
     def __str__(self):
-        return 'Experiment({}, ...)'.format(self.name)
+        return self.name.title()
 
     @property
     def is_custom_analysis(self):
@@ -334,11 +333,17 @@ class Analysis(BaseModel):
     fastq_data = JSONField(default=list, blank=True)
 
     def __str__(self):
-        return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
+        # return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
+        return '{} samples of {}'.format(
+            len(self.results_data), self.experiment)
 
     @property
     def is_custom(self):
         return self.experiment.is_custom_analysis
+
+    @property
+    def is_complete(self):
+        return len(self.results_data) > 0
 
     @property
     def s3_url(self):

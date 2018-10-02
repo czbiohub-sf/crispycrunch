@@ -3,14 +3,22 @@
 {% block content %}
 
 <h2>Experiments</h2>
+<ul>
 {% for experiment in object_list %}
-  <a href="/main/experiment/{{ experiment.id }}/summary/">{{ experiment }}</a>
+  <li><a href="/main/experiment/{{ experiment.id }}/summary/">
+    {{ experiment }}
+  </a></li>
 {% endfor %}
+</ul>
 
 <h2>Analyses</h2>
+<ul>
 {% for analysis in analyses %}
-  <a href="/main/analysis/{{ analysis.id }}/results/">{{ analysis }}</a>
+  <li><a href="/main/analysis/{{ analysis.id }}/results/">
+    {{ analysis }}
+  </a></li>
 {% endfor %}
+</ul>
 
 <hr></hr>
 {# TODO better footer #}

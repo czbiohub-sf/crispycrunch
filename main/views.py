@@ -52,7 +52,7 @@ class IndexView(ListView):
     # TODO (gdingle): fill in
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['analyses'] = Analysis.objects.all()
+        context['analyses'] = (a for a in Analysis.objects.all() if a.is_complete)
         return context
 
 
