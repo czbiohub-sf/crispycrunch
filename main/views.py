@@ -32,7 +32,7 @@ import webscraperequest
 
 from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
-from protospacex import start_codon_seq
+from protospacex import start_codon_chr_loc, start_codon_seq
 
 from main import conversions
 from main import samplesheet
@@ -95,22 +95,26 @@ class GuideDesignView(CreatePlusView):
     form_class = GuideDesignForm
     success_url = '/main/guide-design/{id}/progress/'
 
-    def _normalize_targets(self, targets):
+    # TODO (gdingle): we really need to store this in a new model field
+    # and preserve the original input
+    def _normalize_targets(self, targets, genome):
         # TODO (gdingle): handle mix of target types
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): gggenome all seqs
             return targets
 
-        if not all(is_gene(t) for t in targets):
+        if all(is_ensemble_transcript(t) for t in targets):
+            # TODO (gdingle): assert ENST is for correct genome
+            func = start_codon_chr_loc
+        elif all(is_gene(t) for t in targets):
+            # TODO (gdingle): this still needs some work to get best region of gene
+            func = functools.partial(conversions.gene_to_chr_loc, genome=genome)
+        else:
             return targets
 
         with ThreadPoolExecutor() as pool:
-            normalized = list(pool.map(
-                # TODO (gdingle): this still needs some work to get best region of gene
-                conversions.gene_to_chr_loc,
-                targets,
-            ))
-        # TODO: normalize seqs also
+            normalized = list(pool.map(func, targets))
+
         assert all(is_chr(t) for t in normalized)
         return normalized
 
@@ -125,10 +129,8 @@ class GuideDesignView(CreatePlusView):
             func = functools.partial(conversions.chr_loc_to_seq, genome=genome)
 
         with ThreadPoolExecutor() as pool:
-            seqs = list(pool.map(
-                func,
-                targets,
-            ))
+            seqs = list(pool.map(func, targets))
+
         return seqs
 
     def plus(self, obj):
@@ -138,7 +140,7 @@ class GuideDesignView(CreatePlusView):
         """
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
 
-        obj.targets = self._normalize_targets(obj.targets)
+        obj.targets = self._normalize_targets(obj.targets, obj.genome)
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
 
@@ -178,14 +180,7 @@ class GuideSelectionView(CreatePlusView):
     success_url = '/main/guide-selection/{id}/primer-design/'
 
     @staticmethod
-    def _slice(guide_data, top=3):
-        """
-        OrderedDict does not support slicing :(
-        See https://stackoverflow.com/a/30975520.
-        """
-        from itertools import islice
-        from collections import OrderedDict
-
+    def _slice(guide_data, top=3, by='distance'):
         guide_seqs = guide_data['guide_seqs']
         if not guide_seqs or guide_seqs == {'not found': 'not found'}:
             return {'not found': 'not found'}
@@ -195,22 +190,41 @@ class GuideSelectionView(CreatePlusView):
         scores = dict((k, int(s[0]))
                       for k, s in guide_data['scores'].items()
                       if s[0].isdigit())
-        # Filter out zero scores
-        guide_seqs = (t for t in guide_seqs.items()
-                      if scores.get(t[0]))
-        guide_seqs = sorted(guide_seqs, key=lambda t: int(scores[t[0]]), reverse=True)
-        return OrderedDict(islice(guide_seqs, top))
+
+        if by == 'distance':
+            guide_seqs = dict(g for g in guide_seqs.items()
+                              # TODO (gdingle): is 50 a good cut-off?
+                              if scores.get(g[0], 0) > 50)
+
+        def func(t):
+            if by == 'score':
+                return int(scores[t[0]])
+            # TODO (gdingle): what about forward and reverse?
+            # how does that relate to distance?
+            # TODO (gdingle): weigh score somehow as well instead of filtering above?
+            elif by == 'distance':
+                # s29+, s26+, etc
+                return int(t[0][1:-1])
+
+        guide_seqs = sorted(
+            guide_seqs.items(),
+            key=func,
+            reverse=(by == 'score'))
+        return dict(islice(guide_seqs, top))
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        sort_by = 'distance' if guide_design.hdr_seq else 'score'
         return {
             'selected_guides': dict(
-                (g['target'], self._slice(g, guide_design.wells_per_target))
+                (g['target'],
+                    self._slice(g, guide_design.wells_per_target, sort_by))
                 for g in guide_design.guide_data),
             'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
                                     for g in guide_design.donor_data),
             'selected_guides_tagin': dict(
-                (g['metadata']['chr_loc'], self._slice(g['guide_seqs'], guide_design.wells_per_target))
+                (g['metadata']['chr_loc'],
+                    self._slice(g['guide_seqs'], guide_design.wells_per_target, sort_by))
                 for g in guide_design.donor_data),
         }
 

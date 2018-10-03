@@ -4,10 +4,11 @@ whereas the Django models represent contents per plate.
 
 For tests, see main/tests.py.
 """
+import logging
 import os
 
-from typing import Dict, Optional
 from io import BytesIO
+from typing import Dict, Optional
 
 import pandas
 
@@ -18,6 +19,8 @@ from main.models import *
 from main.validators import get_guide_loc, get_primer_loc
 
 from crispresso.fastqs import reverse_complement
+
+logger = logging.getLogger(__name__)
 
 
 def from_experiment(experiment: Experiment) -> pandas.DataFrame:
@@ -83,7 +86,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     sheet['guide_direction'][lg] = [g[1][-1] for g in guides]
 
     # TODO (gdingle): is this correct? off by one?
-    # TODO (gdingle): indicate direction by high to low for reverse?
     sheet['guide_loc'][lg] = sheet[lg].apply(
         lambda row: get_guide_loc(row['target_loc'], row['guide_offset'], len(row['guide_seq'])),
         axis=1,
@@ -129,7 +131,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     sheet.index = _new_index(size=len(sheet))
 
-    # sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
+    sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
     return sheet
 
 
@@ -147,6 +149,9 @@ def _transform_primer_product(row) -> str:
         # TODO (gdingle): use yellow highlighting of crispor to determine
         # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
         return 'not found'
+
+    logger.warning('Replacing Ns in primer product for {} guide {}'.format(
+        row['target_loc'], row['guide_seq']))
 
     # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
     primer_loc = get_primer_loc(

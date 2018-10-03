@@ -431,6 +431,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         # See http://crispor.tefor.net/manual/
         rows = [r for r in rows
                 if 'primers' in r[1].get_text() and
+                r[2].get_text().strip().isdigit() and
                 int(r[2].get_text().strip()) > 20]
 
         # Filter for rows that have actual primers (by http request),

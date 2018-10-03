@@ -39,6 +39,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     # TODO (gdingle): do we actually need exon features? or just cds? #"exon"
       with exon and CDS features. The coordinates of exons and CDS
       features are relative to the sequence fragment.
+
+    >>> fetch_ensembl_transcript('ENST00000398844').description
+    'chromosome:GRCh38:5:134648789:134727823:1'
     """
 
     # TODO: Validate ensembl_transcript_id is a valid transcript id
@@ -184,6 +187,50 @@ def start_codon_seq(ensembl_transcript_id: str) -> str:
     start_codon_seq = cds[0].location.extract(record).seq
     assert len(start_codon_seq)
     return str(start_codon_seq)
+
+
+def start_codon_chr_loc(ensembl_transcript_id: str) -> str:
+    """
+    Convience function to return chromosome location of start codon.
+
+    See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
+    See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
+
+    >>> start_codon_chr_loc('ENST00000398844')
+    'chr5:134649077-134649174'
+
+    # TODO (gdingle): upgrade when able
+    >> start_codon_chr_loc('ENST00000398844')
+    'GRCh38:chr5:134649077-134649174:+'
+    """
+    record = fetch_ensembl_transcript(ensembl_transcript_id)
+    cds = [f for f in record.features if f.type == 'cds']
+    assert len(cds)
+    codon_location = cds[0].location
+
+    description = record.description.split(':')
+    assert len(description) == 6
+    # TODO (gdingle): deal with other strands
+    assert codon_location.strand == 1
+    # TODO (gdingle): deal with other genomes
+    assert description[1] == 'GRCh38'
+
+    start = int(description[3]) + codon_location.start
+    end = int(description[3]) + codon_location.end
+    assert end - start == len(cds[0].location.extract(record).seq)
+    return 'chr{}:{}-{}'.format(
+        description[2],
+        start,
+        end,
+    )
+
+    # return '{}:chr{}:{}-{}:{}'.format(
+    #     description[1],
+    #     description[2],
+    #     int(description[3]) + codon_location.start,
+    #     int(description[3]) + codon_location.end,
+    #     '+' if codon_location.strand == 1 else '-',
+    # )
 
 
 if __name__ == '__main__':

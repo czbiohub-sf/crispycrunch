@@ -46,14 +46,12 @@ def _reformat_fasta(fasta: str) -> str:
     return ''.join(fasta.split('\n')[1:])
 
 
-def gene_to_chr_loc(gene: str, genome='hg38') -> str:
+def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     """
-    # TODO (gdingle): we need this to return the length of the amplicon,
-    not the whole gene. The amplicon should be less than 500 bp long,
-    according to Jason Li.
-
     Takes the top result from USCS genome browser. See for example:
     https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=ATL2
+
+    # TODO (gdingle): how does this deal with reverse strand?
 
     >>> gene_to_chr_loc('ATL2')
     'chr2:38294880-38377262'
@@ -63,6 +61,12 @@ def gene_to_chr_loc(gene: str, genome='hg38') -> str:
     ValueError: No chr location for XXXX
     >>> gene_to_chr_loc('cxcr4')
     'chr2:136114349-136116243'
+
+    Also handles ENST transcripts.
+    # TODO (gdingle): how reliable is this?
+
+    >>> gene_to_chr_loc('ENST00000398844')
+    'chr5:134648789-134727823'
     """
     url = 'https://genome.ucsc.edu/cgi-bin/hgTracks'
     response = requests.get(url, params={

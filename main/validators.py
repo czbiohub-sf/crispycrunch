@@ -119,6 +119,8 @@ def is_ensemble_transcript(value: str) -> bool:
     """
     >>> is_ensemble_transcript('ENST00000330949')
     True
+    >>> is_ensemble_transcript('ENST00000398844')
+    True
     >>> is_ensemble_transcript('EENST00000330949')
     False
     """
@@ -148,6 +150,8 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     # TODO (gdingle): is this actually correct def for guide_loc?
     >>> get_guide_loc('chr7:5569177-5569415', 191)
     'chr7:5569348-5569367'
+    >>> get_guide_loc('ENST00000330949', 191)
+    ''
     """
     validate_chr(target_loc)
     matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
