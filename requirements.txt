@@ -9,3 +9,4 @@ requests
 requests_cache
 sample_sheet
 xlrd
+httmock

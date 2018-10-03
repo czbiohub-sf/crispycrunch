@@ -421,11 +421,11 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         # Use new threadpool? limit to first 5?
         # TODO (gdingle): check for iteration strat of yunfang
 
-        rows = (
+        rows = [
             [t['id']] +
             [cell for cell in t.find_all('td')[1:8]] +
             [primers_url.format(batch_id, urllib.parse.quote(t['id']))]
-            for t in output_table.find_all(class_='guideRow'))
+            for t in output_table.find_all(class_='guideRow')]
 
         # Filter for rows that have possible primers and better than low specificity
         # See http://crispor.tefor.net/manual/
