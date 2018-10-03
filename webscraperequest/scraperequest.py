@@ -400,8 +400,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
                 self.target, soup.find('body').get_text().strip()))
 
-        rows = output_table.find_all(class_='guideRow')
-
         batch_id = soup.find('input', {'name': 'batchId'})['value']
         url = self.endpoint + '?batchId=' + batch_id
         primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
@@ -412,13 +410,18 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         # Use new threadpool? limit to first 5?
         # TODO (gdingle): check for iteration strat of yunfang
 
-        guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
-                                 for t in rows)
-        scores = OrderedDict((t['id'],
-                              [cell.get_text().strip() for cell in t.find_all('td')[2:7]])
+        rows = (
+            [t['id']] + [cell for cell in t.find_all('td')[1:8]]
+            for t in output_table.find_all(class_='guideRow'))
+        rows = [r for r in rows if 'primers' in r[1].get_text()]
+
+        scores = OrderedDict((t[0],
+                              [c.get_text().strip() for c in t[2:5]])
                              for t in rows)
-        primer_urls = OrderedDict((t['id'],
-                                   primers_url.format(batch_id, urllib.parse.quote(t['id'])))
+        guide_seqs = OrderedDict((t[0], t[1].find_next('tt').get_text())
+                                 for t in rows)
+        primer_urls = OrderedDict((t[0],
+                                   primers_url.format(batch_id, urllib.parse.quote(t[0])))
                                   for t in rows)
         return dict(
             # TODO (gdingle): why is this seq off by one from input seq?
@@ -676,14 +679,14 @@ if __name__ == '__main__':
     # import doctest  # noqa
     # doctest.testmod()
 
-    seq = 'chr2:150500625-150500725'
-    req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
-    data = req.run()
-    print(data)
-
-    # req = CrisporGuideRequestByBatchId('FvePVuqmeBJeBZoT6Erd')
+    # seq = 'chr2:150500625-150500725'
+    # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
     # data = req.run()
     # print(data)
+
+    req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl')
+    data = req.run()
+    print(data)
 
     # req = CrisporPrimerRequest('oI0f65TEwlZdrH9NMAat', 's97-')
     # data = req.run()

@@ -267,12 +267,12 @@ class PrimerDesign(BaseModel):
     # TODO (gdingle): this needs to change based on HDR
     # default of 250 is from
     # https://docs.google.com/document/d/1h_QOtsH6_uH5VeOCr0dBcUBFnQyamgpdQmupYWyvxo8/edit
-    # TODO (gdingle): is default 200bp bad?
+    # TODO (gdingle): is default 300bp bad?
     max_amplicon_length = models.IntegerField(
-        default=200,
+        default=300,
         validators=[
             MinValueValidator(150),
-            MaxValueValidator(300),
+            MaxValueValidator(400),
         ])
     primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
