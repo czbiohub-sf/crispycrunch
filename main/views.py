@@ -142,9 +142,10 @@ class GuideDesignView(CreatePlusView):
         #     assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
-        largs = [[target_seq, obj.experiment.name, obj.genome, obj.pam, target]
+        pre_filter = obj.wells_per_target * 5  # 5 based on safe-harbor experiment
+        largs = [[target_seq, obj.experiment.name, obj.genome, obj.pam, target, pre_filter]
                  for target_seq, target in zip(obj.target_seqs, obj.targets)]
-        batch.start(largs, [-1])
+        batch.start(largs, [-2])
 
         return obj
 
@@ -178,31 +179,32 @@ class GuideSelectionView(CreatePlusView):
         """
         from itertools import islice
         from collections import OrderedDict
+
+        guide_seqs = guide_data['guide_seqs']
+        if not guide_seqs or guide_seqs == {'not found': 'not found'}:
+            return {'not found': 'not found'}
+
         # First score should be the MIT specificity score
         # Filter out 'Not found'
         scores = dict((k, int(s[0]))
                       for k, s in guide_data['scores'].items()
                       if s[0].isdigit())
         # Filter out zero scores
-        guide_seqs = (t for t in guide_data['guide_seqs'].items()
+        guide_seqs = (t for t in guide_seqs.items()
                       if scores.get(t[0]))
         guide_seqs = sorted(guide_seqs, key=lambda t: int(scores[t[0]]), reverse=True)
         return OrderedDict(islice(guide_seqs, top))
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        # TODO (gdingle): maybe make this a guide design option to "fit to plate"
-        wells_per_target = max(1, 96 // len(guide_design.targets))
-        # Add two because we expect some drop-outs from missing primers
-        wells_per_target += 2
         return {
             'selected_guides': dict(
-                (g['target'], self._slice(g, wells_per_target))
+                (g['target'], self._slice(g, guide_design.wells_per_target))
                 for g in guide_design.guide_data),
             'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
                                     for g in guide_design.donor_data),
             'selected_guides_tagin': dict(
-                (g['metadata']['chr_loc'], self._slice(g['guide_seqs'], wells_per_target))
+                (g['metadata']['chr_loc'], self._slice(g['guide_seqs'], guide_design.wells_per_target))
                 for g in guide_design.donor_data),
         }
 

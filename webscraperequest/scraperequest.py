@@ -294,6 +294,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
     >>> seq = 'chr1:11,130,540-11,130,751'
     >>> req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
     >>> data = req.run()
+
     >>> len(data['primer_urls']) > 3
     True
 
@@ -307,19 +308,29 @@ class CrisporGuideRequest(AbstractScrapeRequest):
     True
     """
 
-    def __init__(self, seq: str, name: str = '', org: str = 'hg38', pam: str = 'NGG', target: str = '') -> None:
+    def __init__(
+            self,
+            seq: str,
+            name: str = '',
+            org: str = 'hg38',
+            pam: str = 'NGG',
+            target: str = '',
+            pre_filter: int = 20) -> None:
+
         self.data = {
             'name': name,
             'seq': seq,
             'org': org,
             'pam': pam,
             # TODO (gdingle): this is failing in the case of all low specificity guides
-            # 'sortBy': 'offCount',  # sort by number of off-targets
+            # 'sortBy': 'offCount',
+            # sort by number of off-targets
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
         self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
         self.target = target or seq
+        self.pre_filter = pre_filter
 
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
@@ -402,7 +413,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
         batch_id = soup.find('input', {'name': 'batchId'})['value']
         url = self.endpoint + '?batchId=' + batch_id
-        primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
+        primers_url = self.endpoint.split('?')[0] + '?batchId={}&pamId={}&pam=NGG'
 
         # TODO (gdingle): prefilter scores, guides, primer_urls
         # by existence of primer:
@@ -411,9 +422,31 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         # TODO (gdingle): check for iteration strat of yunfang
 
         rows = (
-            [t['id']] + [cell for cell in t.find_all('td')[1:8]]
+            [t['id']] +
+            [cell for cell in t.find_all('td')[1:8]] +
+            [primers_url.format(batch_id, urllib.parse.quote(t['id']))]
             for t in output_table.find_all(class_='guideRow'))
-        rows = [r for r in rows if 'primers' in r[1].get_text()]
+
+        # Filter for rows that have possible primers and better than low specificity
+        # See http://crispor.tefor.net/manual/
+        rows = [r for r in rows
+                if 'primers' in r[1].get_text() and
+                int(r[2].get_text().strip()) > 20]
+
+        # Filter for rows that have actual primers (by http request),
+        # but only first `pre_filter` to save time.
+        # TODO (gdingle): pool.map parallelize
+        if self.pre_filter:
+            rows = [r for i, r in enumerate(rows)
+                    if i > self.pre_filter or
+                    'Warning: No primers were found'
+                    not in requests.get(r[-1]).text]
+            if not rows:
+                return dict(
+                    target=self.target,
+                    seq=self.data['seq'],
+                    guide_seqs={'not found': 'not found'},
+                )
 
         scores = OrderedDict((t[0],
                               [c.get_text().strip() for c in t[2:5]])
@@ -423,6 +456,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         primer_urls = OrderedDict((t[0],
                                    primers_url.format(batch_id, urllib.parse.quote(t[0])))
                                   for t in rows)
+
         return dict(
             # TODO (gdingle): why is this seq off by one from input seq?
             # seq=soup.find(class_='title').find('a').get_text(),
@@ -445,10 +479,11 @@ class CrisporGuideRequestByBatchId(CrisporGuideRequest):
     For debugging Crispor errors.
     """
 
-    def __init__(self, batch_id: str) -> None:
+    def __init__(self, batch_id: str, pre_filter: int = 5) -> None:
         self.endpoint = 'http://crispor.tefor.net/crispor.py?batchId=' + batch_id
         self.request = requests.Request('GET', self.endpoint).prepare()  # type: ignore
         self.target = batch_id
+        self.pre_filter = pre_filter
 
 
 class CrisporPrimerRequest(AbstractScrapeRequest):
@@ -676,17 +711,17 @@ class TagInRequest(AbstractScrapeRequest):
 
 
 if __name__ == '__main__':
-    # import doctest  # noqa
-    # doctest.testmod()
+    import doctest  # noqa
+    doctest.testmod()
 
     # seq = 'chr2:150500625-150500725'
     # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
     # data = req.run()
     # print(data)
 
-    req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl')
-    data = req.run()
-    print(data)
+    # req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl', pre_filter=5)
+    # data = req.run()
+    # print(data['guide_seqs'])
 
     # req = CrisporPrimerRequest('oI0f65TEwlZdrH9NMAat', 's97-')
     # data = req.run()

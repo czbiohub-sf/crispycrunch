@@ -52,7 +52,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
                                   if g.get('batch_id'))  # filter out errors
     target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
     selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
-                               for g in guide_design.guide_data]
+                               for g in guide_design.guide_data
+                               if g['target'] in guide_selection.selected_guides]
     guides = [(target_loc, offset, seq,
                target_loc_to_batch_id[target_loc],
                target_loc_to_target_seq[target_loc])

@@ -217,6 +217,10 @@ class GuideDesign(BaseModel):
         return 'GuideDesign({}, {}, {}, ...)'.format(
             self.genome, self.pam, self.targets)
 
+    @property
+    def wells_per_target(self):
+        return max(1, 96 // len(self.targets))
+
 
 class GuideSelection(BaseModel):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
