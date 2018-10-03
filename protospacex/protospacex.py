@@ -102,7 +102,8 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     url = base_url + f"/overlap/id/{ensembl_transcript_id}"
 
     log.info(f"Querying Ensembl for overlaps of {ensembl_transcript_id}")
-    response = requests.get(url, {"feature": ["cds", "exon"],
+    # TODO (gdingle): do we actually need exon features? or just cds? #"exon"
+    response = requests.get(url, {"feature": ["cds"],
                                   "content-type": "application/json"})
     try:
         response.raise_for_status()
