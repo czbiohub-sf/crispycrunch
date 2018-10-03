@@ -9,6 +9,15 @@ from httmock import all_requests  # type: ignore
 from protospacex import fetch_ensembl_transcript
 
 
+def _load_testing_data(ensembl_transcript_id):
+    path = os.path.join(
+        os.path.dirname(__file__),
+        f'data/{ensembl_transcript_id}.pkl')
+    with open(path, 'rb') as testing_file:
+        testing_data = pickle.load(testing_file)
+    return testing_data
+
+
 @all_requests
 def ensembl_mock(url, request):
     match = re.match(r'.*/(.*?)$', url.path)
@@ -20,8 +29,7 @@ def ensembl_mock(url, request):
     ensembl_transcript_id = match.group(1)
 
     try:
-        with open(os.path.join(pytest.config.rootdir, f'tests/data/{ensembl_transcript_id}.pkl'), 'rb') as testing_file:
-            testing_data = pickle.load(testing_file)
+        testing_data = _load_testing_data(ensembl_transcript_id)
     except FileNotFoundError:
         raise ValueError(f"Testing file for transcript {ensembl_transcript_id} "
                          "not found")
@@ -46,8 +54,7 @@ def ensembl_mock(url, request):
 ])
 def test_fetch_ensembl_transcript(ensembl_transcript_id):
     with HTTMock(ensembl_mock):
-        with open(os.path.join(pytest.config.rootdir, f'tests/data/{ensembl_transcript_id}.pkl'), 'rb') as testing_file:
-            testing_data = pickle.load(testing_file)
+        testing_data = _load_testing_data(ensembl_transcript_id)
 
         record = fetch_ensembl_transcript(ensembl_transcript_id)
 
