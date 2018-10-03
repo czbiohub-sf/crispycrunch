@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-def fetch_ensembl_transcript(ensembl_transcript_id):
+def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     """Fetch the requested Ensembl transcript.
 
     Get the requested Ensembl transcript, together with exon and

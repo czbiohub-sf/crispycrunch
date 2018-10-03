@@ -9,7 +9,7 @@ from httmock import all_requests  # type: ignore
 from protospacex import fetch_ensembl_transcript
 
 
-def _load_testing_data(ensembl_transcript_id):
+def _load_testing_data(ensembl_transcript_id: str):
     path = os.path.join(
         os.path.dirname(__file__),
         f'data/{ensembl_transcript_id}.pkl')
