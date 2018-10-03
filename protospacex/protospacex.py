@@ -163,3 +163,26 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     record.features.sort(key=lambda f: f.location.start)
 
     return record
+
+
+def start_codon_seq(ensembl_transcript_id: str) -> str:
+    """
+    Convience function to return string sequence of start codon.
+
+    See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
+    See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
+
+    >>> start_codon_seq('ENST00000398844')
+    'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCCAGAACGGAGCCGCCTTGGCCTCGGGGTCTCCCTACACCAACG'
+    """
+    record = fetch_ensembl_transcript(ensembl_transcript_id)
+    cds = [f for f in record.features if f.type == 'cds']
+    assert len(cds)
+    start_codon_seq = cds[0].location.extract(record).seq
+    assert len(start_codon_seq)
+    return str(start_codon_seq)
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
