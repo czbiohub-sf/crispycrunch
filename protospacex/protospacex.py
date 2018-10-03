@@ -22,6 +22,7 @@ logging.basicConfig(level=logging.INFO)
 def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     """Fetch the requested Ensembl transcript.
 
+    # TODO (gdingle): do we actually need exon features? or just cds? #"exon"
     Get the requested Ensembl transcript, together with exon and
     coding region (CDS) boundaries.
 
@@ -35,6 +36,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     `Bio.SeqRecord`
 
       The requested transcript sequence, in 5' -> 3' order, together
+    # TODO (gdingle): do we actually need exon features? or just cds? #"exon"
       with exon and CDS features. The coordinates of exons and CDS
       features are relative to the sequence fragment.
     """

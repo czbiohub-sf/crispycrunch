@@ -14,7 +14,7 @@ import os
 import time
 
 from concurrent.futures import ThreadPoolExecutor
-from io import IOBase, StringIO
+from io import BytesIO, StringIO
 from itertools import islice
 from typing import Any
 
@@ -32,6 +32,8 @@ import webscraperequest
 
 from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
+from protospacex import start_codon_seq
+
 from main import conversions
 from main import samplesheet
 from main.forms import *
@@ -96,8 +98,7 @@ class GuideDesignView(CreatePlusView):
     def _normalize_targets(self, targets):
         # TODO (gdingle): handle mix of target types
         if all(is_seq(t) for t in targets):
-            # TODO (gdingle): BLAST all seqs
-            # https://biopython.readthedocs.io/en/latest/Tutorial/chapter_blast.html
+            # TODO (gdingle): gggenome all seqs
             return targets
 
         if not all(is_gene(t) for t in targets):
@@ -118,9 +119,14 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
+        if all(is_ensemble_transcript(t) for t in targets):
+            func = start_codon_seq
+        else:
+            func = functools.partial(conversions.chr_loc_to_seq, genome=genome)
+
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(
-                functools.partial(conversions.chr_loc_to_seq, genome=genome),
+                func,
                 targets,
             ))
         return seqs
@@ -293,7 +299,8 @@ class PrimerSelectionView(CreatePlusView):
     def get_context_data(self, **kwargs):
         primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
         kwargs['crispor_urls'] = dict(
-            (p['target'], p['url']) for p in primer_data)
+            (p['target'], p['url'] + '#ontargetPcr')
+            for p in primer_data)
         return super().get_context_data(**kwargs)
 
 
@@ -635,7 +642,7 @@ class IlluminaSheetView(View):
         return response
 
 
-def _excel_download_response(excel_file: IOBase, title: str) -> HttpResponse:
+def _excel_download_response(excel_file: BytesIO, title: str) -> HttpResponse:
     response = HttpResponse(
         excel_file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(title)
