@@ -61,6 +61,8 @@ def index(request):
     return HttpResponse("Hello, world. You're at the main index.")
 
 
+# TODO (gdingle): make CreateUpdateView
+# see https://stackoverflow.com/a/48116803
 class CreatePlusView(CreateView):
     """
     Simplifies adding foreign keys and other pre-determined data to a ModelForm

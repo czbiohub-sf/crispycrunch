@@ -207,8 +207,6 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
             analysis: models.Model,
             records: Iterable[Mapping[str, str]]) -> None:
 
-        # TODO (gdingle): why is cache working for first 4 only???
-
         batch = CrispressoBatchWebRequest(analysis)
         largs = [[
             row['primer_product'],  # reference amplicon

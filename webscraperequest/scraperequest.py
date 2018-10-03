@@ -405,11 +405,21 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         batch_id = soup.find('input', {'name': 'batchId'})['value']
         url = self.endpoint + '?batchId=' + batch_id
         primers_url = self.endpoint + '?batchId={}&pamId={}&pam=NGG'
+
+        # TODO (gdingle): prefilter scores, guides, primer_urls
+        # by existence of primer:
+        # 'Warning: No primers were found'
+        # Use new threadpool? limit to first 5?
+        # TODO (gdingle): check for iteration strat of yunfang
+
         guide_seqs = OrderedDict((t['id'], t.find_next('tt').get_text())
                                  for t in rows)
         scores = OrderedDict((t['id'],
                               [cell.get_text().strip() for cell in t.find_all('td')[2:7]])
                              for t in rows)
+        primer_urls = OrderedDict((t['id'],
+                                   primers_url.format(batch_id, urllib.parse.quote(t['id'])))
+                                  for t in rows)
         return dict(
             # TODO (gdingle): why is this seq off by one from input seq?
             # seq=soup.find(class_='title').find('a').get_text(),
@@ -419,7 +429,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             guide_seqs=guide_seqs,
             scores=scores,
             # TODO (gdingle): are these links ever needed?
-            primer_urls=OrderedDict((t['id'], primers_url.format(batch_id, urllib.parse.quote(t['id']))) for t in rows),
+            primer_urls=primer_urls,
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
@@ -457,7 +467,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             self,
             batch_id: str,
             pam_id: str,
-            amp_len: int=400,
+            amp_len: int=250,
             tm: int=60,
             pam: str='NGG',
             target: str='') -> None:
@@ -666,14 +676,15 @@ if __name__ == '__main__':
     # import doctest  # noqa
     # doctest.testmod()
 
-    # seq = 'chr2:150500625-150500725'
-    # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
-    # data = req.run()
+    seq = 'chr2:150500625-150500725'
+    req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
+    data = req.run()
+    print(data)
 
     # req = CrisporGuideRequestByBatchId('FvePVuqmeBJeBZoT6Erd')
     # data = req.run()
     # print(data)
 
-    req = CrisporPrimerRequest('oI0f65TEwlZdrH9NMAat', 's97-')
-    data = req.run()
-    print(data)
+    # req = CrisporPrimerRequest('oI0f65TEwlZdrH9NMAat', 's97-')
+    # data = req.run()
+    # print(data)

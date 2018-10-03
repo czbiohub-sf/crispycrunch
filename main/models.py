@@ -2,6 +2,7 @@ import functools
 
 from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
+from django.core.validators import *
 from django.db import models
 from django.utils.text import slugify
 
@@ -257,10 +258,22 @@ class GuideSelection(BaseModel):
 class PrimerDesign(BaseModel):
     guide_selection = models.ForeignKey(
         GuideSelection, on_delete=models.CASCADE)
-    # TODO (gdingle): any point in specifying temp?
-    primer_temp = models.IntegerField(default=60)
+    primer_temp = models.IntegerField(
+        default=60,
+        validators=[
+            MinValueValidator(58),
+            MaxValueValidator(62),
+        ])
     # TODO (gdingle): this needs to change based on HDR
-    max_amplicon_length = models.IntegerField(default=400)
+    # default of 250 is from
+    # https://docs.google.com/document/d/1h_QOtsH6_uH5VeOCr0dBcUBFnQyamgpdQmupYWyvxo8/edit
+    # TODO (gdingle): is default 200bp bad?
+    max_amplicon_length = models.IntegerField(
+        default=200,
+        validators=[
+            MinValueValidator(150),
+            MaxValueValidator(300),
+        ])
     primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
