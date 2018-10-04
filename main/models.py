@@ -148,11 +148,9 @@ class Researcher(BaseModel):
 
 
 class Experiment(BaseModel):
-    # TODO (gdingle): help_text and naming convention
     name = models.CharField(max_length=40, unique=True)
     researcher = models.ForeignKey(Researcher, on_delete=models.CASCADE)
     description = models.CharField(max_length=65536, blank=True)
-    # TODO (gdingle): status field
 
     def __str__(self):
         return self.name.title()
@@ -177,16 +175,23 @@ class GuideDesign(BaseModel):
         'hg38': 'Human',
         'hg19': 'Human',
     }
+    HDR_TAG_TERMINUSES = [
+        ('start_codon', 'Start Codon'),
+        ('stop_codon', 'Stop Codon')
+        # TODO (gdingle): more codons? second, third?
+    ]
+    HDR_TAG_TERMINUS_TO_HDR_SEQ = {
+        'start_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt',
+        # TODO (gdingle): hdr seq should be different for stop codon
+        'stop_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt',
+    }
 
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
 
-    # TODO (gdingle): make sure this works for TagIn as well
     genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
 
     pam = models.CharField(max_length=80, choices=[
-        # TODO (gdingle): what does this description all mean?
-        ('NGG', '20bp-NGG - SpCas9, SpCas9-HF1, eSpCas9 1.1'),
-        ('todo', 'TODO: more pams'),
+        ('NGG', '20bp-NGG (SpCas9, SpCas9-HF1, eSpCas9, ...)'),
     ], default='NGG')
 
     targets = fields.ArrayField(
@@ -206,19 +211,18 @@ class GuideDesign(BaseModel):
         default=[],
     )
 
+    hdr_tag = models.CharField(choices=HDR_TAG_TERMINUSES, blank=True, max_length=40,
+                               help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair)')
+
     hdr_seq = models.CharField(
         max_length=65536,
-        validators=[validate_chr_or_seq_or_enst_or_gene],
+        validators=[validate_seq],
         blank=True,
         help_text='Sequence for Homology Directed Repair',
-        # TODO (gdingle): no need for text input... need choice of N or C terminus
-        # TODO (gdingle): this is for N terminus. get other seq for C terminus
-        # default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt'
     )
 
     guide_data = JSONField(default=list, blank=True,
                            help_text='Data returned by external service')
-    donor_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
@@ -231,10 +235,6 @@ class GuideDesign(BaseModel):
 
 class GuideSelection(BaseModel):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
-    selected_guides_tagin = JSONField(
-        default=dict,
-        blank=True,
-        help_text='sgRNAs from tagin.stembio.org')
 
     def _validate_selected_guides(val):
         return [validate_seq(seq)  # type: ignore
@@ -248,9 +248,6 @@ class GuideSelection(BaseModel):
             functools.partial(validate_num_wells, max=96 * 2),
             _validate_selected_guides],
         help_text='Guides returned by Crispor')
-    # TODO (gdingle): best name: donor or HDR?
-    selected_donors = JSONField(default=dict, blank=True,
-                                help_text='ssDNAs from tagin.stembio.org')
 
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
@@ -335,7 +332,6 @@ class Analysis(BaseModel):
     researcher = models.ForeignKey(
         Researcher, on_delete=models.CASCADE,
         help_text='The researcher doing the analysis')
-    # TODO (gdingle): add status as for experiment... maybe derive from results_data?
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview

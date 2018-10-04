@@ -4,8 +4,6 @@
 {# TODO: refactor with primer-selection? #}
 {% block intro_content %}
 
-{# TODO: remove this hack for donor dna #}
-{% if form.selected_guides_tagin.is_hidden %}
 <ol>
   <li>Review Crispor recommended guides
       {# TODO: wrap into two cols #}
@@ -29,25 +27,6 @@
     Replace any "<strong>not found</strong>" with custom guides or remove
   </li>
 </ol>
-{% else %}
-<ol>
-  <li>Open
-      <a target="_blank" href={{ tagin_url }}>
-        {# TODO: not working because Tagin requires session ID :O #}
-        Tagin Guides and Donors Page
-      </a>
-  </li>
-  <li>
-    Decide which guides and donors to use (they must be paired)
-  </li>
-  <li>
-    Modify sets of guides and donors below
-  </li>
-</ol>
-{% endif %}
-
-
-
 
 {% endblock intro_content %}
 

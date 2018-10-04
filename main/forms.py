@@ -54,7 +54,7 @@ class GuideDesignForm(ModelForm):
     class Meta:
         model = GuideDesign
         fields = '__all__'
-        exclude = ['experiment', 'guide_data', 'donor_data', 'target_seqs']
+        exclude = ['experiment', 'guide_data', 'target_seqs', 'hdr_seq']
         field_classes = {
             'targets': NewlineArrayField,
             'target_fastas': NewlineArrayField,
@@ -69,23 +69,10 @@ class GuideSelectionForm(ModelForm):
         widgets = {
             'selected_guides': PrettyJsonWidget(attrs={'rows': 40}),
             'selected_guides_tagin': PrettyJsonWidget(attrs={'rows': 40}),
-            'selected_donors': PrettyJsonWidget(attrs={'rows': 40}),
         }
         labels = {
             "selected_guides_tagin": 'Selected guides',
         }
-
-    # TODO (gdingle): HACK ALERT! Disabling selected_guides when tagin
-    # Need to figure out how to get correct guides from Crispor from Tagin
-    # while avoiding 2000 bp limit, or else use Primer3 myself
-    def __init__(self, *args, **kwargs):
-        from django.forms.widgets import HiddenInput  # noqa
-        super().__init__(*args, **kwargs)
-        if kwargs['initial']['selected_guides_tagin']:
-            self.fields['selected_guides'].widget = HiddenInput()
-        else:
-            self.fields['selected_guides_tagin'].widget = HiddenInput()
-            self.fields['selected_donors'].widget = HiddenInput()
 
 
 class PrimerDesignForm(ModelForm):

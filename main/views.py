@@ -142,14 +142,13 @@ class GuideDesignView(CreatePlusView):
         """
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
 
+        if obj.hdr_tag:
+            # Although deterministic, store seq for history
+            obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
+
         obj.targets = self._normalize_targets(obj.targets, obj.genome)
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
-
-        # TODO (gdingle): ignore HDR for now
-        # if obj.hdr_seq:
-        #     # TODO (gdingle): put in form validation somehow
-        #     assert all(is_ensemble_transcript(t) and len(t) <= 600 for t in obj.targets), 'Bad input for TagIn'
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
         pre_filter = obj.wells_per_target * 5  # 5 based on safe-harbor experiment
@@ -222,12 +221,6 @@ class GuideSelectionView(CreatePlusView):
                 (g['target'],
                     self._slice(g, guide_design.wells_per_target, sort_by))
                 for g in guide_design.guide_data),
-            'selected_donors': dict((g['metadata']['chr_loc'], g['donor_seqs'])
-                                    for g in guide_design.donor_data),
-            'selected_guides_tagin': dict(
-                (g['metadata']['chr_loc'],
-                    self._slice(g['guide_seqs'], guide_design.wells_per_target, sort_by))
-                for g in guide_design.donor_data),
         }
 
     def plus(self, obj):
@@ -240,8 +233,6 @@ class GuideSelectionView(CreatePlusView):
             (gd['target'], gd['url'])
             for gd in guide_design.guide_data
             if gd.get('url'))
-        if guide_design.donor_data:
-            kwargs['tagin_url'] = guide_design.donor_data[0]['url']
         return super().get_context_data(**kwargs)
 
 

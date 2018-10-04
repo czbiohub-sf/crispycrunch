@@ -289,7 +289,6 @@ def _new_samplesheet() -> DataFrame:
             '_crispor_pam_id',
             # TODO (gdingle): donor or HDR?
             'hdr_dist',
-            'hdr_seq',
             'hdr_rebind',
             'hdr_template',
             'hdr_mutated',
@@ -353,7 +352,6 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 
 
 def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
-    sheet['hdr_seq'] = hdr_seq
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
@@ -365,7 +363,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
         # TODO (gdingle): do reverse complement of hdr_seq if negative strand
         lambda row: get_hdr_template(
             row['target_seq'],
-            row['hdr_seq'],
+            hdr_seq,
         ),
         axis=1,
     )
@@ -380,7 +378,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
     # sheet['hdr_mutated'] = sheet.apply(
     #     lambda row: get_hdr_template(
     #         row['target_seq'],
-    #         row['hdr_seq'],
+    #         hdr_seq,
     #     ),
     #     axis=1,
     # )
