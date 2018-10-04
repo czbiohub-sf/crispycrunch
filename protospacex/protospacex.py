@@ -67,6 +67,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     try:
         description = response_data['desc'].split(':')
         species = description[1]
+        chromosome_number = int(description[2])
         sequence_left = int(description[3])
         sequence_right = int(description[4])
         transcript_strand = int(description[5])
@@ -80,8 +81,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
         seq_str = response_data['seq']
 
-        log.info(f"Retrieved sequence of length {sequence_right - sequence_left} "
-                 f"for species {species} on strand {transcript_strand}")
+        log.info(f"Retrieved sequence {response_data['desc']} of length "
+                 f"{sequence_right - sequence_left} for species {species} on "
+                 f"strand {transcript_strand}")
     except (KeyError, ValueError) as e:
         log.error(e)
         log.error('Error parsing sequence metadata from Ensembl REST response - '
@@ -107,11 +109,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     url = base_url + f"/overlap/id/{ensembl_transcript_id}"
 
     log.info(f"Querying Ensembl for overlaps of {ensembl_transcript_id}")
-    # TODO (gdingle): do we actually need exon features? or just cds? #"exon"
-    # TODO (gdingle):
-    # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
-
-    response = requests.get(url, {"feature": ["cds"],
+    response = requests.get(url, {"feature": ["cds", "exon"],
                                   "content-type": "application/json"})
     try:
         response.raise_for_status()
@@ -137,16 +135,12 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
             # We store feature locations 0-indexed from the left-most
             # sequence boundary
-            # log.info(response_datum)
             record.features.append(SeqFeature(
                 location=FeatureLocation(
                     int(response_datum['start']) - sequence_left,
                     int(response_datum['end']) - sequence_left + 1,
                     strand=int(response_datum['strand'])),
                 type=response_datum['feature_type']))
-            # log.info(record.features[-1])
-            # if response_datum['feature_type'] == 'exon' and response_datum['rank'] == 1:
-            #    log.info(seq[response_datum['start'] - sequence_left:response_datum['end'] - sequence_left])
         num_exon_boundaries = len([f for f in record.features
                                    if f.type == 'exon'])
 
@@ -161,12 +155,22 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
         log.error('Error parsing overlap metadata from Ensembl REST response - '
                   'did the format of the response change?')
         raise ValueError(e)
-    # log.info(sequence_left)
-    # log.info(sequence_right)
-    # log.info(len(seq))
 
     if transcript_strand == -1:
-        record = record.reverse_complement()
+        # By default `reverse_complement` doesn't preserve
+        # description, so force it...
+        record = record.reverse_complement(description=True)
+
+        # ...but update the description to make clear the sequence
+        # we're storing is the reverse complement of the sequence
+        # described by the metadata in the description
+        record.description = "Reverse complement of " + record.description
+
+    record.annotations['reference_species'] = species
+    record.annotations['reference_chromosome_number'] = chromosome_number
+    record.annotations['reference_left_index'] = sequence_left
+    record.annotations['reference_right_index'] = sequence_right
+    record.annotations['transcript_strand'] = transcript_strand
 
     # Finally, sort features by their start locations
     record.features.sort(key=lambda f: f.location.start)
