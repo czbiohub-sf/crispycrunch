@@ -8,9 +8,10 @@ import logging
 import os
 
 from io import BytesIO
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import pandas
+
 from pandas import DataFrame
 
 from django.core.files.uploadedfile import UploadedFile

@@ -1,3 +1,9 @@
+"""
+Database models for Crispycrunch app.
+
+See SampleSheetTestCase for example data.
+"""
+
 import functools
 
 from django.contrib.postgres import fields

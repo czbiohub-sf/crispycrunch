@@ -6,7 +6,7 @@ from main import conversions, validators
 
 from main.models import *
 from main.samplesheet import *
-from main.samplesheet import _insert_fastqs, _new_samplesheet, _from_analysis
+from main.samplesheet import _from_analysis, _insert_fastqs, _new_samplesheet
 
 
 def load_tests(loader, tests, ignore):
@@ -38,11 +38,16 @@ class SampleSheetTestCase(TestCase):
                 "seq": "chr2:38377154-38377424",
                 "target": "chr2:38377154-38377424",
                 "batch_id": "R1k4GVEcYvRcHOPSDpJk",
+                "scores": {
+                        "s28+": ['50', '50', '50'],
+                        "s29+": ['50', '50', '50'],
+                        "s47+": ['50', '50', '50'],
+                        },
                 "guide_seqs": {
-                        "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
-                        "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
-                        "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
-                        }}])
+                    "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
+                    "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
+                    "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
+                }}])
 
     @property
     def _guide_selection(self):
@@ -76,11 +81,9 @@ class SampleSheetTestCase(TestCase):
         return Analysis(
             experiment=self._experiment,
             researcher=Researcher(),
-            fastqs=[
-                'A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz',
-                'A1-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz',
-                'A3-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz',
-                'A1-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz',
+            fastq_data=[
+                ('A1-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz',
+                 'A1-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz',),
             ],
             results_data=[{
                 "success": True,
@@ -109,7 +112,7 @@ class SampleSheetTestCase(TestCase):
 
     def test_insert_fastqs(self):
         sheet = _new_samplesheet()
-        self.assertEqual(len(sheet), 96)
+        self.assertGreaterEqual(len(sheet), 96)
         fastqs = [
             'A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz',
             'A1-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz',

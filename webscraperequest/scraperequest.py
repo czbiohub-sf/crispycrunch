@@ -6,6 +6,8 @@ dependent requests to get results. They may also retry in case of failure.
 Server responses are cached by default using requests_cache.
 
 Doctests will run slow on the first run before the cahce is warm.
+
+See also SampleSheetTestCase for sample return data.
 """
 import json
 import logging
