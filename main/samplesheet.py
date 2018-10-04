@@ -8,9 +8,10 @@ import logging
 import os
 
 from io import BytesIO
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Tuple
 
 import pandas
+from pandas import DataFrame
 
 from django.core.files.uploadedfile import UploadedFile
 
@@ -23,7 +24,7 @@ from crispresso.fastqs import reverse_complement
 logger = logging.getLogger(__name__)
 
 
-def from_experiment(experiment: Experiment) -> pandas.DataFrame:
+def from_experiment(experiment: Experiment) -> DataFrame:
     sheet = _new_samplesheet()
 
     # Special pandas attribute for preserving metadata across transforms
@@ -44,88 +45,49 @@ def from_experiment(experiment: Experiment) -> pandas.DataFrame:
     return sheet
 
 
-def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
+def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     guide_design = guide_selection.guide_design
     sheet = from_experiment(guide_design.experiment)
 
-    # Ungroup guide data into rows
-    # TODO (gdingle): this is a complicated beast that should at least have its own tests
-    target_loc_to_batch_id = dict((g['target'], g['batch_id'])
-                                  for g in guide_design.guide_data
-                                  if g.get('batch_id'))  # filter out errors
-    target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
-    selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
-                               for g in guide_design.guide_data
-                               if g['target'] in guide_selection.selected_guides]
-    guides = [(target_loc, offset, seq,
-               target_loc_to_batch_id[target_loc],
-               target_loc_to_target_seq[target_loc])
-              for target_loc, selected in selected_guides_ordered
-              for offset, seq in selected.items()]
+    guides = _flatten_guide_data(guide_selection)
 
-    # For assigning to subset of rows of A1 to H12
-    lg = slice(0, len(guides))
+    # Trim sheet to available guides
+    sheet = sheet[0:len(guides)]
 
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'][lg] = [g[0] for g in guides]
-    sheet['target_seq'][lg] = [g[4] for g in guides]
+    sheet['target_loc'] = [g[0] for g in guides]
+    sheet['target_seq'] = [g[4] for g in guides]
 
-    # TODO: assume always 20 bp with trailing PAM as in Crispor?
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g[2] for g in guides), 'Expecting trailing PAM'
     assert all(len(g[2]) == 24 for g in guides), 'Expecting 20bp guide'
-    sheet['guide_seq'][lg] = [g[2].split(' ')[0] for g in guides]
-    sheet['guide_pam'][lg] = [g[2].split(' ')[1] for g in guides]
+    sheet['guide_seq'] = [g[2].split(' ')[0] for g in guides]
+    sheet['guide_pam'] = [g[2].split(' ')[1] for g in guides]
 
     # Taken direct from Crispor. Example: "s207-" and "s76+".
     # See http://crispor.tefor.net/manual/.
     # TODO (gdingle): recompute from guide_seq
-    sheet['guide_offset'][lg] = [int(g[1][1:-1]) for g in guides]
-    sheet['guide_direction'][lg] = [g[1][-1] for g in guides]
+    sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
+    sheet['guide_direction'] = [g[1][-1] for g in guides]
 
-    # TODO (gdingle): is this correct? off by one?
-    sheet['guide_loc'][lg] = sheet[lg].apply(
+    # TODO (gdingle): is this correct? off by one? reverse strand?
+    sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(row['target_loc'], row['guide_offset'], len(row['guide_seq'])),
         axis=1,
     )
 
+    sheet = _set_scores(sheet, guide_design, guides)
+
+    # TODO (gdingle): put into unit test
     if guide_design.hdr_seq:
-        sheet['hdr_seq'][lg] = guide_design.hdr_seq
-        sheet['hdr_dist'][lg] = sheet[lg].apply(
-            lambda row: get_guide_cut_to_insert(
-                row['target_loc'],
-                row['guide_loc'],
-            ),
-            axis=1,
-        )
-        sheet['hdr_template'][lg] = sheet[lg].apply(
-            lambda row: get_hdr_template(
-                row['target_seq'],
-                row['hdr_seq'],
-            ),
-            axis=1,
-        )
-        sheet['hdr_rebind'][lg] = sheet[lg].apply(
-            # less than 14 nucleotides* of the original protospacer remaining to be safe
-            lambda row: row['hdr_dist'] >= 14,
-            axis=1,
-        )
-        # TODO (gdingle): merge with hdr_template above
-        # TODO (gdingle): address PAM in target_seq
-        # sheet['hdr_mutated'][lg] = sheet[lg].apply(
-        #     lambda row: get_hdr_template(
-        #         row['target_seq'],
-        #         row['hdr_seq'],
-        #     ),
-        #     axis=1,
-        # )
+        sheet = _set_hdr_cols(sheet, guide_design.hdr_seq)
 
     # TODO (gdingle): is this really the best unique name?
     # Example: "hg38:chr2:136116735-136116754:-"
     # TODO (gdingle): ever useful?
-    # sheet['well_name'][lg] = sheet[lg].apply(
+    # sheet['well_name'] = sheet.apply(
     #     lambda row: '{}:{}:{}'.format(
     #         row['target_genome'],
     #         row['guide_loc'],
@@ -133,19 +95,14 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
     #     axis=1,
     # )
 
-    sheet['_crispor_batch_id'][lg] = [g[3] for g in guides]
-    sheet['_crispor_pam_id'][lg] = [g[1] for g in guides]
+    sheet['_crispor_batch_id'] = [g[3] for g in guides]
+    sheet['_crispor_pam_id'] = [g[1] for g in guides]
     # 'TODO_crispor_stats',
 
-    # TODO (gdingle): donor dna
-    # sheet['donor_seq'][lg] =
-    # TODO (gdingle): how to compute this? wait for protospacex
-    # sheet['donor_target_seq'][lg] =
-
-    return sheet[lg]
+    return sheet
 
 
-def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame:
+def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet = from_guide_selection(primer_selection.primer_design.guide_selection)
     selected_primers = primer_selection.selected_primers
     for primer_id, primer_pair in selected_primers.items():
@@ -164,6 +121,28 @@ def from_primer_selection(primer_selection: PrimerSelection) -> pandas.DataFrame
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
     return sheet
+
+
+def _flatten_guide_data(
+    guide_selection: GuideSelection
+) -> List[Tuple[str, str, str, str, str]]:
+
+    guide_design = guide_selection.guide_design
+    # Ungroup guide data into rows
+    # TODO (gdingle): this is a complicated beast that should at least have its own tests
+    target_loc_to_batch_id = dict((g['target'], g['batch_id'])
+                                  for g in guide_design.guide_data
+                                  if g.get('batch_id'))  # filter out errors
+    target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
+    selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
+                               for g in guide_design.guide_data
+                               if g['target'] in guide_selection.selected_guides]
+    guides = [(target_loc, offset, seq,
+               target_loc_to_batch_id[target_loc],
+               target_loc_to_target_seq[target_loc])
+              for target_loc, selected in selected_guides_ordered
+              for offset, seq in selected.items()]
+    return guides
 
 
 def _transform_primer_product(row) -> str:
@@ -193,19 +172,19 @@ def _transform_primer_product(row) -> str:
     return primer_product
 
 
-def from_analysis(analysis: Analysis) -> pandas.DataFrame:
+def from_analysis(analysis: Analysis) -> DataFrame:
     primer_selection = PrimerSelection.objects.filter(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
     sheet = from_primer_selection(primer_selection)
     return _from_analysis(analysis, sheet)
 
 
-def from_custom_analysis(analysis: Analysis) -> pandas.DataFrame:
+def from_custom_analysis(analysis: Analysis) -> DataFrame:
     sheet = from_experiment(analysis.experiment)[:len(analysis.fastq_data)]
     return _from_analysis(analysis, sheet)
 
 
-def from_excel(file: UploadedFile) -> pandas.DataFrame:
+def from_excel(file: UploadedFile) -> DataFrame:
     if file.content_type in (
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-excel'):
@@ -216,7 +195,7 @@ def from_excel(file: UploadedFile) -> pandas.DataFrame:
     return sheet
 
 
-def _from_analysis(analysis: Analysis, sheet: pandas.DataFrame) -> pandas.DataFrame:
+def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
 
     # TODO (gdingle): does this metadata stick?
     sheet._metadata = [
@@ -257,17 +236,15 @@ def _from_analysis(analysis: Analysis, sheet: pandas.DataFrame) -> pandas.DataFr
     return sheet
 
 
-def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
-    """
-    See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
-    """
-    report_stats = [r.get('report_stats', {}) for r in reports]
-    if not any(report_stats):
-        return None
-    temp_sheet = pandas.DataFrame.from_records(report_stats)
-    nonzero_cols = (temp_sheet != 0).any(axis='rows')
-    temp_sheet = temp_sheet.loc[:, nonzero_cols]
-    return temp_sheet.to_dict(orient='records')
+def to_excel(sheet: DataFrame) -> BytesIO:
+    # Workaround for saving in-memory. See:
+    # https://stackoverflow.com/questions/28058563/write-to-stringio-object-using-pandas-excelwriter
+    excel_file = BytesIO()
+    xlw = pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
+    sheet.to_excel(xlw)
+    xlw.book.save(excel_file)
+    excel_file.seek(0)
+    return excel_file
 
 
 # We actually assume a larger well-plate here so we can assign more than
@@ -281,8 +258,8 @@ def _new_index(size=192,
     return [c + str(i) for c in chars for i in ints][:size]
 
 
-def _new_samplesheet() -> pandas.DataFrame:
-    return pandas.DataFrame(
+def _new_samplesheet() -> DataFrame:
+    return DataFrame(
         index=_new_index(),
         columns=[
             'target_genome',
@@ -294,6 +271,7 @@ def _new_samplesheet() -> pandas.DataFrame:
             'guide_direction',
             'guide_seq',
             'guide_pam',
+            'guide_score',
             '_crispor_batch_id',
             '_crispor_pam_id',
             # TODO (gdingle): donor or HDR?
@@ -319,7 +297,7 @@ def _new_samplesheet() -> pandas.DataFrame:
 
 
 # TODO (gdingle): remove me when matching proven
-def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
+def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
     """
     Insert pairs of fastq sequence files into their corresponding rows.
     NOTE: This assumes a naming convention of A1, A2, ...H12 in the filename,
@@ -344,12 +322,61 @@ def _insert_fastqs(sheet: pandas.DataFrame, fastqs: list) -> pandas.DataFrame:
     return sheet
 
 
-def to_excel(sheet: pandas.DataFrame) -> BytesIO:
-    # Workaround for saving in-memory. See:
-    # https://stackoverflow.com/questions/28058563/write-to-stringio-object-using-pandas-excelwriter
-    excel_file = BytesIO()
-    xlw = pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
-    sheet.to_excel(xlw)
-    xlw.book.save(excel_file)
-    excel_file.seek(0)
-    return excel_file
+def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
+    """
+    See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
+    """
+    report_stats = [r.get('report_stats', {}) for r in reports]
+    if not any(report_stats):
+        return None
+    temp_sheet = DataFrame.from_records(report_stats)
+    nonzero_cols = (temp_sheet != 0).any(axis='rows')
+    temp_sheet = temp_sheet.loc[:, nonzero_cols]
+    return temp_sheet.to_dict(orient='records')
+
+
+def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
+    sheet['hdr_seq'] = hdr_seq
+    sheet['hdr_dist'] = sheet.apply(
+        lambda row: get_guide_cut_to_insert(
+            row['target_loc'],
+            row['guide_loc'],
+        ),
+        axis=1,
+    )
+    sheet['hdr_template'] = sheet.apply(
+        lambda row: get_hdr_template(
+            row['target_seq'],
+            row['hdr_seq'],
+        ),
+        axis=1,
+    )
+    sheet['hdr_rebind'] = sheet.apply(
+        # less than 14 nucleotides* of the original protospacer remaining to be safe
+        lambda row: row['hdr_dist'] >= 14,
+        axis=1,
+    )
+    # TODO (gdingle): merge with hdr_template above
+    # TODO (gdingle): address PAM in target_seq
+    # sheet['hdr_mutated'] = sheet.apply(
+    #     lambda row: get_hdr_template(
+    #         row['target_seq'],
+    #         row['hdr_seq'],
+    #     ),
+    #     axis=1,
+    # )
+    return sheet
+
+
+# TODO (gdingle): figure out shorter type sig for guides
+def _set_scores(
+        sheet: DataFrame,
+        guide_design: GuideDesign,
+        guides: List[Tuple[str, str, str, str, str]]) -> DataFrame:
+    # Get first score by target and offset, MIT score
+    scores = dict((row['target'], row['scores'])
+                  for row in guide_design.guide_data)
+    # Scores are stored as chr_loc -> offset -> list of numbers
+    # TODO (gdingle): this is pretty ugly
+    sheet['guide_score'] = [int(scores[g[0]][g[1]][0]) for g in guides]
+    return sheet

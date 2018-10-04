@@ -207,6 +207,8 @@ def start_codon_chr_loc(ensembl_transcript_id: str) -> str:
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
     codon_location = cds[0].location
+    codon_seq = cds[0].location.extract(record).seq
+    assert codon_seq[0:3] == 'ATG', codon_seq
 
     description = record.description.split(':')
     assert len(description) == 6
@@ -217,7 +219,7 @@ def start_codon_chr_loc(ensembl_transcript_id: str) -> str:
 
     start = int(description[3]) + codon_location.start
     end = int(description[3]) + codon_location.end
-    assert end - start == len(cds[0].location.extract(record).seq)
+    assert end - start == len(codon_seq)
     return 'chr{}:{}-{}'.format(
         description[2],
         start,

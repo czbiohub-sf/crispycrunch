@@ -186,14 +186,16 @@ def get_guide_cut_to_insert(target_loc: str, guide_loc: str) -> int:
 
 def get_hdr_template(target_seq: str, hdr_seq: str) -> str:
     """
-    Based on https://czi.quip.com/YbAhAbOV4aXi/
+    Based on https://czi.quip.com/YbAhAbOV4aXi/.
 
     >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
     'ATGNNNTCCCAGCCGGGAAT'
     """
     validate_seq(target_seq)
     validate_seq(hdr_seq)
-    return target_seq[0:3] + hdr_seq + target_seq[3:]
+    first_codon = target_seq[0:3]
+    assert first_codon == 'ATG'
+    return first_codon + hdr_seq + target_seq[3:]
 
 
 def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
