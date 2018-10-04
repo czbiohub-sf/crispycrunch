@@ -33,6 +33,47 @@ class SampleSheetTestCase(TestCase):
         return GuideDesign(
             experiment=self._experiment,
             targets=["chr2:38377154-38377424"],
+            target_seqs=['ATGACGTGGTTAACCGCGGCGCTTGGG'],
+            guide_data=[{
+                "seq": "chr2:38377154-38377424",
+                "target": "chr2:38377154-38377424",
+                "batch_id": "R1k4GVEcYvRcHOPSDpJk",
+                "scores": {
+                        "s28+": ['50', '50', '50'],
+                        "s29+": ['50', '50', '50'],
+                        "s47+": ['50', '50', '50'],
+                        },
+                "guide_seqs": {
+                    "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
+                    "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
+                    "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
+                }}],
+            hdr_seq='N' * 20,
+        )
+
+    # TODO (gdingle): move me back
+    def test_set_hdr_cols(self):
+        sheet = from_guide_selection(self._guide_selection)
+        self.assertEqual(len(sheet), 3)
+
+        self.assertEqual(sheet['hdr_seq'][0], 'N' * 20)
+        self.assertEqual(
+            sheet['hdr_template'][0],
+            'ATGNNNNNNNNNNNNNNNNNNNNACGTGGTTAACCGCGGCGCTTGGG')
+
+        self.assertEqual(sheet['hdr_dist'][0], 17)
+        self.assertEqual(sheet['hdr_rebind'][0], True)
+
+        self.assertEqual(sheet['hdr_dist'][1], 18)
+        self.assertEqual(sheet['hdr_rebind'][0], True)
+
+    # TODO (gdingle): merge with above?
+    @property
+    def _guide_design_OLD(self):
+        return GuideDesign(
+            experiment=self._experiment,
+            targets=["chr2:38377154-38377424"],
+            # TODO (gdingle): change to actual seq
             target_seqs=["chr2:38377154-38377424"],
             guide_data=[{
                 "seq": "chr2:38377154-38377424",
@@ -47,7 +88,8 @@ class SampleSheetTestCase(TestCase):
                     "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
                     "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
                     "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
-                }}])
+                }}],
+        )
 
     @property
     def _guide_selection(self):
@@ -110,6 +152,7 @@ class SampleSheetTestCase(TestCase):
         sheet = _from_analysis(self._analysis, sheet)
         self.assertTrue(len(sheet))
 
+    # TODO (gdingle): _insert_fastqs is deprecated
     def test_insert_fastqs(self):
         sheet = _new_samplesheet()
         self.assertGreaterEqual(len(sheet), 96)

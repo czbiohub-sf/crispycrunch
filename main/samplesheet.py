@@ -69,9 +69,17 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # Taken direct from Crispor. Example: "s207-" and "s76+".
     # See http://crispor.tefor.net/manual/.
-    # TODO (gdingle): recompute from guide_seq
+    # DEFINITION: number of chars before the first char of NGG PAM
     sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
     sheet['guide_direction'] = [g[1][-1] for g in guides]
+
+    # TODO (gdingle): use this in test somehow
+    # Does not include PAM, always +3 of guide_offset
+    # sheet['guide_offset2'] = sheet.apply(
+    #     lambda row: row['target_seq'].find(
+    #         row['guide_seq'] if row['guide_direction'] == '+' else reverse_complement(row['guide_seq'])),
+    #     axis=1,
+    # )
 
     # TODO (gdingle): is this correct? off by one? reverse strand?
     sheet['guide_loc'] = sheet.apply(
@@ -111,10 +119,12 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
         target_loc, _crispor_pam_id = primer_id.split(' ')
         mask1 = sheet['target_loc'] == target_loc
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
+
+        # TODO (gdingle): A value is trying to be set on a copy of a slice from a DataFrame
+        # See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
         sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0][0]
         sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1][0]
-        assert primer_pair[0][1].startswith(primer_pair[0][0]), 'Primer product should start with primer'
-        # TODO (gdingle): do we need this after all?
+        assert primer_pair[0][1].startswith(primer_pair[0][0]), 'Primer product should start with forward primer'
         sheet['primer_product'][mask1 & mask2] = primer_pair[0][1]
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
@@ -124,6 +134,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     return sheet
 
 
+# TODO (gdingle): try using bolton itertools remap?
 def _flatten_guide_data(
     guide_selection: GuideSelection
 ) -> List[Tuple[str, str, str, str, str]]:
@@ -268,6 +279,7 @@ def _new_samplesheet() -> DataFrame:
             'target_loc',
             'target_seq',
             'guide_offset',
+            'guide_offset2',
             'guide_loc',
             'guide_direction',
             'guide_seq',
@@ -296,8 +308,12 @@ def _new_samplesheet() -> DataFrame:
             'report_stats',
         ])
 
-
+# TODO (gdingle): _insert_fastqs is deprecated pending whether
+# illumina sequencer sample sheet will correctly communicate names
+# of fastq files.
 # TODO (gdingle): remove me when matching proven
+
+
 def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
     """
     Insert pairs of fastq sequence files into their corresponding rows.
@@ -346,6 +362,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
         axis=1,
     )
     sheet['hdr_template'] = sheet.apply(
+        # TODO (gdingle): do reverse complement of hdr_seq if negative strand
         lambda row: get_hdr_template(
             row['target_seq'],
             row['hdr_seq'],
@@ -357,6 +374,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
         lambda row: row['hdr_dist'] >= 14,
         axis=1,
     )
+    # TODO (gdingle): mutate only if hdr_rebind is True
     # TODO (gdingle): merge with hdr_template above
     # TODO (gdingle): address PAM in target_seq
     # sheet['hdr_mutated'] = sheet.apply(
@@ -369,10 +387,11 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
     return sheet
 
 
-# TODO (gdingle): figure out shorter type sig for guides
+# TODO (gdingle): try using bolton itertools remap?
 def _set_scores(
         sheet: DataFrame,
         guide_design: GuideDesign,
+        # TODO (gdingle): figure out shorter type sig for guides
         guides: List[Tuple[str, str, str, str, str]]) -> DataFrame:
     # Get first score by target and offset, MIT score
     scores = dict((row['target'], row['scores'])

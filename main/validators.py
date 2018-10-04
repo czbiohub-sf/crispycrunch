@@ -1,3 +1,10 @@
+"""
+Custom validators of crispycrunch specific types,
+plus some util functions that operate on those types.
+
+# TODO (gdingle): move util functions, or refactor all into objects
+"""
+
 import doctest
 import re
 

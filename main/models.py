@@ -211,7 +211,8 @@ class GuideDesign(BaseModel):
         validators=[validate_chr_or_seq_or_enst_or_gene],
         blank=True,
         help_text='Sequence for Homology Directed Repair',
-        # TODO (gdingle): is this default correct? it was taken from Jason Li sample sheet example
+        # TODO (gdingle): no need for text input... need choice of N or C terminus
+        # TODO (gdingle): this is for N terminus. get other seq for C terminus
         # default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt'
     )
 

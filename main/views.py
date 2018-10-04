@@ -105,6 +105,8 @@ class GuideDesignView(CreatePlusView):
 
         if all(is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): assert ENST is for correct genome
+            # TODO (gdingle): specify which codon... and allow custom insert offset by codon
+            # TODO (gdingle): specify insert in last codon, right before stop codon
             func = start_codon_chr_loc
         elif all(is_gene(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene

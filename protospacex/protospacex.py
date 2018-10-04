@@ -108,6 +108,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
     log.info(f"Querying Ensembl for overlaps of {ensembl_transcript_id}")
     # TODO (gdingle): do we actually need exon features? or just cds? #"exon"
+    # TODO (gdingle):
+    # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
+
     response = requests.get(url, {"feature": ["cds"],
                                   "content-type": "application/json"})
     try:
@@ -212,13 +215,15 @@ def start_codon_chr_loc(ensembl_transcript_id: str) -> str:
 
     description = record.description.split(':')
     assert len(description) == 6
-    # TODO (gdingle): deal with other strands
+    # TODO (gdingle): deal with reverse strand
     assert codon_location.strand == 1
     # TODO (gdingle): deal with other genomes
     assert description[1] == 'GRCh38'
 
-    start = int(description[3]) + codon_location.start
-    end = int(description[3]) + codon_location.end
+    # TODO (gdingle): check for off by one error... is codon_location.start zero-indexed?
+    transcript_start = int(description[3])
+    start = transcript_start + codon_location.start
+    end = transcript_start + codon_location.end
     assert end - start == len(codon_seq)
     return 'chr{}:{}-{}'.format(
         description[2],
