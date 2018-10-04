@@ -91,6 +91,37 @@ def from_guide_selection(guide_selection: GuideSelection) -> pandas.DataFrame:
         axis=1,
     )
 
+    if guide_design.hdr_seq:
+        sheet['hdr_seq'][lg] = guide_design.hdr_seq
+        sheet['hdr_dist'][lg] = sheet[lg].apply(
+            lambda row: get_guide_cut_to_insert(
+                row['target_loc'],
+                row['guide_loc'],
+            ),
+            axis=1,
+        )
+        sheet['hdr_template'][lg] = sheet[lg].apply(
+            lambda row: get_hdr_template(
+                row['target_seq'],
+                row['hdr_seq'],
+            ),
+            axis=1,
+        )
+        sheet['hdr_rebind'][lg] = sheet[lg].apply(
+            # less than 14 nucleotides* of the original protospacer remaining to be safe
+            lambda row: row['hdr_dist'] >= 14,
+            axis=1,
+        )
+        # TODO (gdingle): merge with hdr_template above
+        # TODO (gdingle): address PAM in target_seq
+        # sheet['hdr_mutated'][lg] = sheet[lg].apply(
+        #     lambda row: get_hdr_template(
+        #         row['target_seq'],
+        #         row['hdr_seq'],
+        #     ),
+        #     axis=1,
+        # )
+
     # TODO (gdingle): is this really the best unique name?
     # Example: "hg38:chr2:136116735-136116754:-"
     # TODO (gdingle): ever useful?
@@ -265,8 +296,12 @@ def _new_samplesheet() -> pandas.DataFrame:
             'guide_pam',
             '_crispor_batch_id',
             '_crispor_pam_id',
-            'donor_seq',
-            'donor_target_seq',
+            # TODO (gdingle): donor or HDR?
+            'hdr_dist',
+            'hdr_seq',
+            'hdr_rebind',
+            'hdr_template',
+            'hdr_mutated',
             'primer_seq_fwd',
             'primer_seq_rev',
             # TODO (gdingle): rename to reference amplicon?

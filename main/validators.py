@@ -150,15 +150,50 @@ def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     # TODO (gdingle): is this actually correct def for guide_loc?
     >>> get_guide_loc('chr7:5569177-5569415', 191)
     'chr7:5569348-5569367'
-    >>> get_guide_loc('ENST00000330949', 191)
-    ''
     """
     validate_chr(target_loc)
     matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
     start = int(matches[1]) + guide_offset
+    # TODO (gdingle): is this correct for reverse guides?
     # Guide goes backwards from pam, right to left
     # Minus one, for length inclusive
     return 'chr{}:{}-{}'.format(matches[0], start - guide_len, start - 1)
+
+
+def get_guide_cut_to_insert(target_loc: str, guide_loc: str) -> int:
+    """
+    Based on https://czi.quip.com/YbAhAbOV4aXi/
+
+    >>> get_guide_cut_to_insert('chr5:134649077-134649174', 'chr5:134649061-134649080')
+    -2
+    >>> get_guide_cut_to_insert('chr5:134649077-134649174', 'chr5:134649077-134649096')
+    14
+    """
+    validate_chr(target_loc)
+    validate_chr(guide_loc)
+    target_matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
+    # insert location is assumed to be always one codon past start codon
+    insert_loc = int(target_matches[1]) + 3
+
+    guide_matches = re.match(CHR_REGEX, guide_loc).groups()  # type: ignore
+    # cut location is assumed to be always in between the 3rd and 4th nucleotide
+    # away from the PAM site
+    cut_loc = int(guide_matches[2]) - 3
+    # TODO (gdingle): is this correct for reverse guides?
+    # Plus one for inclusive range
+    return cut_loc - insert_loc + 1
+
+
+def get_hdr_template(target_seq: str, hdr_seq: str) -> str:
+    """
+    Based on https://czi.quip.com/YbAhAbOV4aXi/
+
+    >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
+    'ATGNNNTCCCAGCCGGGAAT'
+    """
+    validate_seq(target_seq)
+    validate_seq(hdr_seq)
+    return target_seq[0:3] + hdr_seq + target_seq[3:]
 
 
 def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
