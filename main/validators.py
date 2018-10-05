@@ -195,8 +195,9 @@ def get_guide_cut_to_insert(target_loc: str, guide_loc: str) -> int:
     return cut_loc - insert_loc + 1
 
 
-def get_hdr_template(target_seq: str, hdr_seq: str) -> str:
+def get_hdr_template(target_seq: str, hdr_seq: str, hdr_tag: str = 'start_codon') -> str:
     """
+    Inserts HDR sequencee in correct position in target sequence.
     Based on https://czi.quip.com/YbAhAbOV4aXi/.
 
     >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
@@ -204,9 +205,31 @@ def get_hdr_template(target_seq: str, hdr_seq: str) -> str:
     """
     validate_seq(target_seq)
     validate_seq(hdr_seq)
+    # TODO (gdingle): stop_codon
+    assert hdr_tag == 'start_codon', 'stop_codon not implemented'
     first_codon = target_seq[0:3]
     assert first_codon == 'ATG'
     return first_codon + hdr_seq + target_seq[3:]
+
+
+def get_hdr_primer(primer_product: str, hdr_seq: str, hdr_tag: str = 'start_codon') -> str:
+    """
+    Locates target codon in primer product then inserts HDR sequence.
+    >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'NNN')
+    'ATGNNNTCCCAGCCGGGAAT'
+    """
+    validate_seq(primer_product)
+    validate_seq(hdr_seq)
+    # TODO (gdingle): stop_codon
+    assert hdr_tag == 'start_codon', 'stop_codon not implemented'
+    codon_index = primer_product.find('ATG')
+    if codon_index == -1:
+        # TODO (gdingle): good return value?
+        return 'start_codon not found'
+    assert primer_product[codon_index:codon_index + 3] == 'ATG'
+
+    return primer_product[:codon_index] + \
+        get_hdr_template(primer_product[codon_index:], hdr_seq)
 
 
 def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:

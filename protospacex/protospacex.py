@@ -260,6 +260,10 @@ def get_codon_chr_loc(ensembl_transcript_id: str, cds_index: int = 0) -> str:
     start = sequence_left + codon_location.start
     end = sequence_left + codon_location.end
     assert end - start == len(codon_seq)
+
+    # TODO (gdingle): figure out solution for short cds. Jason Li says:
+    # The target region doesnt need to be majority cds. In this case, if we were going for a window of 50 bp total, it would be the 22nt region before ATG, AAGCCA, and the 19nt region that come after. Most of this region will be either intron or 5’UTR, but that’s totally fine
+
     return 'chr{}:{}-{}'.format(
         chromosome_number,
         start,

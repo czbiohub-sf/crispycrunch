@@ -56,6 +56,7 @@ class SampleSheetTestCase(TestCase):
     # >>> start_codon_chr_loc('ENST00000398844')
     # 'chr5:134649077-134649174'
 
+    # TODO (gdingle): these are too short
     # >>> start_codon_chr_loc('ENST00000411809')
     # 'chr5:157786494-157786535'
 
