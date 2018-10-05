@@ -51,12 +51,23 @@ class SampleSheetTestCase(TestCase):
             hdr_seq='N' * 20,
         )
 
+
+    # TODO (gdingle): use as tests
+    # >>> start_codon_chr_loc('ENST00000398844')
+    # 'chr5:134649077-134649174'
+
+    # >>> start_codon_chr_loc('ENST00000411809')
+    # 'chr5:157786494-157786535'
+
+    # >>> start_codon_chr_loc('ENST00000221801')
+    # 'chr19:39834572-39834582'
+
+
     # TODO (gdingle): move me back
     def test_set_hdr_cols(self):
         sheet = from_guide_selection(self._guide_selection)
         self.assertEqual(len(sheet), 3)
 
-        self.assertEqual(sheet['hdr_seq'][0], 'N' * 20)
         self.assertEqual(
             sheet['hdr_template'][0],
             'ATGNNNNNNNNNNNNNNNNNNNNACGTGGTTAACCGCGGCGCTTGGG')

@@ -32,7 +32,7 @@ import webscraperequest
 
 from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
-from protospacex import start_codon_chr_loc, start_codon_seq
+from protospacex import get_codon_chr_loc, get_codon_seq
 
 from main import conversions
 from main import samplesheet
@@ -97,7 +97,7 @@ class GuideDesignView(CreatePlusView):
 
     # TODO (gdingle): we really need to store this in a new model field
     # and preserve the original input
-    def _normalize_targets(self, targets, genome):
+    def _normalize_targets(self, targets, genome, cds_index):
         # TODO (gdingle): handle mix of target types
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): gggenome all seqs
@@ -107,28 +107,38 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): assert ENST is for correct genome
             # TODO (gdingle): specify which codon... and allow custom insert offset by codon
             # TODO (gdingle): specify insert in last codon, right before stop codon
-            func = start_codon_chr_loc
+            func = functools.partial(
+                get_codon_chr_loc,
+                cds_index=cds_index)
         elif all(is_gene(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene
-            func = functools.partial(conversions.gene_to_chr_loc, genome=genome)
+            func = functools.partial(
+                conversions.gene_to_chr_loc,
+                genome=genome)
         else:
             return targets
 
         with ThreadPoolExecutor() as pool:
             normalized = list(pool.map(func, targets))
 
+        # TODO (gdingle): make these errors show in form
         assert all(is_chr(t) for t in normalized)
+        assert all(validate_chr_length(t) or True for t in normalized)  # type: ignore
         return normalized
 
-    def _get_target_seqs(self, targets, genome):
+    def _get_target_seqs(self, targets, genome, cds_index):
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
         if all(is_ensemble_transcript(t) for t in targets):
-            func = start_codon_seq
+            func = functools.partial(
+                get_codon_seq,
+                cds_index=cds_index)
         else:
-            func = functools.partial(conversions.chr_loc_to_seq, genome=genome)
+            func = functools.partial(
+                conversions.chr_loc_to_seq,
+                genome=genome)
 
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(func, targets))
@@ -146,9 +156,9 @@ class GuideDesignView(CreatePlusView):
             # Although deterministic, store seq for history
             obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
 
-        obj.targets = self._normalize_targets(obj.targets, obj.genome)
+        obj.targets = self._normalize_targets(obj.targets, obj.genome, obj.cds_index)
 
-        obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome)
+        obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome, obj.cds_index)
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
         pre_filter = obj.wells_per_target * 5  # 5 based on safe-harbor experiment

@@ -178,70 +178,93 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     return record
 
 
-def start_codon_seq(ensembl_transcript_id: str) -> str:
+def get_codon_seq(ensembl_transcript_id: str, cds_index: int = 0) -> str:
     """
     Convience function to return string sequence of start codon.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
-    >>> start_codon_seq('ENST00000398844')
+    >>> get_codon_seq('ENST00000398844')
     'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCCAGAACGGAGCCGCCTTGGCCTCGGGGTCTCCCTACACCAACG'
+
+    >>> get_codon_seq('ENST00000398844', -1)
+    'GGATGAGAGTCCAATGAAAGCAAACTTCCTTCAAAACATGATAGAAGACAGAACAGAATCTGCATTATCATATTATGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGA'
+
+    >>> get_codon_seq('ENST00000411809')
+    'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGC'
+
+    >>> get_codon_seq('ENST00000221801')
+    'ATGAAGCCAG'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
-    start_codon_seq = cds[0].location.extract(record).seq
+    start_codon_seq = cds[cds_index].location.extract(record).seq
     assert len(start_codon_seq)
     return str(start_codon_seq)
 
 
-def start_codon_chr_loc(ensembl_transcript_id: str) -> str:
+def get_codon_chr_loc(ensembl_transcript_id: str, cds_index: int = 0) -> str:
     """
     Convience function to return chromosome location of start codon.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
-    >>> start_codon_chr_loc('ENST00000398844')
+    >>> get_codon_chr_loc('ENST00000398844')
     'chr5:134649077-134649174'
 
-    # TODO (gdingle): upgrade when able
-    >> start_codon_chr_loc('ENST00000398844')
-    'GRCh38:chr5:134649077-134649174:+'
+    >>> get_codon_chr_loc('ENST00000411809')
+    'chr5:157786494-157786535'
+
+    >>> get_codon_chr_loc('ENST00000221801')
+    'chr19:39834572-39834582'
+
+    Get last codon.
+
+    >>> get_codon_chr_loc('ENST00000398844', -1)
+    'chr5:134724980-134725095'
+
+    >>> get_codon_chr_loc('ENST00000411809', -1)
+    'chr5:157857472-157857819'
+
+    >>> get_codon_chr_loc('ENST00000221801', -1)
+    'chr19:39846310-39846335'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
-    codon_location = cds[0].location
-    codon_seq = cds[0].location.extract(record).seq
-    assert codon_seq[0:3] == 'ATG', codon_seq
+    codon_location = cds[cds_index].location
+    codon_seq = cds[cds_index].location.extract(record).seq
+    # TODO (gdingle): why isn't codon_seq divisible by 3?
+    # assert len(codon_seq) % 3 == 0, len(codon_seq)
+    if cds_index == 0:
+        # start codon
+        assert codon_seq[0:3] == 'ATG', codon_seq
+    elif cds_index == -1:
+        # stop codon
+        assert codon_seq[-3:] in ('TAG', 'TGA', 'TAA'), codon_seq
 
-    description = record.description.split(':')
-    assert len(description) == 6
-    # TODO (gdingle): deal with reverse strand
+    species = record.annotations['reference_species']
+    chromosome_number = record.annotations['reference_chromosome_number']
+    sequence_left = record.annotations['reference_left_index']
+
+    # Transcript of reverse strand is translated above.
     assert codon_location.strand == 1
-    # TODO (gdingle): deal with other genomes
-    assert description[1] == 'GRCh38'
+    assert species == 'GRCh38'
 
-    # TODO (gdingle): check for off by one error... is codon_location.start zero-indexed?
-    transcript_start = int(description[3])
-    start = transcript_start + codon_location.start
-    end = transcript_start + codon_location.end
+    # TODO (gdingle): exon junctions
+    # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
+
+    start = sequence_left + codon_location.start
+    end = sequence_left + codon_location.end
     assert end - start == len(codon_seq)
     return 'chr{}:{}-{}'.format(
-        description[2],
+        chromosome_number,
         start,
         end,
     )
-
-    # return '{}:chr{}:{}-{}:{}'.format(
-    #     description[1],
-    #     description[2],
-    #     int(description[3]) + codon_location.start,
-    #     int(description[3]) + codon_location.end,
-    #     '+' if codon_location.strand == 1 else '-',
-    # )
 
 
 if __name__ == '__main__':

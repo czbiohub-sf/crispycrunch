@@ -188,12 +188,14 @@ class GuideDesign(BaseModel):
 
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
 
+    # TODO (gdingle): enforce match of ENST transcript and genome
     genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
 
     pam = models.CharField(max_length=80, choices=[
         ('NGG', '20bp-NGG (SpCas9, SpCas9-HF1, eSpCas9, ...)'),
     ], default='NGG')
 
+    # TODO (gdingle): enforce must be ENST for HDR, explain ENST is always converted to forward strand
     targets = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
@@ -231,6 +233,15 @@ class GuideDesign(BaseModel):
     @property
     def wells_per_target(self):
         return max(1, 96 // len(self.targets))
+
+    @property
+    def cds_index(self):
+        if self.hdr_tag == 'start_codon':
+            return 0
+        elif self.hdr_tag == 'stop_codon':
+            return -1
+        else:
+            raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
 
 
 class GuideSelection(BaseModel):

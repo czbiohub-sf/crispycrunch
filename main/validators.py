@@ -82,19 +82,23 @@ def validate_chr(value: str) -> None:
         raise ValidationError('"{}" is not a chromosome location'.format(value))
 
 
-def validate_chr_length(value: str, max_length: int = 2000) -> None:
+def validate_chr_length(value: str, max_length: int = 2000, min_length=23) -> None:
     """
     >>> validate_chr_length('chr1:11,130,540-11,130,751')
     >>> validate_chr_length('chr1:11,230,540-11,130,751')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['"99789" is longer than the max length of 2000']
+    django.core.exceptions.ValidationError: ['99789 is longer than the max length of 2000 for chr1:11,230,540-11,130,751']
     """
     matches = [m.replace(',', '') for m in re.match(CHR_REGEX, value).groups()]  # type: ignore
     length = abs(int(matches[1]) - sum(int(m) for m in matches[2:]))
     if length > max_length:
-        raise ValidationError('"{}" is longer than the max length of {}'.format(
-            length, max_length))
+        raise ValidationError('{} is longer than the max length of {} for {}'.format(
+            length, max_length, value))
+    if length < min_length:
+        raise ValidationError('{} is shorter than the min length of {} for {}.'.format(
+            length, min_length, value))
+    return None
 
 
 def is_chr(value: str) -> bool:
