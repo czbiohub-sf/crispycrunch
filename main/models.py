@@ -218,6 +218,7 @@ class GuideDesign(BaseModel):
                                help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair)')
 
     hdr_seq = models.CharField(
+        # TODO (gdingle): set a better max_length... see amplicon_length
         max_length=65536,
         validators=[validate_seq],
         blank=True,
@@ -299,6 +300,19 @@ class PrimerDesign(BaseModel):
 
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
+
+    @property
+    def amplicon_length(self):
+        """
+        Knocks down size a notch to make space for hdr_seq in primer
+        """
+        hdr_seq = self.guide_selection.guide_design.hdr_seq
+        if hdr_seq:
+            # TODO (gdingle): generalize up to len(hdr_seq) 200
+            assert len(hdr_seq) < 100
+            return self.max_amplicon_length - 100
+        else:
+            return self.max_amplicon_length
 
 
 class PrimerSelection(BaseModel):

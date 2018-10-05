@@ -257,14 +257,9 @@ class PrimerDesignView(CreatePlusView):
 
         sheet = samplesheet.from_guide_selection(guide_selection)
         batch = webscraperequest.CrisporPrimerBatchWebRequest(obj)
-        # Knock down size a notch to make space for hdr_seq
-        # TODO (gdingle): move to model
-        amp_len = obj.max_amplicon_length - 100 \
-            if guide_selection.guide_design.hdr_seq \
-            else obj.max_amplicon_length
         largs = [[row['_crispor_batch_id'],
                   row['_crispor_pam_id'],
-                  amp_len,
+                  obj.amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   # TODO (gdingle): is this the best way of identifying guides?
