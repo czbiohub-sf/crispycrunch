@@ -32,7 +32,7 @@ import webscraperequest
 
 from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
-from protospacex import get_codon_chr_loc, get_codon_seq
+from protospacex import get_cds_chr_loc, get_cds_seq
 
 from main import conversions
 from main import samplesheet
@@ -108,7 +108,7 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): specify which codon... and allow custom insert offset by codon
             # TODO (gdingle): specify insert in last codon, right before stop codon
             func = functools.partial(
-                get_codon_chr_loc,
+                get_cds_chr_loc,
                 cds_index=cds_index)
         elif all(is_gene(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene
@@ -133,7 +133,7 @@ class GuideDesignView(CreatePlusView):
 
         if all(is_ensemble_transcript(t) for t in targets):
             func = functools.partial(
-                get_codon_seq,
+                get_cds_seq,
                 cds_index=cds_index)
         else:
             func = functools.partial(

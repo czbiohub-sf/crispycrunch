@@ -176,8 +176,9 @@ class GuideDesign(BaseModel):
         'hg19': 'Human',
     }
     HDR_TAG_TERMINUSES = [
-        ('start_codon', 'Start Codon'),
-        ('stop_codon', 'Stop Codon')
+        # 40bp is encoded in protospacex
+        ('start_codon', 'Within 40bp of Start Codon'),
+        ('stop_codon', 'Within 40bp of Stop Codon')
         # TODO (gdingle): more codons? second, third?
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
