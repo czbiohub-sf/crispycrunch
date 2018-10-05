@@ -140,12 +140,12 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
                 row['hdr_template'],
                 guide_selection.guide_design.hdr_tag),
             axis=1)
-        # TODO (gdingle): fix too long primers upstream
         max_amplicon_length = primer_selection.primer_design.max_amplicon_length
         sheet['primer_product'] = sheet.apply(
-            lambda row: row['primer_product'] if len(
-                row['primer_product']) <= max_amplicon_length else f'too long: >{max_amplicon_length}bp'
-            , axis=1)
+            lambda row: row['primer_product']
+            if len(row['primer_product']) <= max_amplicon_length
+            else 'too long: {}bp'.format(len(row['primer_product'])),
+            axis=1)
 
     return sheet
 
@@ -157,17 +157,17 @@ def _flatten_guide_data(
     guide_selection: GuideSelection
 ) -> List[Tuple[str, str, str, str, str]]:
 
-    guide_design=guide_selection.guide_design
+    guide_design = guide_selection.guide_design
     # Ungroup guide data into rows
     # TODO (gdingle): this is a complicated beast that should at least have its own tests
-    target_loc_to_batch_id=dict((g['target'], g['batch_id'])
+    target_loc_to_batch_id = dict((g['target'], g['batch_id'])
                                   for g in guide_design.guide_data
                                   if g.get('batch_id'))  # filter out errors
-    target_loc_to_target_seq=dict(zip(guide_design.targets, guide_design.target_seqs))
-    selected_guides_ordered=[(g['target'], guide_selection.selected_guides[g['target']])
+    target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
+    selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
                                for g in guide_design.guide_data
                                if g['target'] in guide_selection.selected_guides]
-    guides=[(target_loc, offset, seq,
+    guides = [(target_loc, offset, seq,
                target_loc_to_batch_id[target_loc],
                target_loc_to_target_seq[target_loc])
               for target_loc, selected in selected_guides_ordered
@@ -181,9 +181,9 @@ def _transform_primer_product(row) -> str:
         return row['primer_product']
 
     if row['guide_direction'] == '+':
-        guide_seq=row['guide_seq']
+        guide_seq = row['guide_seq']
     else:
-        guide_seq=reverse_complement(row['guide_seq'])
+        guide_seq = reverse_complement(row['guide_seq'])
 
     if guide_seq not in row['primer_product']:
         # TODO (gdingle): use yellow highlighting of crispor to determine
@@ -194,23 +194,23 @@ def _transform_primer_product(row) -> str:
         row['target_loc'], row['guide_seq']))
 
     # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
-    primer_loc=get_primer_loc(
+    primer_loc = get_primer_loc(
         row['primer_product'],
         guide_seq,
         row['guide_loc'])
-    primer_product=conversions.chr_loc_to_seq(primer_loc, row['target_genome'])
+    primer_product = conversions.chr_loc_to_seq(primer_loc, row['target_genome'])
     return primer_product
 
 
 def from_analysis(analysis: Analysis) -> DataFrame:
-    primer_selection=PrimerSelection.objects.filter(
+    primer_selection = PrimerSelection.objects.filter(
         primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
-    sheet=from_primer_selection(primer_selection)
+    sheet = from_primer_selection(primer_selection)
     return _from_analysis(analysis, sheet)
 
 
 def from_custom_analysis(analysis: Analysis) -> DataFrame:
-    sheet=from_experiment(analysis.experiment)[:len(analysis.fastq_data)]
+    sheet = from_experiment(analysis.experiment)[:len(analysis.fastq_data)]
     return _from_analysis(analysis, sheet)
 
 
@@ -218,9 +218,9 @@ def from_excel(file: UploadedFile) -> DataFrame:
     if file.content_type in (
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.ms-excel'):
-        sheet=pandas.read_excel(file, sheet_name=0)
+        sheet = pandas.read_excel(file, sheet_name=0)
     else:
-        sheet=pandas.read_csv(file)
+        sheet = pandas.read_csv(file)
     # TODO (gdingle): trim and validate all cells?
     return sheet
 
@@ -228,34 +228,34 @@ def from_excel(file: UploadedFile) -> DataFrame:
 def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
 
     # TODO (gdingle): does this metadata stick?
-    sheet._metadata=[
+    sheet._metadata = [
         'analysis_id',
         'analysis_create_time',
         'analyst_name',
     ]
-    sheet.analysis_id=analysis.id
-    sheet.analysis_create_time=analysis.create_time
-    sheet.analyst_name=analysis.researcher.full_name
+    sheet.analysis_id = analysis.id
+    sheet.analysis_create_time = analysis.create_time
+    sheet.analyst_name = analysis.researcher.full_name
 
-    sheet['s3_bucket']=analysis.s3_bucket
-    sheet['s3_prefix']=analysis.s3_prefix
+    sheet['s3_bucket'] = analysis.s3_bucket
+    sheet['s3_prefix'] = analysis.s3_prefix
 
     # TODO (gdingle): remove _insert_fastqs when new method proved
     # sheet = _insert_fastqs(sheet, analysis.fastqs)
     if not analysis.fastq_data:
         return sheet
 
-    sheet['fastq_fwd']=[pair[0] for pair in analysis.fastq_data]
-    sheet['fastq_rev']=[pair[1] for pair in analysis.fastq_data]
+    sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
+    sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
 
-    reports=[r for r in analysis.results_data]
+    reports = [r for r in analysis.results_data]
     if not any(reports):
         return sheet
 
-    sheet['report_url']=[r.get('report_url') for r in reports]
-    sheet['report_zip']=[r.get('report_zip') for r in reports]
+    sheet['report_url'] = [r.get('report_url') for r in reports]
+    sheet['report_zip'] = [r.get('report_zip') for r in reports]
 
-    sheet['report_stats']=_drop_empty_report_stats(reports)
+    sheet['report_stats'] = _drop_empty_report_stats(reports)
 
     # TODO (gdingle): strangely, we lose the order of headers as when compared to...
     # sheet['report_stats'] = [r.get('report_stats') for r in reports]
@@ -269,8 +269,8 @@ def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
 def to_excel(sheet: DataFrame) -> BytesIO:
     # Workaround for saving in-memory. See:
     # https://stackoverflow.com/questions/28058563/write-to-stringio-object-using-pandas-excelwriter
-    excel_file=BytesIO()
-    xlw=pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
+    excel_file = BytesIO()
+    xlw = pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
     sheet.to_excel(xlw)
     xlw.book.save(excel_file)
     excel_file.seek(0)
@@ -282,8 +282,8 @@ def to_excel(sheet: DataFrame) -> BytesIO:
 def _new_index(size=192,
                end_char='P',
                end_int=12) -> list:
-    chars=[chr(i) for i in range(ord('A'), ord(end_char) + 1)]
-    ints=list(range(1, end_int + 1))
+    chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
+    ints = list(range(1, end_int + 1))
     assert len(chars) * len(ints) >= size
     return [c + str(i) for c in chars for i in ints][:size]
 
@@ -340,7 +340,7 @@ def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
     For example: "A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz".
     """
     for well_pos in sheet.index:
-        matches=sorted([
+        matches = sorted([
             filename for filename in fastqs
             if well_pos in os.path.basename(filename).split('-')
         ])
@@ -348,10 +348,10 @@ def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
             # TODO (gdingle): allow missing fastqs?
             continue
         assert len(matches) == 2, 'Exactly two fastq files expected per well'
-        sheet.loc[well_pos, 'fastq_fwd']=matches[0]
-        sheet.loc[well_pos, 'fastq_rev']=matches[1]
+        sheet.loc[well_pos, 'fastq_fwd'] = matches[0]
+        sheet.loc[well_pos, 'fastq_rev'] = matches[1]
 
-    sheet=sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
+    sheet = sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
     assert len(sheet), 'Some fastqs must match rows'
     return sheet
 
@@ -360,24 +360,24 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     """
     See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
     """
-    report_stats=[r.get('report_stats', {}) for r in reports]
+    report_stats = [r.get('report_stats', {}) for r in reports]
     if not any(report_stats):
         return None
-    temp_sheet=DataFrame.from_records(report_stats)
-    nonzero_cols=(temp_sheet != 0).any(axis='rows')
-    temp_sheet=temp_sheet.loc[:, nonzero_cols]
+    temp_sheet = DataFrame.from_records(report_stats)
+    nonzero_cols = (temp_sheet != 0).any(axis='rows')
+    temp_sheet = temp_sheet.loc[:, nonzero_cols]
     return temp_sheet.to_dict(orient='records')
 
 
 def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
-    sheet['hdr_dist']=sheet.apply(
+    sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
             row['guide_loc'],
         ),
         axis=1,
     )
-    sheet['hdr_template']=sheet.apply(
+    sheet['hdr_template'] = sheet.apply(
         # TODO (gdingle): do reverse complement of hdr_seq if negative strand
         # TODO (gdingle): what's the max length of the template? is it the full cds?
         lambda row: get_hdr_template(
@@ -386,7 +386,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
         ),
         axis=1,
     )
-    sheet['hdr_rebind']=sheet.apply(
+    sheet['hdr_rebind'] = sheet.apply(
         # less than 14 nucleotides* of the original protospacer remaining to be safe
         lambda row: row['hdr_dist'] >= 14,
         axis=1,
@@ -411,10 +411,10 @@ def _set_scores(
         # TODO (gdingle): figure out shorter type sig for guides
         guides: List[Tuple[str, str, str, str, str]]) -> DataFrame:
     # Get first score by target and offset, MIT score
-    scores=dict((row['target'], row['scores'])
+    scores = dict((row['target'], row['scores'])
                   for row in guide_design.guide_data
                   if row.get('scores'))
     # Scores are stored as chr_loc -> offset -> list of numbers
     # TODO (gdingle): this is pretty ugly
-    sheet['guide_score']=[int(scores[g[0]][g[1]][0]) for g in guides]
+    sheet['guide_score'] = [int(scores[g[0]][g[1]][0]) for g in guides]
     return sheet

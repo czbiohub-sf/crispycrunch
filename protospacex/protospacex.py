@@ -178,21 +178,29 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     return record
 
 
-def get_codon_seq(ensembl_transcript_id: str, cds_index: int = 0) -> str:
+def get_codon_seq(
+        ensembl_transcript_id: str,
+        cds_index: int = 0,
+        max_length: int = 40) -> str:
     """
-    Convience function to return string sequence of start codon.
+    Convience function to return base pair sequence of a codon.
+
+    The codon may the start or stop codon or other depending on cds_index.
+
+    max_length trims the codon to the first max_length base pairs, useful for
+    targeting HDR.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
     >>> get_codon_seq('ENST00000398844')
-    'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCCAGAACGGAGCCGCCTTGGCCTCGGGGTCTCCCTACACCAACG'
+    'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAG'
 
     >>> get_codon_seq('ENST00000398844', -1)
-    'GGATGAGAGTCCAATGAAAGCAAACTTCCTTCAAAACATGATAGAAGACAGAACAGAATCTGCATTATCATATTATGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGA'
+    'GGATGAGAGTCCAATGAAAGCAAACTTCCTTCAAAACATG'
 
     >>> get_codon_seq('ENST00000411809')
-    'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGC'
+    'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAG'
 
     >>> get_codon_seq('ENST00000221801')
     'ATGAAGCCAG'
@@ -202,35 +210,48 @@ def get_codon_seq(ensembl_transcript_id: str, cds_index: int = 0) -> str:
     assert len(cds)
     start_codon_seq = cds[cds_index].location.extract(record).seq
     assert len(start_codon_seq)
-    return str(start_codon_seq)
+    return str(start_codon_seq)[:max_length]
 
 
-def get_codon_chr_loc(ensembl_transcript_id: str, cds_index: int = 0) -> str:
+def get_codon_chr_loc(
+        ensembl_transcript_id: str,
+        cds_index: int = 0,
+        max_length: int = 40) -> str:
     """
-    Convience function to return chromosome location of start codon.
+    Convience function to return genome region of codon.
+
+    The codon may the start or stop codon or other depending on cds_index.
+
+    max_length trims the codon to the first max_length base pairs, useful for
+    targeting HDR.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
-    >>> get_codon_chr_loc('ENST00000398844')
-    'chr5:134649077-134649174'
+    >>> get_codon_chr_loc('ENST00000398844', max_length=999)
+    'chr5:134649077-134649173'
 
-    >>> get_codon_chr_loc('ENST00000411809')
-    'chr5:157786494-157786535'
+    >>> get_codon_chr_loc('ENST00000411809', max_length=999)
+    'chr5:157786494-157786534'
 
-    >>> get_codon_chr_loc('ENST00000221801')
-    'chr19:39834572-39834582'
+    >>> get_codon_chr_loc('ENST00000221801', max_length=999)
+    'chr19:39834572-39834581'
 
     Get last codon.
 
-    >>> get_codon_chr_loc('ENST00000398844', -1)
-    'chr5:134724980-134725095'
+    >>> get_codon_chr_loc('ENST00000398844', -1, 999)
+    'chr5:134724980-134725094'
 
-    >>> get_codon_chr_loc('ENST00000411809', -1)
-    'chr5:157857472-157857819'
+    >>> get_codon_chr_loc('ENST00000411809', -1, 999)
+    'chr5:157857472-157857818'
 
-    >>> get_codon_chr_loc('ENST00000221801', -1)
-    'chr19:39846310-39846335'
+    >>> get_codon_chr_loc('ENST00000221801', -1, 999)
+    'chr19:39846310-39846334'
+
+    Max length.
+
+    >>> get_codon_chr_loc('ENST00000398844')
+    'chr5:134649077-134649116'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -261,13 +282,16 @@ def get_codon_chr_loc(ensembl_transcript_id: str, cds_index: int = 0) -> str:
     end = sequence_left + codon_location.end
     assert end - start == len(codon_seq)
 
+    # enforce max_length
+    end = min(end, start + max_length)
+
     # TODO (gdingle): figure out solution for short cds. Jason Li says:
     # The target region doesnt need to be majority cds. In this case, if we were going for a window of 50 bp total, it would be the 22nt region before ATG, AAGCCA, and the 19nt region that come after. Most of this region will be either intron or 5’UTR, but that’s totally fine
 
     return 'chr{}:{}-{}'.format(
         chromosome_number,
         start,
-        end,
+        end - 1,  # change to inclusive range
     )
 
 

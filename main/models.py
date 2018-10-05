@@ -286,10 +286,12 @@ class PrimerDesign(BaseModel):
     # TODO (gdingle): this needs to change based on HDR
     # default of 250 is from
     # https://docs.google.com/document/d/1h_QOtsH6_uH5VeOCr0dBcUBFnQyamgpdQmupYWyvxo8/edit
+    # TODO (gdingle): crispor has a preset list of values... mirror?
     max_amplicon_length = models.IntegerField(
         default=400,
         validators=[
-            MinValueValidator(150),
+            # Constrain range to Biohub plausible experiments
+            MinValueValidator(200),
             MaxValueValidator(400),
         ])
     primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
