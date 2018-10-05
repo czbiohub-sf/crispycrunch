@@ -393,7 +393,8 @@ def _set_scores(
         guides: List[Tuple[str, str, str, str, str]]) -> DataFrame:
     # Get first score by target and offset, MIT score
     scores = dict((row['target'], row['scores'])
-                  for row in guide_design.guide_data)
+                  for row in guide_design.guide_data
+                  if row.get('scores'))
     # Scores are stored as chr_loc -> offset -> list of numbers
     # TODO (gdingle): this is pretty ugly
     sheet['guide_score'] = [int(scores[g[0]][g[1]][0]) for g in guides]

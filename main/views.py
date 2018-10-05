@@ -193,8 +193,8 @@ class GuideSelectionView(CreatePlusView):
     @staticmethod
     def _slice(guide_data, top=3, by='distance'):
         guide_seqs = guide_data['guide_seqs']
-        if not guide_seqs or guide_seqs == {'not found': 'not found'}:
-            return {'not found': 'not found'}
+        if not guide_seqs or guide_seqs.get('not found'):
+            return guide_seqs
 
         # First score should be the MIT specificity score
         # Filter out 'Not found'

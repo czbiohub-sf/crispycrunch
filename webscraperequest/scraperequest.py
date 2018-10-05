@@ -340,7 +340,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             response = requests.Session().send(self.request)  # type: ignore
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
-            return self._extract_data(soup)
+            return self._extract_data(soup, response.url)
         except TimeoutError as e:
             logger.warning(str(e))
             # IMPORTANT: Delete cache of "waiting" page
@@ -357,7 +357,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             raise
         raise RuntimeError('unknown error')
 
-    def _extract_data(self, soup: BeautifulSoup) -> Dict[str, Any]:
+    def _extract_data(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
         title = soup.find(class_='title')
         if title and 'not present in the selected genome' in title.get_text():
             raise ValueError('Crispor on {}: {}'.format(
@@ -391,20 +391,30 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 return dict(
                     target=self.target,
                     seq=self.data['seq'],
-                    guide_seqs={'not found': 'not found'},
+                    guide_seqs={
+                        'not found': 'not found',
+                        # TODO (gdingle): make url on error work somehow
+                        # 'url': url,
+                    },
                 )
             if 'Server error: could not run command' in soup.get_text():
                 return dict(
                     target=self.target,
                     seq=self.data['seq'],
-                    guide_seqs={'server error': 'server error'},
+                    guide_seqs={
+                        'server error': 'server error',
+                        # TODO (gdingle): make url on error work somehow
+                        # 'url': url,
+                    },
                 )
             if 'are not valid in the genome' in soup.get_text():
                 return dict(
                     target=self.target,
                     seq=self.data['seq'],
                     guide_seqs={
-                        'invalid chromosome range': 'invalid chromosome range'
+                        'invalid chromosome range': 'invalid chromosome range',
+                        # TODO (gdingle): make url on error work somehow
+                        # 'url': url,
                     },
                 )
             if 'An error occured during processing' in soup.get_text():
