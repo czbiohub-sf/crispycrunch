@@ -20,7 +20,7 @@
   <dt class="col-sm-3">HDR Tag</dt>
   <dd class="col-sm-9">{{ guide_design.hdr_tag|title }}</dd>
   <dt class="col-sm-3">HDR Sequence</dt>
-  <dd class="col-sm-9">{{ guide_design.hdr_seq }}</dd>
+  <dd class="col-sm-9">{{ guide_design.hdr_seq|truncatechars:show }}</dd>
   {% endif %}
   <dt class="col-sm-12">&nbsp;</dt>
   <dt class="col-sm-3">Primer Temp</dt>
@@ -78,6 +78,13 @@
 <small>
   <a href="./?download=xls">Download table as Excel file</a>
 </small>
+<small class="float-right">
+  {% if request.GET.show %}
+  <a href="./">Truncate sequences</a>
+  {% else %}
+  <a href="./?show=9999">Show full sequences</a>
+  {% endif %}
+</small>
 <table class="table">
   <thead class="thead-light">
     <tr>
@@ -90,8 +97,8 @@
     {% for row in sheet.values %}
     <tr>
       {% for cell in row %}
-      <td title="{{ cell }}">
-        {{ cell|truncatechars:32 }}
+      <td title="{{ cell }}" style="word-break: break-all;">
+        {{ cell|truncatechars:show }}
       </td>
       {% endfor %}
     </tr>

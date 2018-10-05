@@ -351,6 +351,9 @@ class ExperimentSummaryView(View):
 
         # TODO (gdingle): download csv
 
+        # max length to show of table cell values
+        show = request.GET.get('show', 26)
+
         return render(request, self.template_name, locals())
 
     def _prepare_sheet(self, sheet):

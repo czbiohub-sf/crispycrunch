@@ -307,8 +307,8 @@ def _new_samplesheet() -> DataFrame:
             '_crispor_pam_id',
             # TODO (gdingle): donor or HDR?
             'hdr_dist',
-            'hdr_rebind',
             'hdr_template',
+            'hdr_rebind',
             'hdr_mutated',
             'primer_seq_fwd',
             'primer_seq_rev',
@@ -395,7 +395,9 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
     def _mutate(row):
         # Only mutate if risk of rebinding
         if not row['hdr_rebind']:
-            return row['hdr_template']
+            # TODO (gdingle): when replacing hdr_template
+            # return row['hdr_template']
+            return ''
         hdr_template = row['hdr_template']
         # Assumes always cut after first codon, as in get_hdr_template
         assert hdr_template[3:].startswith(hdr_seq)
