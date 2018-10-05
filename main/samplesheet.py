@@ -391,16 +391,34 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
         lambda row: row['hdr_dist'] >= 14,
         axis=1,
     )
-    # TODO (gdingle): mutate only if hdr_rebind is True
-    # TODO (gdingle): merge with hdr_template above
-    # TODO (gdingle): address PAM in target_seq
-    # sheet['hdr_mutated'] = sheet.apply(
-    #     lambda row: get_hdr_template(
-    #         row['target_seq'],
-    #         hdr_seq,
-    #     ),
-    #     axis=1,
-    # )
+
+    def _mutate(row):
+        # Only mutate if risk of rebinding
+        if not row['hdr_rebind']:
+            return row['hdr_template']
+        hdr_template = row['hdr_template']
+        # Assumes always cut after first codon, as in get_hdr_template
+        assert hdr_template[3:].startswith(hdr_seq)
+        cut = 3 + len(hdr_seq) + row['hdr_dist']
+        # Align mutation region to nearest codon
+        assert len(hdr_seq) % 3 == 0
+        guide_right = cut - (cut % 3)
+        # A max of 17 contiguous bp in the protospacer may survive HDR,
+        # so we only touch 5 codons in that sequence
+        # TODO (gdingle): handle guides on reverse as well
+        assert len(row['guide_seq']) == 20
+        guide_left = guide_right - 15
+        new_hdr_template = (
+            hdr_template[:guide_left] +
+            mutate_guide_seq(hdr_template[guide_left:guide_right]) +
+            hdr_template[guide_right:]
+        )
+        assert len(new_hdr_template) == len(hdr_template)
+        return new_hdr_template
+
+    # TODO (gdingle): override hdr_template when good enough
+    sheet['hdr_mutated'] = sheet.apply(_mutate, axis=1)
+
     return sheet
 
 

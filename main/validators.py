@@ -343,11 +343,12 @@ def mutate_guide_seq(guide_seq: str) -> str:
     validate_seq(guide_seq)
     new_guide = ''
     for i in range(0, len(guide_seq), 3):
-        codon = guide_seq[i:i + 3]
+        codon = guide_seq[i:i + 3].upper()
         syns = set(synonymous[synonymous_index[codon]])
-        syns.remove(codon)
+        if len(syns) > 1:
+            syns.remove(codon)
         # TODO (gdingle): better to choose random syn?
-        new_guide += syns.pop()
+        new_guide += syns.pop().lower()
     assert len(new_guide) == len(guide_seq)
     assert new_guide != guide_seq
     return new_guide

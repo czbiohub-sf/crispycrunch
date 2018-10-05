@@ -182,9 +182,9 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): more codons? second, third?
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
-        'start_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt',
+        'start_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
         # TODO (gdingle): hdr seq should be different for stop codon
-        'stop_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt',
+        'stop_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
     }
 
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
