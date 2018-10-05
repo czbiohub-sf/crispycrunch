@@ -156,6 +156,41 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
         # TODO (gdingle): length of other types
 
 
+def validate_gene(value: str) -> None:
+    """
+    >>> validate_gene('ATL2') is None
+    True
+    >>> validate_gene('atl2')
+    Traceback (most recent call last):
+    ...
+    django.core.exceptions.ValidationError: ['"atl2" is not a valid HGNC gene name']
+    """
+    if re.match(GENE_REGEX, value) is None:
+        raise ValidationError('"{}" is not a valid HGNC gene name'.format(value))
+
+
+def is_gene(value: str) -> bool:
+    """
+    >>> is_gene('ATL3')
+    True
+    >>> is_gene('ATL_3')
+    False
+    """
+    try:
+        validate_gene(value)
+    except ValidationError:
+        return False
+    else:
+        return True
+
+
+def validate_num_wells(value: dict, max: int = 96) -> None:
+    total = sum(len(seqs) for seqs in value.values())
+    if total > max:
+        raise ValidationError(
+            '{} items do not fit in a 96-well plate'.format(total))
+
+
 def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
     """
     # TODO (gdingle): is this actually correct def for guide_loc?
@@ -263,39 +298,59 @@ def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
     return 'chr{}:{}-{}'.format(chr_num, primer_start, primer_end)
 
 
-def validate_gene(value: str) -> None:
+def mutate_guide_seq(guide_seq: str) -> str:
     """
-    >>> validate_gene('ATL2') is None
-    True
-    >>> validate_gene('atl2')
-    Traceback (most recent call last):
-    ...
-    django.core.exceptions.ValidationError: ['"atl2" is not a valid HGNC gene name']
+    Silently mutates input sequence by substituing a different
+    codon that encodes the same amino acid wherever possible.
+
+    The input is assumed to start with a codon of 3bp.
+
+    Based on https://czi.quip.com/YbAhAbOV4aXi/.
+
+    Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
+
+    >>> mutate_guide_seq('TGTTGCGATGAC')
+    TGCTGTGACGAT
     """
-    if re.match(GENE_REGEX, value) is None:
-        raise ValidationError('"{}" is not a valid HGNC gene name'.format(value))
-
-
-def is_gene(value: str) -> bool:
-    """
-    >>> is_gene('ATL3')
-    True
-    >>> is_gene('ATL_3')
-    False
-    """
-    try:
-        validate_gene(value)
-    except ValidationError:
-        return False
-    else:
-        return True
-
-
-def validate_num_wells(value: dict, max: int = 96) -> None:
-    total = sum(len(seqs) for seqs in value.values())
-    if total > max:
-        raise ValidationError(
-            '{} items do not fit in a 96-well plate'.format(total))
+    synonymous = {
+        'CYS': ['TGT', 'TGC'],
+        'ASP': ['GAT', 'GAC'],
+        'SER': ['TCT', 'TCG', 'TCA', 'TCC', 'AGC', 'AGT'],
+        'GLN': ['CAA', 'CAG'],
+        'MET': ['ATG'],
+        'ASN': ['AAC', 'AAT'],
+        'PRO': ['CCT', 'CCG', 'CCA', 'CCC'],
+        'LYS': ['AAG', 'AAA'],
+        'STOP': ['TAG', 'TGA', 'TAA'],
+        'THR': ['ACC', 'ACA', 'ACG', 'ACT'],
+        'PHE': ['TTT', 'TTC'],
+        'ALA': ['GCA', 'GCC', 'GCG', 'GCT'],
+        'GLY': ['GGT', 'GGG', 'GGA', 'GGC'],
+        'ILE': ['ATC', 'ATA', 'ATT'],
+        'LEU': ['TTA', 'TTG', 'CTC', 'CTT', 'CTG', 'CTA'],
+        'HIS': ['CAT', 'CAC'],
+        'ARG': ['CGA', 'CGC', 'CGG', 'CGT', 'AGG', 'AGA'],
+        'TRP': ['TGG'],
+        'VAL': ['GTA', 'GTC', 'GTG', 'GTT'],
+        'GLU': ['GAG', 'GAA'],
+        'TYR': ['TAT', 'TAC'],
+    }
+    synonymous_index = dict(
+        (codon, aa)
+        for aa, codons in synonymous.items()
+        for codon in codons
+    )
+    validate_seq(guide_seq)
+    new_guide = ''
+    for i in range(0, len(guide_seq), 3):
+        codon = guide_seq[i:i + 3]
+        syns = set(synonymous[synonymous_index[codon]])
+        syns.remove(codon)
+        # TODO (gdingle): better to choose random syn?
+        new_guide += syns.pop()
+    assert len(new_guide) == len(guide_seq)
+    assert new_guide != guide_seq
+    return new_guide
 
 
 if __name__ == '__main__':
