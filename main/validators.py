@@ -232,7 +232,7 @@ def get_guide_cut_to_insert(target_loc: str, guide_loc: str) -> int:
 
 def get_hdr_template(target_seq: str, hdr_seq: str, hdr_tag: str = 'start_codon') -> str:
     """
-    Inserts HDR sequencee in correct position in target sequence.
+    Inserts HDR sequence in correct position in target sequence.
     Based on https://czi.quip.com/YbAhAbOV4aXi/.
 
     >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
@@ -244,17 +244,17 @@ def get_hdr_template(target_seq: str, hdr_seq: str, hdr_tag: str = 'start_codon'
     assert hdr_tag == 'start_codon', 'stop_codon not implemented'
     first_codon = target_seq[0:3]
     assert first_codon == 'ATG'
-    return first_codon + hdr_seq + target_seq[3:]
+    return first_codon + hdr_seq.lower() + target_seq[3:]
 
 
-def get_hdr_primer(primer_product: str, hdr_seq: str, hdr_tag: str = 'start_codon') -> str:
+def get_hdr_primer(primer_product: str, hdr_template: str, hdr_tag: str = 'start_codon') -> str:
     """
     Locates target codon in primer product then inserts HDR sequence.
     >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'NNN')
     'ATGNNNTCCCAGCCGGGAAT'
     """
     validate_seq(primer_product)
-    validate_seq(hdr_seq)
+    validate_seq(hdr_template)
     # TODO (gdingle): stop_codon
     assert hdr_tag == 'start_codon', 'stop_codon not implemented'
     codon_index = primer_product.find('ATG')
@@ -262,7 +262,8 @@ def get_hdr_primer(primer_product: str, hdr_seq: str, hdr_tag: str = 'start_codo
         # TODO (gdingle): good return value?
         return 'start_codon not found'
     assert primer_product[codon_index:codon_index + 3] == 'ATG'
-
+    assert hdr_template[0:3] == 'ATG'
+    hdr_seq = hdr_template[3:].lower()
     return primer_product[:codon_index] + \
         get_hdr_template(primer_product[codon_index:], hdr_seq)
 
@@ -313,6 +314,9 @@ def mutate_guide_seq(guide_seq: str) -> str:
     TGCTGTGACGAT
     """
     synonymous = {
+        # TODO (gdingle): comment out rare codons
+        # see https://www.genscript.com/tools/codon-frequency-table
+        # TODO (gdingle): consider offtarget analysis of mutated
         'CYS': ['TGT', 'TGC'],
         'ASP': ['GAT', 'GAC'],
         'SER': ['TCT', 'TCG', 'TCA', 'TCC', 'AGC', 'AGT'],

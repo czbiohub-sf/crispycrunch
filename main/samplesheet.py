@@ -400,7 +400,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
             return ''
         hdr_template = row['hdr_template']
         # Assumes always cut after first codon, as in get_hdr_template
-        assert hdr_template[3:].startswith(hdr_seq)
+        assert hdr_template[3:].upper().startswith(hdr_seq.upper())
         cut = 3 + len(hdr_seq) + row['hdr_dist']
         # Align mutation region to nearest codon
         assert len(hdr_seq) % 3 == 0
