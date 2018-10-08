@@ -18,7 +18,8 @@ from django.core.files.uploadedfile import UploadedFile
 
 from main import conversions
 from main.models import *
-from main.validators import get_guide_loc, get_primer_loc
+from main.validators import get_guide_loc, get_primer_loc, get_guide_cut_to_insert
+from main.hdr import mutate_guide_seq, get_hdr_template, get_hdr_primer
 
 from crispresso.fastqs import reverse_complement
 
