@@ -237,15 +237,15 @@ def get_hdr_template(target_seq: str, hdr_seq: str, hdr_tag: str = 'start_codon'
 
     >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
     'ATGnnnTCCCAGCCGGGAAT'
-    >>> get_hdr_template('TCCCAGCCGGGAATTGA', 'NNN', 'stop_codon')
-    'TCCCAGCCGGGAATnnnTGA'
+    >>> get_hdr_template('TGATCCCAGCCGGGTGA', 'NNN', 'stop_codon')
+    'TGATCCCAGCCGGGnnnTGA'
     """
     validate_seq(target_seq)
     validate_seq(hdr_seq)
     if hdr_tag == 'stop_codon':
         codon = target_seq[-3:]
         assert codon in ['TAG', 'TGA', 'TAA']
-        return target_seq[:-3] + hdr_seq.lower() + codon
+        return target_seq[0:-3] + hdr_seq.lower() + codon
     else:
         codon = target_seq[0:3]
         assert codon in ['ATG']
@@ -271,6 +271,9 @@ def get_hdr_primer(primer_product: str, hdr_template: str, hdr_tag: str = 'start
             return 'start_codon not found'
         assert primer_product[codon_index:codon_index + 3] == 'ATG'
         hdr_seq = hdr_template[3:].lower()
+        return primer_product[:codon_index] + \
+            get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
+
     # TODO (gdingle): this is really uglly and should be refactored.
     elif hdr_tag == 'stop_codon':
         stop_codons = ['TAG', 'TGA', 'TAA']
@@ -282,9 +285,10 @@ def get_hdr_primer(primer_product: str, hdr_template: str, hdr_tag: str = 'start
         codon_index = max(stops)
         assert primer_product[codon_index:codon_index + 3] in stop_codons
         hdr_seq = hdr_template[:-3].lower()
+        return get_hdr_template(primer_product[:codon_index+3], hdr_seq, hdr_tag) + \
+            primer_product[-3:]
 
-    return primer_product[:codon_index] + \
-        get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
+    assert False
 
 
 def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:

@@ -91,7 +91,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # TODO (gdingle): put into unit test
     if guide_design.hdr_seq:
-        sheet = _set_hdr_cols(sheet, guide_design.hdr_seq, guide_design.hdr_tag),
+        sheet = _set_hdr_cols(sheet, guide_design.hdr_seq, guide_design.hdr_tag)
 
     # TODO (gdingle): is this really the best unique name?
     # Example: "hg38:chr2:136116735-136116754:-"
