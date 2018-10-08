@@ -308,6 +308,11 @@ def get_cds_chr_loc(
 
 
 if __name__ == '__main__':
+    # TODO: something is wrong with this compared to
+    # CCDS database... CDS locations are not the same
+    # see https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000105202;r=19:39834458-39846414;t=ENST00000221801
+    # get_cds_chr_loc('ENST00000221801', -1
+
     import doctest
     doctest.testmod()
 

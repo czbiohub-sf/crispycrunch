@@ -236,36 +236,55 @@ def get_hdr_template(target_seq: str, hdr_seq: str, hdr_tag: str = 'start_codon'
     Based on https://czi.quip.com/YbAhAbOV4aXi/.
 
     >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
-    'ATGNNNTCCCAGCCGGGAAT'
+    'ATGnnnTCCCAGCCGGGAAT'
+    >>> get_hdr_template('TCCCAGCCGGGAATTGA', 'NNN', 'stop_codon')
+    'TCCCAGCCGGGAATnnnTGA'
     """
     validate_seq(target_seq)
     validate_seq(hdr_seq)
-    # TODO (gdingle): stop_codon
-    assert hdr_tag == 'start_codon', 'stop_codon not implemented'
-    first_codon = target_seq[0:3]
-    assert first_codon == 'ATG'
-    return first_codon + hdr_seq.lower() + target_seq[3:]
+    if hdr_tag == 'stop_codon':
+        codon = target_seq[-3:]
+        assert codon in ['TAG', 'TGA', 'TAA']
+        return target_seq[:-3] + hdr_seq.lower() + codon
+    else:
+        codon = target_seq[0:3]
+        assert codon in ['ATG']
+        return codon + hdr_seq.lower() + target_seq[3:]
 
 
 def get_hdr_primer(primer_product: str, hdr_template: str, hdr_tag: str = 'start_codon') -> str:
     """
     Locates target codon in primer product then inserts HDR sequence.
-    >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'NNN')
-    'ATGNNNTCCCAGCCGGGAAT'
+    >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'ATGnnn')
+    'ATGnnnTCCCAGCCGGGAAT'
+    >>> get_hdr_primer('AACAAGTGAATAAATGA', 'nnnTGA', 'stop_codon')
+    'AACAAGTGAATAAAnnnTGA'
     """
     validate_seq(primer_product)
     validate_seq(hdr_template)
-    # TODO (gdingle): stop_codon
-    assert hdr_tag == 'start_codon', 'stop_codon not implemented'
-    codon_index = primer_product.find('ATG')
-    if codon_index == -1:
-        # TODO (gdingle): good return value?
-        return 'start_codon not found'
-    assert primer_product[codon_index:codon_index + 3] == 'ATG'
-    assert hdr_template[0:3] == 'ATG'
-    hdr_seq = hdr_template[3:].lower()
+    assert hdr_tag in ('start_codon', 'stop_codon')
+    if hdr_tag == 'start_codon':
+        assert hdr_template[0:3] == 'ATG'
+        codon_index = primer_product.find('ATG')
+        if codon_index == -1:
+            # TODO (gdingle): good return value?
+            return 'start_codon not found'
+        assert primer_product[codon_index:codon_index + 3] == 'ATG'
+        hdr_seq = hdr_template[3:].lower()
+    # TODO (gdingle): this is really uglly and should be refactored.
+    elif hdr_tag == 'stop_codon':
+        stop_codons = ['TAG', 'TGA', 'TAA']
+        assert hdr_template[-3:] in stop_codons, hdr_template
+        stops = [primer_product.rfind(stop) for stop in stop_codons]
+        if all(s == -1 for s in stops):
+            return 'stop_codon not found'
+        # TODO (gdingle): is this biologically correct?
+        codon_index = max(stops)
+        assert primer_product[codon_index:codon_index + 3] in stop_codons
+        hdr_seq = hdr_template[:-3].lower()
+
     return primer_product[:codon_index] + \
-        get_hdr_template(primer_product[codon_index:], hdr_seq)
+        get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
 
 
 def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
@@ -311,7 +330,7 @@ def mutate_guide_seq(guide_seq: str) -> str:
     Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
 
     >>> mutate_guide_seq('TGTTGCGATGAC')
-    TGCTGTGACGAT
+    'tgctgtgacgat'
     """
     synonymous = {
         # TODO (gdingle): comment out rare codons

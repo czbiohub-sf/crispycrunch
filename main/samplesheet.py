@@ -91,7 +91,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # TODO (gdingle): put into unit test
     if guide_design.hdr_seq:
-        sheet = _set_hdr_cols(sheet, guide_design.hdr_seq)
+        sheet = _set_hdr_cols(sheet, guide_design.hdr_seq, guide_design.hdr_tag),
 
     # TODO (gdingle): is this really the best unique name?
     # Example: "hg38:chr2:136116735-136116754:-"
@@ -369,7 +369,7 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     return temp_sheet.to_dict(orient='records')
 
 
-def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
+def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
@@ -383,6 +383,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str) -> DataFrame:
         lambda row: get_hdr_template(
             row['target_seq'],
             hdr_seq,
+            hdr_tag,
         ),
         axis=1,
     )
