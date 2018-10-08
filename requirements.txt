@@ -1,7 +1,9 @@
-Django>=2
 beautifulsoup4
+Bio
 boto3
 django-bootstrap4
+Django>=2
+httmock
 openpyxl
 pandas
 psycopg2-binary
@@ -9,4 +11,3 @@ requests
 requests_cache
 sample_sheet
 xlrd
-httmock
