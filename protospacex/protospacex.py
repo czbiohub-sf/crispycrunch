@@ -189,13 +189,13 @@ def get_cds_seq(
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
-    >>> get_cds_seq('ENST00000398844')
+    >>> get_cds_seq('ENST00000398844')[:40]
     'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAG'
 
-    >>> get_cds_seq('ENST00000398844', -1)
+    >>> get_cds_seq('ENST00000398844', -1)[:40]
     'GGATGAGAGTCCAATGAAAGCAAACTTCCTTCAAAACATG'
 
-    >>> get_cds_seq('ENST00000411809')
+    >>> get_cds_seq('ENST00000411809')[:40]
     'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAG'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
