@@ -180,18 +180,11 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
 def get_cds_seq(
         ensembl_transcript_id: str,
-        cds_index: int = 0,
-        max_length: int = 40,
-        min_length: int = 30) -> str:
+        cds_index: int = 0) -> str:
     """
     Convience function to return base pair sequence of a codon.
 
     The codon may the start or stop codon or other depending on cds_index.
-
-    max_length trims the codon to the first max_length base pairs, useful for
-    targeting HDR.
-
-    min_length extends the return seq past the CDS to ensure some PAMs are available.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
@@ -204,26 +197,15 @@ def get_cds_seq(
 
     >>> get_cds_seq('ENST00000411809')
     'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAG'
-
-    Min length.
-
-    >>> get_cds_seq('ENST00000221801')
-    'ATGAAGCCAGGTCAGGCTGGGGTGAGGGTC'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
     location = cds[cds_index].location
-    # enforce min length
-    if location.end - location.start < min_length:
-        location = FeatureLocation(
-            location.start,
-            location.start + min_length,
-            location.strand)
-    start_cds_seq = location.extract(record).seq
-    assert len(start_cds_seq)
+    cds_seq = location.extract(record).seq
+    assert len(cds_seq)
 
-    return str(start_cds_seq)[:max_length]
+    return str(cds_seq)
 
 
 def get_cds_chr_loc(
@@ -236,10 +218,11 @@ def get_cds_chr_loc(
 
     The codon may the start or stop codon or other depending on cds_index.
 
-    max_length trims the codon to the first max_length base pairs, useful for
-    targeting HDR.
+    max_length truncates the codon to the first max_length base pairs.
 
-    min_length extends the return seq past the CDS to ensure some PAMs are available.
+    min_length extends the return seq past the CDS.
+
+    If stop codon, the start is adjusted, if start codon, the end is adjusted.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
@@ -255,6 +238,9 @@ def get_cds_chr_loc(
     >>> get_cds_chr_loc('ENST00000221801', max_length=999, min_length=30)
     'chr19:39834572-39834601'
 
+    >>> get_cds_chr_loc('ENST00000398844', -1, 100, 100)
+    'chr5:134724995-134725094'
+
     Get last codon.
 
     >>> get_cds_chr_loc('ENST00000398844', -1, 999)
@@ -263,13 +249,18 @@ def get_cds_chr_loc(
     >>> get_cds_chr_loc('ENST00000411809', -1, 999)
     'chr5:157857472-157857818'
 
+    Min length, last codon.
+
     >>> get_cds_chr_loc('ENST00000221801', -1, 999, min_length=30)
-    'chr19:39846310-39846339'
+    'chr19:39846305-39846334'
 
     Max length.
 
     >>> get_cds_chr_loc('ENST00000398844')
     'chr5:134649077-134649116'
+
+    >>> get_cds_chr_loc('ENST00000398844', -1)
+    'chr5:134725055-134725094'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -300,11 +291,14 @@ def get_cds_chr_loc(
     end = sequence_left + cds_location.end
     assert end - start == len(cds_seq)
 
-    # enforce max_length
-    end = min(end, start + max_length)
-
-    # enforce min_length
-    end = max(end, start + min_length)
+    # enforce max_length and min_length
+    assert max_length >= min_length
+    if cds_index == -1:  # stop codon
+        start = max(start, end - max_length)
+        start = min(start, end - min_length)
+    else:
+        end = min(end, start + max_length)
+        end = max(end, start + min_length)
 
     return 'chr{}:{}-{}'.format(
         chromosome_number,
@@ -319,5 +313,7 @@ if __name__ == '__main__':
 
     # import requests_cache
     # requests_cache.install_cache()
-    # s = get_cds_chr_loc('ENST00000221801')
+    # s = get_cds_chr_loc('ENST00000221801', -1, 999, 0)
+    # print(s)
+    # s = get_cds_seq('ENST00000221801', -1)
     # print(s)

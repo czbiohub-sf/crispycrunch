@@ -130,16 +130,16 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
-        if cds_index is not None:
-            assert all(is_ensemble_transcript(t) for t in targets)
-            func = functools.partial(
-                get_cds_seq,
-                cds_index=cds_index)
-        else:
-            func = functools.partial(
-                conversions.chr_loc_to_seq,
-                genome=genome)
+        # TODO (gdingle): any point to getting seq by transcript ID?
+        # if not, then remove get_cds_seq
+        # if cds_index is not None:
+        #     func = functools.partial(
+        #         get_cds_seq,
+        #         cds_index=cds_index)
 
+        func = functools.partial(
+            conversions.chr_loc_to_seq,
+            genome=genome)
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(func, targets))
 
@@ -158,7 +158,6 @@ class GuideDesignView(CreatePlusView):
             obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
 
         obj.targets = self._normalize_targets(obj.targets, obj.genome, obj.cds_index)
-        assert False, obj.targets
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome, obj.cds_index)
 
@@ -206,8 +205,8 @@ class GuideSelectionView(CreatePlusView):
 
         if by == 'distance':
             guide_seqs = dict(g for g in guide_seqs.items()
-                              # TODO (gdingle): is 50 a good cut-off?
-                              if scores.get(g[0], 0) > 50)
+                              # TODO (gdingle): is 30 (yellow) a good cut-off?
+                              if scores.get(g[0], 0) > 30)
 
         def func(t):
             if by == 'score':
