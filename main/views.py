@@ -103,15 +103,14 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): gggenome all seqs
             return targets
 
-        if all(is_ensemble_transcript(t) for t in targets):
+        if cds_index is not None:
+            assert all(is_ensemble_transcript(t) for t in targets)
             # TODO (gdingle): assert ENST is for correct genome
-            # TODO (gdingle): specify which codon... and allow custom insert offset by codon
-            # TODO (gdingle): specify insert in last codon, right before stop codon
             func = functools.partial(
                 get_cds_chr_loc,
                 cds_index=cds_index)
-        elif all(is_gene(t) for t in targets):
-            # TODO (gdingle): this still needs some work to get best region of gene
+        elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
+            # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
                 conversions.gene_to_chr_loc,
                 genome=genome)
@@ -131,7 +130,8 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
-        if all(is_ensemble_transcript(t) for t in targets):
+        if cds_index is not None:
+            assert all(is_ensemble_transcript(t) for t in targets)
             func = functools.partial(
                 get_cds_seq,
                 cds_index=cds_index)
@@ -143,6 +143,7 @@ class GuideDesignView(CreatePlusView):
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(func, targets))
 
+        assert all(is_seq(t) for t in seqs)
         return seqs
 
     def plus(self, obj):
@@ -157,6 +158,7 @@ class GuideDesignView(CreatePlusView):
             obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
 
         obj.targets = self._normalize_targets(obj.targets, obj.genome, obj.cds_index)
+        assert False, obj.targets
 
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome, obj.cds_index)
 

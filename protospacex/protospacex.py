@@ -181,7 +181,8 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 def get_cds_seq(
         ensembl_transcript_id: str,
         cds_index: int = 0,
-        max_length: int = 40) -> str:
+        max_length: int = 40,
+        min_length: int = 30) -> str:
     """
     Convience function to return base pair sequence of a codon.
 
@@ -189,6 +190,8 @@ def get_cds_seq(
 
     max_length trims the codon to the first max_length base pairs, useful for
     targeting HDR.
+
+    min_length extends the return seq past the CDS to ensure some PAMs are available.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
@@ -202,21 +205,32 @@ def get_cds_seq(
     >>> get_cds_seq('ENST00000411809')
     'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAG'
 
+    Min length.
+
     >>> get_cds_seq('ENST00000221801')
-    'ATGAAGCCAG'
+    'ATGAAGCCAGGTCAGGCTGGGGTGAGGGTC'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
-    start_codon_seq = cds[cds_index].location.extract(record).seq
-    assert len(start_codon_seq)
-    return str(start_codon_seq)[:max_length]
+    location = cds[cds_index].location
+    # enforce min length
+    if location.end - location.start < min_length:
+        location = FeatureLocation(
+            location.start,
+            location.start + min_length,
+            location.strand)
+    start_cds_seq = location.extract(record).seq
+    assert len(start_cds_seq)
+
+    return str(start_cds_seq)[:max_length]
 
 
 def get_cds_chr_loc(
         ensembl_transcript_id: str,
         cds_index: int = 0,
-        max_length: int = 40) -> str:
+        max_length: int = 40,
+        min_length: int = 30) -> str:
     """
     Convience function to return genome region of codon.
 
@@ -224,6 +238,8 @@ def get_cds_chr_loc(
 
     max_length trims the codon to the first max_length base pairs, useful for
     targeting HDR.
+
+    min_length extends the return seq past the CDS to ensure some PAMs are available.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
@@ -234,8 +250,10 @@ def get_cds_chr_loc(
     >>> get_cds_chr_loc('ENST00000411809', max_length=999)
     'chr5:157786494-157786534'
 
-    >>> get_cds_chr_loc('ENST00000221801', max_length=999)
-    'chr19:39834572-39834581'
+    Min length.
+
+    >>> get_cds_chr_loc('ENST00000221801', max_length=999, min_length=30)
+    'chr19:39834572-39834601'
 
     Get last codon.
 
@@ -245,8 +263,8 @@ def get_cds_chr_loc(
     >>> get_cds_chr_loc('ENST00000411809', -1, 999)
     'chr5:157857472-157857818'
 
-    >>> get_cds_chr_loc('ENST00000221801', -1, 999)
-    'chr19:39846310-39846334'
+    >>> get_cds_chr_loc('ENST00000221801', -1, 999, min_length=30)
+    'chr19:39846310-39846339'
 
     Max length.
 
@@ -256,37 +274,37 @@ def get_cds_chr_loc(
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
-    codon_location = cds[cds_index].location
-    codon_seq = cds[cds_index].location.extract(record).seq
-    # TODO (gdingle): why isn't codon_seq divisible by 3?
-    # assert len(codon_seq) % 3 == 0, len(codon_seq)
+    cds_location = cds[cds_index].location
+    cds_seq = cds[cds_index].location.extract(record).seq
+    # TODO (gdingle): why isn't cds_seq divisible by 3?
+    # assert len(cds_seq) % 3 == 0, len(cds_seq)
     if cds_index == 0:
         # start codon
-        assert codon_seq[0:3] == 'ATG', codon_seq
+        assert cds_seq[0:3] == 'ATG', cds_seq
     elif cds_index == -1:
         # stop codon
-        assert codon_seq[-3:] in ('TAG', 'TGA', 'TAA'), codon_seq
+        assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
 
     species = record.annotations['reference_species']
     chromosome_number = record.annotations['reference_chromosome_number']
     sequence_left = record.annotations['reference_left_index']
 
     # Transcript of reverse strand is translated above.
-    assert codon_location.strand == 1
+    assert cds_location.strand == 1
     assert species == 'GRCh38'
 
     # TODO (gdingle): exon junctions
     # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
 
-    start = sequence_left + codon_location.start
-    end = sequence_left + codon_location.end
-    assert end - start == len(codon_seq)
+    start = sequence_left + cds_location.start
+    end = sequence_left + cds_location.end
+    assert end - start == len(cds_seq)
 
     # enforce max_length
     end = min(end, start + max_length)
 
-    # TODO (gdingle): figure out solution for short cds. Jason Li says:
-    # The target region doesnt need to be majority cds. In this case, if we were going for a window of 50 bp total, it would be the 22nt region before ATG, AAGCCA, and the 19nt region that come after. Most of this region will be either intron or 5’UTR, but that’s totally fine
+    # enforce min_length
+    end = max(end, start + min_length)
 
     return 'chr{}:{}-{}'.format(
         chromosome_number,
@@ -298,3 +316,8 @@ def get_cds_chr_loc(
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+
+    # import requests_cache
+    # requests_cache.install_cache()
+    # s = get_cds_chr_loc('ENST00000221801')
+    # print(s)

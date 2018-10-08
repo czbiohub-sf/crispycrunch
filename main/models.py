@@ -238,6 +238,8 @@ class GuideDesign(BaseModel):
 
     @property
     def cds_index(self):
+        if not self.hdr_seq:
+            return None
         if self.hdr_tag == 'start_codon':
             return 0
         elif self.hdr_tag == 'stop_codon':
