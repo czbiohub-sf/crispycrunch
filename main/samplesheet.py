@@ -59,7 +59,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
+    sheet['target_loc'] = [ChrLoc(g[0] + ':' + g[1][-1]) for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -72,13 +72,13 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     # See http://crispor.tefor.net/manual/.
     # DEFINITION: number of chars before the first char of NGG PAM
     sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
-    sheet['guide_direction'] = [g[1][-1] for g in guides]
+    sheet['_guide_direction'] = [g[1][-1] for g in guides]
 
     # TODO (gdingle): use this in test somehow
     # Does not include PAM, always +3 of guide_offset
     # sheet['guide_offset2'] = sheet.apply(
     #     lambda row: row['target_seq'].find(
-    #         row['guide_seq'] if row['guide_direction'] == '+' else reverse_complement(row['guide_seq'])),
+    #         row['guide_seq'] if row['_guide_direction'] == '+' else reverse_complement(row['guide_seq'])),
     #     axis=1,
     # )
 
@@ -87,7 +87,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
         lambda row: get_guide_loc(
             row['target_loc'],
             row['guide_offset'],
-            len(row['guide_seq'])),
+            len(row['guide_seq']),
+            row['_guide_direction']),
         axis=1,
     )
 
@@ -104,7 +105,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     #     lambda row: '{}:{}:{}'.format(
     #         row['target_genome'],
     #         row['guide_loc'],
-    #         row['guide_direction']),
+    #         row['_guide_direction']),
     #     axis=1,
     # )
 
@@ -187,7 +188,7 @@ def _transform_primer_product(row) -> str:
     if 'N' not in row['primer_product']:
         return row['primer_product']
 
-    if row['guide_direction'] == '+':
+    if row['_guide_direction'] == '+':
         guide_seq = row['guide_seq']
     else:
         guide_seq = reverse_complement(row['guide_seq'])
@@ -306,7 +307,7 @@ def _new_samplesheet() -> DataFrame:
             'guide_offset',
             'guide_offset2',
             'guide_loc',
-            'guide_direction',
+            '_guide_direction',
             'guide_seq',
             'guide_pam',
             'guide_score',
@@ -382,6 +383,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
             row['guide_loc'],
+            hdr_tag,
         ),
         axis=1,
     )

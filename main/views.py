@@ -369,8 +369,8 @@ class ExperimentSummaryView(View):
         # TODO (gdingle): download csv
 
         # max length to show of table cell values
-        # 25 is optimized for laptop screen
-        show = request.GET.get('show', 25)
+        # 26 is optimized for laptop screen and chr loc
+        show = request.GET.get('show', 26)
 
         return render(request, self.template_name, locals())
 
