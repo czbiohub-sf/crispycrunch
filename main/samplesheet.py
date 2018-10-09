@@ -388,7 +388,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
         axis=1,
     )
     sheet['hdr_template'] = sheet.apply(
-        # TODO (gdingle): do reverse complement of hdr_seq if negative strand
+        # TODO (gdingle): do reverse complement of hdr_seq if guide is negative strand after construction
         # TODO (gdingle): what's the max length of the template? is it the full cds?
         lambda row: get_hdr_template(
             row['target_seq'],

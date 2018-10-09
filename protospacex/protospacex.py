@@ -238,6 +238,12 @@ def get_cds_chr_loc(
         ensembl_transcript_id: str,
         cds_index: int = 0,
         max_length: int = 40,
+        # TODO (gdingle): consider lowering to min required by Crispor
+        # or skip the next one or two codons
+        # or warn or filter out in _top_guides
+
+        # TODO (gdingle): for cds_index -1, we don't care about cutting
+        # into non-coding region of tail of gene, so expand always max_length/2=20 on both sides
         min_length: int = 30) -> str:
     """
     Convience function to return genome region of codon.

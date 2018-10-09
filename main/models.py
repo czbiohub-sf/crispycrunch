@@ -200,14 +200,13 @@ class GuideDesign(BaseModel):
     }
     HDR_TAG_TERMINUSES = [
         # 40bp is encoded in protospacex
-        ('start_codon', 'Within 40bp of Start Codon'),
-        ('stop_codon', 'Within 40bp of Stop Codon')
-        # TODO (gdingle): more codons? second, third?
+        ('start_codon', 'Within 40bp after start codon'),
+        ('stop_codon', 'Within 20bp before or after the stop codon')
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
-        'start_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
-        # TODO (gdingle): hdr seq should be different for stop codon
-        'stop_codon': 'CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
+        # TODO (gdingle): if negative guide, do reverse complement
+        'start_codon': 'ACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATGGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
+        'stop_codon': 'GGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGTACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATG',
     }
 
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
