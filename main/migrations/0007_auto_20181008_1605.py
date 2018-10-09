@@ -3,7 +3,7 @@
 import django.contrib.postgres.fields
 import django.core.validators
 from django.db import migrations, models
-import main.validators
+from lib import validators
 
 
 class Migration(migrations.Migration):
@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='guidedesign',
             name='targets_raw',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[main.validators.validate_chr_or_seq_or_enst_or_gene]), default=[
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[validators.validate_chr_or_seq_or_enst_or_gene]), default=[
             ], help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.', size=None),
             preserve_default=False,
         ),
@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
             model_name='guidedesign',
             name='targets',
             field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(
-                blank=True, max_length=80, validators=[main.validators.validate_chr]), size=None),
+                blank=True, max_length=80, validators=[validators.validate_chr]), size=None),
         ),
         migrations.AlterField(
             model_name='primerdesign',

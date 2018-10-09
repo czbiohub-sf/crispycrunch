@@ -34,11 +34,11 @@ from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
 from protospacex import get_cds_chr_loc, get_cds_seq
 
-from main import conversions
+from lib import conversions
 from main import samplesheet
 from main.forms import *
 from main.models import *
-from main.validators import is_ensemble_transcript
+from lib.validators import is_ensemble_transcript
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
@@ -73,6 +73,8 @@ class CreatePlusView(CreateView):
     See https://github.com/django/django/blob/master/django/views/generic/edit.py.
     """
 
+    # TODO (gdingle): handle exceptions here to form
+    # see form_invalid, non_field_errors, https://docs.djangoproject.com/en/2.1/topics/class-based-views/generic-editing/
     def form_valid(self, form: ModelForm) -> HttpResponse:
         obj = form.save(commit=False)
         obj = self.plus(obj)
@@ -120,9 +122,6 @@ class GuideDesignView(CreatePlusView):
         with ThreadPoolExecutor() as pool:
             normalized = list(pool.map(func, targets))
 
-        # TODO (gdingle): make these errors show in form
-        assert all(is_chr(t) for t in normalized)
-        assert all(validate_chr_length(t) or True for t in normalized)  # type: ignore
         return normalized
 
     def _get_target_seqs(self, targets, genome, cds_index):

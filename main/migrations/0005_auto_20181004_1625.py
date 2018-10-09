@@ -3,11 +3,13 @@
 import django.contrib.postgres.fields
 import django.contrib.postgres.fields.jsonb
 import django.core.validators
-from django.db import migrations, models
 import django.db.models.deletion
 import functools
 import main.models
-import main.validators
+
+from lib import validators
+
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -58,12 +60,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='guidedesign',
             name='hdr_seq',
-            field=models.CharField(blank=True, help_text='Sequence for Homology Directed Repair', max_length=65536, validators=[main.validators.validate_seq]),
+            field=models.CharField(blank=True, help_text='Sequence for Homology Directed Repair', max_length=65536, validators=[validators.validate_seq]),
         ),
         migrations.AlterField(
             model_name='guidedesign',
             name='targets',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[main.validators.validate_chr_or_seq_or_enst_or_gene]), help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.', size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[validators.validate_chr_or_seq_or_enst_or_gene]), help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.', size=None),
         ),
         migrations.AlterField(
             model_name='guideselection',
@@ -73,7 +75,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='guideselection',
             name='selected_guides',
-            field=django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Guides returned by Crispor', validators=[functools.partial(main.validators.validate_num_wells, *(), **{'max': 192}), main.models.GuideSelection._validate_selected_guides]),
+            field=django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Guides returned by Crispor', validators=[functools.partial(validators.validate_num_wells, *(), **{'max': 192}), main.models.GuideSelection._validate_selected_guides]),
         ),
         migrations.AlterField(
             model_name='primerdesign',

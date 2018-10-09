@@ -2,11 +2,12 @@
 
 import django.contrib.postgres.fields
 import django.contrib.postgres.fields.jsonb
-from django.db import migrations, models
 import django.db.models.deletion
 import functools
 import main.models
-import main.validators
+from lib import validators
+
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -25,8 +26,10 @@ class Migration(migrations.Migration):
                 ('update_time', models.DateTimeField(auto_now=True)),
                 ('s3_bucket', models.CharField(default='jasonli-bucket', max_length=80)),
                 ('s3_prefix', models.CharField(default='JasonHDR/96wp1sorted-fastq/', max_length=160)),
-                ('results_data', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=list, help_text='Data returned by external service')),
-                ('fastqs', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=160, validators=[main.validators.validate_fastq]), blank=True, default=[], size=None)),
+                ('results_data', django.contrib.postgres.fields.jsonb.JSONField(
+                    blank=True, default=list, help_text='Data returned by external service')),
+                ('fastqs', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(
+                    max_length=160, validators=[validators.validate_fastq]), blank=True, default=[], size=None)),
             ],
             options={
                 'ordering': ['-id'],
@@ -53,13 +56,20 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('create_time', models.DateTimeField(auto_now_add=True)),
                 ('update_time', models.DateTimeField(auto_now=True)),
-                ('genome', models.CharField(choices=[('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38) + SNPs: dbSNP148, Kaviar'), ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'), ('todo', 'TODO: more genomes')], default='hg38', max_length=80)),
-                ('pam', models.CharField(choices=[('NGG', '20bp-NGG - SpCas9, SpCas9-HF1, eSpCas9 1.1'), ('todo', 'TODO: more pams')], default='NGG', max_length=80)),
-                ('targets', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[main.validators.validate_chr_or_seq_or_enst_or_gene]), default=['chr2:38377424-38377154', 'chr11:63671469-63671209', 'chrX:153701090-153700826', 'chr14:75657605-75657356', 'chr14:75651723-75651474', 'chr14:23097577-23097833', 'chr14:23097913-23098179', 'chr15:67521137-67521414', 'chr15:67526436-67526700', 'chr18:35972616-35972885', 'chr18:35978838-35979107', 'chr19:1275474-1275724', 'chr19:1277214-1277466', 'chr19:12734747-12734478', 'chr19:12731088-12730836', 'chr19:13774309-13774571', 'chr19:13778035-13778297', 'chr1:53220731-53220476', 'chr1:53214782-53214523', 'chr21:32612372-32612122', 'chr21:32602012-32601760', 'chr7:1127479-1127213', 'chr7:997743-997489', 'chr7:135662408-135662673', 'chr7:135674007-135674269', 'chr8:145052416-145052678', 'chr8:145054080-145054341', 'chr8:85217669-85217405', 'chr8:85214648-85214399', 'chr9:128160324-128160593', 'chr9:128163437-128163702', 'chr9:27567241-27566981', 'chr12:55728446-55728192', 'chr11:2377415-2377673', 'chr12:6200379-6200636', 'chr9:36190899-36191152', 'chr5:176416500-176416251', 'chr17:59693711-59693960', 'chr5:75379451-75379177', 'chr12:56128228-56128494', 'chr6:29945285-29945542', 'chr1:11258733-11258474', 'chr2:189771869-189771618', 'chr12:55820298-55820562', 'chr17:39922679-39922414', 'chr11:59615837-59615570', 'chr3:125594954-125594704', 'chr12:76487706-76487443', 'chr2:26034454-26034708', 'chr15:65869483-65869736', 'chr19:8390321-8390591', 'chr18:8609599-8609871', 'chr1:153986315-153986059', 'chr9:121193525-121193263', 'chr10:27504201-27504465', 'chr2:65130095-65129826', 'chr11:66268524-66268773', 'chr12:71754963-71755230', 'chr6:57210557-57210282', 'chr5:177303410-177303154', 'chr4:13484255-13483981', 'chr1:205775137-205774862', 'chr8:60517056-60517321', 'chr14:21477037-21476777', 'chr6:146543708-146543974', 'chr4:139454092-139454365', 'chr12:120116726-120116450', 'chr19:11337504-11337255', 'chr1:220272500-220272247', 'chr17:82698775-82698506', 'chr16:590214-590472', 'chr3:19950819-19951070', 'chr12:55986864-55987121', 'chr3:133895614-133895363', 'chr3:128795279-128795541', 'chr15:63189444-63189718', 'chrX:13708616-13708872', 'chr19:41959464-41959204', 'chr17:5282310-5282588', 'chr9:125202921-125203181', 'chr9:122956944-122957210', 'chr1:174219010-174219265', 'chr14:24271200-24270935', 'chr1:75786089-75786358', 'chr1:202889173-202888904', 'chr3:120742674-120742415', 'chr7:151519582-151519312', 'chr2:55050468-55050218', 'chr3:45703309-45703572', 'chr9:99222443-99222712', 'chr4:89726729-89726465', 'chr9:92032579-92032330', 'chr14:34462280-34462021', 'chr18:9914152-9914417', 'chr20:58389364-58389613'], help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.', size=None)),
-                ('target_seqs', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[main.validators.validate_seq]), blank=True, default=[], size=None)),
-                ('hdr_seq', models.CharField(blank=True, default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt', help_text='Sequence for Homology Directed Repair', max_length=65536, validators=[main.validators.validate_chr_or_seq_or_enst_or_gene])),
-                ('guide_data', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=list, help_text='Data returned by external service')),
-                ('donor_data', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=list, help_text='Data returned by external service')),
+                ('genome', models.CharField(choices=[('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38) + SNPs: dbSNP148, Kaviar'), ('hg19',
+                                                                                                                                                'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19) + SNPs: 1000Genomes, ExaC'), ('todo', 'TODO: more genomes')], default='hg38', max_length=80)),
+                ('pam', models.CharField(choices=[
+                 ('NGG', '20bp-NGG - SpCas9, SpCas9-HF1, eSpCas9 1.1'), ('todo', 'TODO: more pams')], default='NGG', max_length=80)),
+                ('targets', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(max_length=65536, validators=[validators.validate_chr_or_seq_or_enst_or_gene]), default=['chr2:38377424-38377154', 'chr11:63671469-63671209', 'chrX:153701090-153700826', 'chr14:75657605-75657356', 'chr14:75651723-75651474', 'chr14:23097577-23097833', 'chr14:23097913-23098179', 'chr15:67521137-67521414', 'chr15:67526436-67526700', 'chr18:35972616-35972885', 'chr18:35978838-35979107', 'chr19:1275474-1275724', 'chr19:1277214-1277466', 'chr19:12734747-12734478', 'chr19:12731088-12730836', 'chr19:13774309-13774571', 'chr19:13778035-13778297', 'chr1:53220731-53220476', 'chr1:53214782-53214523', 'chr21:32612372-32612122', 'chr21:32602012-32601760', 'chr7:1127479-1127213', 'chr7:997743-997489', 'chr7:135662408-135662673', 'chr7:135674007-135674269', 'chr8:145052416-145052678', 'chr8:145054080-145054341', 'chr8:85217669-85217405', 'chr8:85214648-85214399', 'chr9:128160324-128160593', 'chr9:128163437-128163702', 'chr9:27567241-27566981', 'chr12:55728446-55728192', 'chr11:2377415-2377673', 'chr12:6200379-6200636', 'chr9:36190899-36191152', 'chr5:176416500-176416251', 'chr17:59693711-59693960', 'chr5:75379451-75379177', 'chr12:56128228-56128494', 'chr6:29945285-29945542', 'chr1:11258733-11258474', 'chr2:189771869-189771618', 'chr12:55820298-55820562', 'chr17:39922679-39922414', 'chr11:59615837-59615570', 'chr3:125594954-125594704',
+                                                                                                                                                                                           'chr12:76487706-76487443', 'chr2:26034454-26034708', 'chr15:65869483-65869736', 'chr19:8390321-8390591', 'chr18:8609599-8609871', 'chr1:153986315-153986059', 'chr9:121193525-121193263', 'chr10:27504201-27504465', 'chr2:65130095-65129826', 'chr11:66268524-66268773', 'chr12:71754963-71755230', 'chr6:57210557-57210282', 'chr5:177303410-177303154', 'chr4:13484255-13483981', 'chr1:205775137-205774862', 'chr8:60517056-60517321', 'chr14:21477037-21476777', 'chr6:146543708-146543974', 'chr4:139454092-139454365', 'chr12:120116726-120116450', 'chr19:11337504-11337255', 'chr1:220272500-220272247', 'chr17:82698775-82698506', 'chr16:590214-590472', 'chr3:19950819-19951070', 'chr12:55986864-55987121', 'chr3:133895614-133895363', 'chr3:128795279-128795541', 'chr15:63189444-63189718', 'chrX:13708616-13708872', 'chr19:41959464-41959204', 'chr17:5282310-5282588', 'chr9:125202921-125203181', 'chr9:122956944-122957210', 'chr1:174219010-174219265', 'chr14:24271200-24270935', 'chr1:75786089-75786358', 'chr1:202889173-202888904', 'chr3:120742674-120742415', 'chr7:151519582-151519312', 'chr2:55050468-55050218', 'chr3:45703309-45703572', 'chr9:99222443-99222712', 'chr4:89726729-89726465', 'chr9:92032579-92032330', 'chr14:34462280-34462021', 'chr18:9914152-9914417', 'chr20:58389364-58389613'], help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.', size=None)),
+                ('target_seqs', django.contrib.postgres.fields.ArrayField(base_field=models.CharField(
+                    max_length=65536, validators=[validators.validate_seq]), blank=True, default=[], size=None)),
+                ('hdr_seq', models.CharField(blank=True, default='CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt',
+                                             help_text='Sequence for Homology Directed Repair', max_length=65536, validators=[validators.validate_chr_or_seq_or_enst_or_gene])),
+                ('guide_data', django.contrib.postgres.fields.jsonb.JSONField(
+                    blank=True, default=list, help_text='Data returned by external service')),
+                ('donor_data', django.contrib.postgres.fields.jsonb.JSONField(
+                    blank=True, default=list, help_text='Data returned by external service')),
                 ('experiment', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='main.Experiment')),
             ],
             options={
@@ -73,9 +83,12 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('create_time', models.DateTimeField(auto_now_add=True)),
                 ('update_time', models.DateTimeField(auto_now=True)),
-                ('selected_guides_tagin', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='sgRNAs from tagin.stembio.org')),
-                ('selected_guides', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Guides returned by Crispor, sorted by number of off-targets', validators=[main.validators.validate_num_wells, main.models.GuideSelection._validate_selected_guides])),
-                ('selected_donors', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='ssDNAs from tagin.stembio.org')),
+                ('selected_guides_tagin', django.contrib.postgres.fields.jsonb.JSONField(
+                    blank=True, default=dict, help_text='sgRNAs from tagin.stembio.org')),
+                ('selected_guides', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Guides returned by Crispor, sorted by number of off-targets',
+                                                                                   validators=[validators.validate_num_wells, main.models.GuideSelection._validate_selected_guides])),
+                ('selected_donors', django.contrib.postgres.fields.jsonb.JSONField(
+                    blank=True, default=dict, help_text='ssDNAs from tagin.stembio.org')),
                 ('guide_design', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='main.GuideDesign')),
             ],
             options={
@@ -91,7 +104,8 @@ class Migration(migrations.Migration):
                 ('update_time', models.DateTimeField(auto_now=True)),
                 ('primer_temp', models.IntegerField(default=60)),
                 ('max_amplicon_length', models.IntegerField(default=400)),
-                ('primer_data', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=list, help_text='Data returned by external service')),
+                ('primer_data', django.contrib.postgres.fields.jsonb.JSONField(
+                    blank=True, default=list, help_text='Data returned by external service')),
                 ('guide_selection', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='main.GuideSelection')),
             ],
             options={
@@ -105,7 +119,8 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('create_time', models.DateTimeField(auto_now_add=True)),
                 ('update_time', models.DateTimeField(auto_now=True)),
-                ('selected_primers', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Primers returned by Crispor, grouped by guide, forward primer then reverse primer', validators=[functools.partial(main.validators.validate_num_wells, *(), **{'max': 192}), main.models.PrimerSelection._validate_selected_primers])),
+                ('selected_primers', django.contrib.postgres.fields.jsonb.JSONField(blank=True, default=dict, help_text='Primers returned by Crispor, grouped by guide, forward primer then reverse primer',
+                                                                                    validators=[functools.partial(validators.validate_num_wells, *(), **{'max': 192}), main.models.PrimerSelection._validate_selected_primers])),
                 ('primer_design', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='main.PrimerDesign')),
             ],
             options={
@@ -140,6 +155,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='analysis',
             name='researcher',
-            field=models.ForeignKey(help_text='The researcher doing the analysis', on_delete=django.db.models.deletion.PROTECT, to='main.Researcher'),
+            field=models.ForeignKey(help_text='The researcher doing the analysis',
+                                    on_delete=django.db.models.deletion.PROTECT, to='main.Researcher'),
         ),
     ]

@@ -12,8 +12,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
-from main.chrloc import ChrLoc
-from main.validators import *
+from lib.chrloc import ChrLoc
+from lib.validators import *
 
 # TODO (gdingle): temp
 JASON_LI_EXAMPLE = [
@@ -133,23 +133,19 @@ class BaseModel(models.Model):
     update_time = models.DateTimeField(auto_now=True)
 
 
-class ChrLocField(models.Field):
+class ChrLocField(models.CharField):
     """
     Custom field for structuring 'chr7:5569177-5569415' strings.
     See https://docs.djangoproject.com/en/2.1/howto/custom-model-fields/#converting-values-to-python-objects
     """
 
-    # TODO (gdingle): is this needed?
-    # def value_to_string(value):
-    #     return str(value)
+    # TODO (gdingle): why isn't higher level value_to_string called when this is?
+    # see https://docs.djangoproject.com/en/2.1/_modules/django/contrib/postgres/fields/array/
+    def get_db_prep_value(self, value, connection, prepared):
+        return str(value)
 
-    def to_python(self, value):
-        if isinstance(value, ChrLoc):
-            return value
-        elif value is None:
-            return value
-        else:
-            return ChrLoc(value)
+    def from_db_value(self, item, expression, connection, context):
+        return ChrLoc(item)
 
 
 class Researcher(BaseModel):

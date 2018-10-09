@@ -16,9 +16,9 @@ from pandas import DataFrame
 
 from django.core.files.uploadedfile import UploadedFile
 
-from main import conversions
-from main.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
-from main.hdr import get_hdr_primer, get_hdr_template, mutate_guide_seq
+from lib import conversions
+from lib.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
+from lib.hdr import get_hdr_primer, get_hdr_template, mutate_guide_seq
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
 
 from crispresso.fastqs import reverse_complement
@@ -59,7 +59,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
+    sheet['target_loc'] = [g[0] for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -84,7 +84,10 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # TODO (gdingle): is this correct? off by one? reverse strand?
     sheet['guide_loc'] = sheet.apply(
-        lambda row: get_guide_loc(row['target_loc'], row['guide_offset'], len(row['guide_seq'])),
+        lambda row: get_guide_loc(
+            ChrLoc(row['target_loc']),
+            row['guide_offset'],
+            len(row['guide_seq'])),
         axis=1,
     )
 
@@ -120,7 +123,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     for guide_id, primer_pair in selected_primers.items():
         # TODO (gdingle): this is awkward... should we use well_name?
         target_loc, _crispor_pam_id = guide_id.split(' ')
-        mask1 = sheet['target_loc'] == ChrLoc(target_loc)
+        mask1 = sheet['target_loc'] == target_loc
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
         assert any(mask1) and any(mask2)
 

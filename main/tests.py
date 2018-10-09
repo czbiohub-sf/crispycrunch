@@ -2,7 +2,7 @@ import doctest
 
 from django.test import TestCase
 
-from main import conversions, validators
+from lib import conversions, validators
 
 from main.models import *
 from main.samplesheet import *
@@ -51,7 +51,6 @@ class SampleSheetTestCase(TestCase):
             hdr_seq='N' * 20,
         )
 
-
     # TODO (gdingle): use as tests
     # >>> start_codon_chr_loc('ENST00000398844')
     # 'chr5:134649077-134649174'
@@ -62,7 +61,6 @@ class SampleSheetTestCase(TestCase):
 
     # >>> start_codon_chr_loc('ENST00000221801')
     # 'chr19:39834572-39834582'
-
 
     # TODO (gdingle): move me back
     def test_set_hdr_cols(self):
