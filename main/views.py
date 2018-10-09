@@ -35,10 +35,10 @@ from crispresso.s3 import download_fastqs
 from protospacex import get_cds_chr_loc, get_cds_seq
 
 from lib import conversions
+from lib.validators import is_ensemble_transcript
 from main import samplesheet
 from main.forms import *
 from main.models import *
-from lib.validators import is_ensemble_transcript
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
@@ -107,7 +107,7 @@ class GuideDesignView(CreatePlusView):
 
         if cds_index is not None:
             assert all(is_ensemble_transcript(t) for t in targets)
-            # TODO (gdingle): assert ENST is for correct genome
+            assert genome == 'hg38', 'only implemented for hg38'
             func = functools.partial(
                 get_cds_chr_loc,
                 cds_index=cds_index)
@@ -130,10 +130,14 @@ class GuideDesignView(CreatePlusView):
             return targets
 
         # TODO (gdingle): investigate why get_cds_seq returns diff than chr_loc_to_seq
-        if cds_index is not None:
+        # and fix in case of ENST and no hdr_tag
+        if cds_index is not None:  # hdr
+            assert genome == 'hg38', 'only implemented for hg38'
             func = functools.partial(
                 get_cds_seq,
                 cds_index=cds_index)
+        elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
+            assert False, 'not implemented'
         else:
             func = functools.partial(
                 conversions.chr_loc_to_seq,
@@ -155,10 +159,16 @@ class GuideDesignView(CreatePlusView):
             # Although deterministic, store seq for history
             obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
 
-        obj.targets = self._normalize_targets(obj.targets_raw, obj.genome, obj.cds_index)
-
-        # TODO (gdingle): change me to targets from raw
-        obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome, obj.cds_index)
+        obj.targets = self._normalize_targets(
+            obj.targets_raw,
+            obj.genome,
+            obj.cds_index
+        )
+        obj.target_seqs = self._get_target_seqs(
+            obj.targets_raw,
+            obj.genome,
+            obj.cds_index
+        )
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
         pre_filter = obj.wells_per_target * 5  # 5 based on safe-harbor experiment
@@ -191,7 +201,15 @@ class GuideSelectionView(CreatePlusView):
     success_url = '/main/guide-selection/{id}/primer-design/'
 
     @staticmethod
-    def _slice(guide_data, top=3, by='distance'):
+    def _top_guides(guide_data, guide_design, min_score=30):
+        """
+        Select the top guides for further manual selection depending on a few
+        vars, such as HDR and wells_per_target.
+        """
+        by = 'distance' if guide_design.hdr_seq else 'score'
+        top = guide_design.wells_per_target
+        cds_index = guide_design.cds_index
+
         guide_seqs = guide_data['guide_seqs']
         if not guide_seqs or guide_seqs.get('not found'):
             return guide_seqs
@@ -205,7 +223,7 @@ class GuideSelectionView(CreatePlusView):
         if by == 'distance':
             guide_seqs = dict(g for g in guide_seqs.items()
                               # TODO (gdingle): is 30 (yellow) a good cut-off?
-                              if scores.get(g[0], 0) > 30)
+                              if scores.get(g[0], 0) > min_score)
 
         def func(t):
             if by == 'score':
@@ -215,7 +233,9 @@ class GuideSelectionView(CreatePlusView):
             # TODO (gdingle): weigh score somehow as well instead of filtering above?
             elif by == 'distance':
                 # s29+, s26+, etc
-                return int(t[0][1:-1])
+                # change dist depending on codon target
+                # TODO (gdingle): how to express guide offset when stop_codon?
+                return int(t[0][1:-1]) * cds_index or 1
 
         guide_seqs = sorted(
             guide_seqs.items(),
@@ -225,11 +245,9 @@ class GuideSelectionView(CreatePlusView):
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        sort_by = 'distance' if guide_design.hdr_seq else 'score'
         return {
             'selected_guides': dict(
-                (g['target'],
-                    self._slice(g, guide_design.wells_per_target, sort_by))
+                (g['target'], self._top_guides(g, guide_design))
                 for g in guide_design.guide_data),
         }
 

@@ -18,7 +18,7 @@ from django.core.files.uploadedfile import UploadedFile
 
 from lib import conversions
 from lib.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
-from lib.hdr import get_hdr_primer, get_hdr_template, mutate_guide_seq
+from lib.hdr import get_hdr_primer, get_hdr_template, mutate
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
 
 from crispresso.fastqs import reverse_complement
@@ -402,34 +402,11 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
     )
 
     # TODO (gdingle): move to hdr.py and write test cases
-    def _mutate(row):
-        # Only mutate if risk of rebinding
-        if not row['hdr_rebind']:
-            # TODO (gdingle): when replacing hdr_template
-            # return row['hdr_template']
-            return ''
-        hdr_template = row['hdr_template']
-        # Assumes always cut after first codon, as in get_hdr_template
-        assert hdr_template[3:].upper().startswith(hdr_seq.upper())
-        cut = 3 + len(hdr_seq) + row['hdr_dist']
-        # Align mutation region to nearest codon
-        assert len(hdr_seq) % 3 == 0
-        guide_right = cut - (cut % 3)
-        # A max of 17 contiguous bp in the protospacer may survive HDR,
-        # so we only touch 5 codons in that sequence
-        # TODO (gdingle): handle guides on reverse as well
-        assert len(row['guide_seq']) == 20
-        guide_left = guide_right - 15
-        new_hdr_template = (
-            hdr_template[:guide_left] +
-            mutate_guide_seq(hdr_template[guide_left:guide_right]) +
-            hdr_template[guide_right:]
-        )
-        assert len(new_hdr_template) == len(hdr_template)
-        return new_hdr_template
 
     # TODO (gdingle): override hdr_template when good enough
-    sheet['hdr_mutated'] = sheet.apply(_mutate, axis=1)
+    sheet['hdr_mutated'] = sheet.apply(
+        lambda row: mutate(row, hdr_seq) if row['hdr_rebind'] else '',
+        axis=1)
 
     return sheet
 

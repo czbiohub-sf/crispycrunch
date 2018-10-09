@@ -16,6 +16,13 @@ from lib.chrloc import ChrLoc
 from lib.validators import *
 
 # TODO (gdingle): temp
+ENST_EXAMPLE = [
+    'ENST00000221801',
+    'ENST00000411809',
+    'ENST00000398844',
+]
+
+# TODO (gdingle): temp
 JASON_LI_EXAMPLE = [
     'chr2:38377424-38377154',
     'chr11:63671469-63671209',
@@ -224,6 +231,7 @@ class GuideDesign(BaseModel):
         # default=['ATL2', 'ATL3'],
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
+        default=ENST_EXAMPLE,
     )
 
     targets = fields.ArrayField(
