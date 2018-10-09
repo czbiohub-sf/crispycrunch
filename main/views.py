@@ -129,16 +129,15 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
-        # TODO (gdingle): any point to getting seq by transcript ID?
-        # if not, then remove get_cds_seq
-        # if cds_index is not None:
-        #     func = functools.partial(
-        #         get_cds_seq,
-        #         cds_index=cds_index)
-
-        func = functools.partial(
-            conversions.chr_loc_to_seq,
-            genome=genome)
+        # TODO (gdingle): investigate why get_cds_seq returns diff than chr_loc_to_seq
+        if cds_index is not None:
+            func = functools.partial(
+                get_cds_seq,
+                cds_index=cds_index)
+        else:
+            func = functools.partial(
+                conversions.chr_loc_to_seq,
+                genome=genome)
         with ThreadPoolExecutor() as pool:
             seqs = list(pool.map(func, targets))
 

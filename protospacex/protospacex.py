@@ -180,7 +180,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
 def get_cds_seq(
         ensembl_transcript_id: str,
-        cds_index: int = 0) -> str:
+        cds_index: int = 0,
+        max_length: int = 40,
+        min_length: int = 30) -> str:
     """
     Convience function to return base pair sequence of a codon.
 
@@ -189,21 +191,45 @@ def get_cds_seq(
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
-    >>> get_cds_seq('ENST00000398844')[:40]
+    Start codon.
+
+    >>> get_cds_seq('ENST00000398844')
     'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAG'
 
-    >>> get_cds_seq('ENST00000398844', -1)[:40]
-    'GGATGAGAGTCCAATGAAAGCAAACTTCCTTCAAAACATG'
-
-    >>> get_cds_seq('ENST00000411809')[:40]
+    >>> get_cds_seq('ENST00000411809')
     'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAG'
+
+    Stop codon.
+
+    >>> get_cds_seq('ENST00000398844', -1)
+    'TGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGA'
+
+    >>> get_cds_seq('ENST00000411809', -1)
+    'GCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAA'
+
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
     location = cds[cds_index].location
-    cds_seq = location.extract(record).seq
-    assert len(cds_seq)
+
+    # enforce max_length and min_length
+    assert max_length >= min_length
+    start = location.start
+    end = location.end
+    if cds_index == -1:  # stop codon
+        start = max(start, end - max_length)
+        start = min(start, end - min_length)
+    elif cds_index == 0:  # start codon
+        end = min(end, start + max_length)
+        end = max(end, start + min_length)
+
+    cds_seq = record.seq[start:end]
+
+    if cds_index == 0:
+        assert cds_seq[0:3] == 'ATG'
+    elif cds_index == -1:
+        assert cds_seq[-3:] in ['TAG', 'TGA', 'TAA']
 
     return str(cds_seq)
 
@@ -267,7 +293,7 @@ def get_cds_chr_loc(
     assert len(cds)
     cds_location = cds[cds_index].location
     cds_seq = cds[cds_index].location.extract(record).seq
-    # TODO (gdingle): why isn't cds_seq divisible by 3?
+    # TODO (gdingle): why isn't cds_seq always divisible by 3?
     # assert len(cds_seq) % 3 == 0, len(cds_seq)
     if cds_index == 0:
         # start codon

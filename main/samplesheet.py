@@ -401,6 +401,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
         axis=1,
     )
 
+    # TODO (gdingle): move to hdr.py and write test cases
     def _mutate(row):
         # Only mutate if risk of rebinding
         if not row['hdr_rebind']:
