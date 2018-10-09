@@ -54,9 +54,9 @@ class GuideDesignForm(ModelForm):
     class Meta:
         model = GuideDesign
         fields = '__all__'
-        exclude = ['experiment', 'guide_data', 'target_seqs', 'hdr_seq']
+        exclude = ['experiment', 'guide_data', 'target_seqs', 'hdr_seq', 'targets']
         field_classes = {
-            'targets': NewlineArrayField,
+            'targets_raw': NewlineArrayField,
             'target_fastas': NewlineArrayField,
         }
 

@@ -157,8 +157,9 @@ class GuideDesignView(CreatePlusView):
             # Although deterministic, store seq for history
             obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
 
-        obj.targets = self._normalize_targets(obj.targets, obj.genome, obj.cds_index)
+        obj.targets = self._normalize_targets(obj.targets_raw, obj.genome, obj.cds_index)
 
+        # TODO (gdingle): change me to targets from raw
         obj.target_seqs = self._get_target_seqs(obj.targets, obj.genome, obj.cds_index)
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
@@ -263,8 +264,7 @@ class PrimerDesignView(CreatePlusView):
                   obj.amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
-                  # TODO (gdingle): is this the best way of identifying guides?
-                  row['target_loc'] + ' ' + row['_crispor_pam_id']]
+                  row['_crispor_guide_id']]
                  for row in sheet.to_records()]
         batch.start(largs, [-1])
 

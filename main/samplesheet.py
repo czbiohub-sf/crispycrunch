@@ -17,9 +17,9 @@ from pandas import DataFrame
 from django.core.files.uploadedfile import UploadedFile
 
 from main import conversions
-from main.models import *
-from main.validators import get_guide_loc, get_primer_loc, get_guide_cut_to_insert
-from main.hdr import mutate_guide_seq, get_hdr_template, get_hdr_primer
+from main.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
+from main.hdr import get_hdr_primer, get_hdr_template, mutate_guide_seq
+from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
 
 from crispresso.fastqs import reverse_complement
 
@@ -59,7 +59,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [g[0] for g in guides]
+    sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -107,7 +107,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     sheet['_crispor_batch_id'] = [g[3] for g in guides]
     sheet['_crispor_pam_id'] = [g[1] for g in guides]
-    # 'TODO_crispor_stats',
+    # TODO (gdingle): is this the best way of identifying guides?
+    sheet['_crispor_guide_id'] = [g[0] + ' ' + g[1] for g in guides]
 
     return sheet
 
@@ -116,11 +117,12 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     guide_selection = primer_selection.primer_design.guide_selection
     sheet = from_guide_selection(guide_selection)
     selected_primers = primer_selection.selected_primers
-    for primer_id, primer_pair in selected_primers.items():
+    for guide_id, primer_pair in selected_primers.items():
         # TODO (gdingle): this is awkward... should we use well_name?
-        target_loc, _crispor_pam_id = primer_id.split(' ')
-        mask1 = sheet['target_loc'] == target_loc
+        target_loc, _crispor_pam_id = guide_id.split(' ')
+        mask1 = sheet['target_loc'] == ChrLoc(target_loc)
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
+        assert any(mask1) and any(mask2)
 
         # TODO (gdingle): A value is trying to be set on a copy of a slice from a DataFrame
         # See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
@@ -130,6 +132,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
         sheet['primer_product'][mask1 & mask2] = primer_pair[0][1]
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
+    assert len(sheet)
     sheet.index = _new_index(size=len(sheet))
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
@@ -199,7 +202,7 @@ def _transform_primer_product(row) -> str:
         row['primer_product'],
         guide_seq,
         row['guide_loc'])
-    primer_product = conversions.chr_loc_to_seq(primer_loc, row['target_genome'])
+    primer_product = conversions.chr_loc_to_seq(str(primer_loc), row['target_genome'])
     return primer_product
 
 
@@ -306,6 +309,7 @@ def _new_samplesheet() -> DataFrame:
             'guide_score',
             '_crispor_batch_id',
             '_crispor_pam_id',
+            '_crispor_guide_id',
             # TODO (gdingle): donor or HDR?
             'hdr_dist',
             'hdr_template',

@@ -12,6 +12,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
+from main.chrloc import ChrLoc
 from main.validators import *
 
 # TODO (gdingle): temp
@@ -132,6 +133,25 @@ class BaseModel(models.Model):
     update_time = models.DateTimeField(auto_now=True)
 
 
+class ChrLocField(models.Field):
+    """
+    Custom field for structuring 'chr7:5569177-5569415' strings.
+    See https://docs.djangoproject.com/en/2.1/howto/custom-model-fields/#converting-values-to-python-objects
+    """
+
+    # TODO (gdingle): is this needed?
+    # def value_to_string(value):
+    #     return str(value)
+
+    def to_python(self, value):
+        if isinstance(value, ChrLoc):
+            return value
+        elif value is None:
+            return value
+        else:
+            return ChrLoc(value)
+
+
 class Researcher(BaseModel):
     first_name = models.CharField(max_length=40)
     last_name = models.CharField(max_length=40)
@@ -196,8 +216,9 @@ class GuideDesign(BaseModel):
         ('NGG', '20bp-NGG (SpCas9, SpCas9-HF1, eSpCas9, ...)'),
     ], default='NGG')
 
-    # TODO (gdingle): enforce must be ENST for HDR, explain ENST is always converted to forward strand
-    targets = fields.ArrayField(
+    # TODO (gdingle): enforce must be ENST for HDR,
+    # explain ENST is always converted to forward strand
+    targets_raw = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
         help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.',
@@ -207,6 +228,11 @@ class GuideDesign(BaseModel):
         # default=['ATL2', 'ATL3'],
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
+    )
+
+    targets = fields.ArrayField(
+        ChrLocField(max_length=80, validators=[validate_chr], blank=True),
+        # encoder
     )
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),

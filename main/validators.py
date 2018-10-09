@@ -1,8 +1,5 @@
 """
-Custom validators of crispycrunch specific types,
-plus some util functions that operate on those types.
-
-# TODO (gdingle): move util functions, or refactor all into objects
+Custom validators of specialized types.
 """
 
 import doctest
@@ -10,7 +7,7 @@ import re
 
 from django.core.exceptions import ValidationError
 
-# See also CHR_REGEX in conversions.py
+# See also CHR_REGEX in conversions.py and chrloc.py
 CHR_REGEX = r'^chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])$'
 # See https://www.genenames.org/about/guidelines
 # And see https://www.biostars.org/p/60118/ .
@@ -62,6 +59,8 @@ def is_seq(value: str) -> bool:
         return True
 
 
+
+# TODO (gdingle): refactor with ChrLoc
 def validate_chr(value: str) -> None:
     """
     >>> validate_chr('chr1:11,130,540-11,130,751')
@@ -82,6 +81,7 @@ def validate_chr(value: str) -> None:
         raise ValidationError('"{}" is not a chromosome location'.format(value))
 
 
+# TODO (gdingle): refactor with ChrLoc
 def validate_chr_length(value: str, max_length: int = 2000, min_length=23) -> None:
     """
     >>> validate_chr_length('chr1:11,130,540-11,130,751')
@@ -101,6 +101,7 @@ def validate_chr_length(value: str, max_length: int = 2000, min_length=23) -> No
     return None
 
 
+# TODO (gdingle): refactor with ChrLoc
 def is_chr(value: str) -> bool:
     """
     >>> is_chr('chr1:11,130,540-11,130,751')
@@ -189,76 +190,6 @@ def validate_num_wells(value: dict, max: int = 96) -> None:
     if total > max:
         raise ValidationError(
             '{} items do not fit in a 96-well plate'.format(total))
-
-
-def get_guide_loc(target_loc: str, guide_offset: int, guide_len=20) -> str:
-    """
-    # TODO (gdingle): is this actually correct def for guide_loc?
-    >>> get_guide_loc('chr7:5569177-5569415', 191)
-    'chr7:5569348-5569367'
-    """
-    validate_chr(target_loc)
-    matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
-    start = int(matches[1]) + guide_offset
-    # TODO (gdingle): is this correct for reverse guides?
-    # Guide goes backwards from pam, right to left
-    # Minus one, for length inclusive
-    return 'chr{}:{}-{}'.format(matches[0], start - guide_len, start - 1)
-
-
-def get_primer_loc(primer_product: str, guide_seq: str, guide_loc: str) -> str:
-    """
-    Returns the chr loc of a primer product seq based on the known position of
-    the guide within it.
-
-    >>> get_primer_loc('''TGCTGGCTGGCCATTTCTAAACTTCCATTTGAATTTAANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-    ... NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-    ... NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-    ... NNNNNNNNNNNNNNNNNNNNNNNTATTACTTTTGTCTTCTACTAGCCAAAAGAATGTCAACAGAAATCAGAACATAACAC
-    ... TAAGTAAGTTTAACATGTACTTTTATTAACAACTTAATACAAGACTGTACACTGTAGGTGCTGAAATCAACCCACTCCT''',
-    ... 'AATACAAGACTGTACACTGTAGG', 'chr2:136114380-136114402')
-    'chr2:136114025-136114423'
-    """
-    primer_product = primer_product.replace('\n', '')
-    # TODO (gdingle): time to start using seq objects? Biopython?
-    validate_seq(primer_product)
-    validate_seq(guide_seq)
-    validate_chr(guide_loc)
-    assert guide_seq in primer_product
-    chr_num, start, end = re.match(CHR_REGEX, guide_loc).groups()  # type: ignore
-    start, end = int(start), int(end)
-    assert end - start == len(guide_seq) - 1  # inclusive range
-
-    primer_start = start - primer_product.index(guide_seq)
-    primer_end = primer_start + len(primer_product) - 1
-    assert primer_end - primer_start <= 500, 'Primers should always be less than 500 bp for paired reads'
-    assert primer_end - primer_start == len(primer_product) - 1
-
-    return 'chr{}:{}-{}'.format(chr_num, primer_start, primer_end)
-
-
-def get_guide_cut_to_insert(target_loc: str, guide_loc: str) -> int:
-    """
-    Based on https://czi.quip.com/YbAhAbOV4aXi/
-
-    >>> get_guide_cut_to_insert('chr5:134649077-134649174', 'chr5:134649061-134649080')
-    -2
-    >>> get_guide_cut_to_insert('chr5:134649077-134649174', 'chr5:134649077-134649096')
-    14
-    """
-    validate_chr(target_loc)
-    validate_chr(guide_loc)
-    target_matches = re.match(CHR_REGEX, target_loc).groups()  # type: ignore
-    # insert location is assumed to be always one codon past start codon
-    insert_loc = int(target_matches[1]) + 3
-
-    guide_matches = re.match(CHR_REGEX, guide_loc).groups()  # type: ignore
-    # cut location is assumed to be always in between the 3rd and 4th nucleotide
-    # away from the PAM site
-    cut_loc = int(guide_matches[2]) - 3
-    # TODO (gdingle): is this correct for reverse guides?
-    # Plus one for inclusive range
-    return cut_loc - insert_loc + 1
 
 
 if __name__ == '__main__':
