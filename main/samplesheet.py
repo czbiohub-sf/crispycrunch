@@ -59,7 +59,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [g[0] for g in guides]
+    sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -85,7 +85,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     # TODO (gdingle): is this correct? off by one? reverse strand?
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
-            ChrLoc(row['target_loc']),
+            row['target_loc'],
             row['guide_offset'],
             len(row['guide_seq'])),
         axis=1,
