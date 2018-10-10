@@ -15,112 +15,120 @@ codon_stop is reversed operation of codon_start
 
 # TODO (gdingle): MIT score on mutation
 """
-# For doctest
-try:
-    from utils.validators import validate_seq
-except ImportError:
-    from validators import validate_seq  # type: ignore
+
+# TODO (gdingle): how to subclass str?
 
 
-def get_hdr_template(target_seq: str, hdr_seq: str, hdr_tag: str='start_codon') -> str:
-    """
-    Inserts HDR sequence in correct position in target sequence.
-    Based on https://czi.quip.com/YbAhAbOV4aXi/.
+class HDR:
 
-    >>> get_hdr_template('ATGTCCCAGCCGGGAAT', 'NNN')
-    'ATGnnnTCCCAGCCGGGAAT'
-    >>> get_hdr_template('TCCCAGCCGGGTGA', 'NNN', 'stop_codon')
-    'TCCCAGCCGGGnnnTGA'
-    """
+    def __init__(
+            self,
+            target_seq: str,
+            hdr_seq: str,
+            hdr_tag: str = 'start_codon',
+            hdr_dist: int = 0) -> None:
 
-    # TODO (gdingle): - [ ] need to create a Donor/hdr_template,  200bp, 90bp
-    # insert (hdr_seq), 55 bp on either side of homology arm around insertion
-    # point, needs to exist within primer product
+        assert len(target_seq)
+        self.target_seq = target_seq
+        assert len(hdr_seq)
+        self.hdr_seq = hdr_seq
 
-    validate_seq(target_seq)
-    validate_seq(hdr_seq)
-    if hdr_tag == 'stop_codon':
-        codon = target_seq[-3:]
-        assert codon in ['TAG', 'TGA', 'TAA']
-        return target_seq[0:-3] + hdr_seq.lower() + codon
-    else:
-        codon = target_seq[0:3]
-        assert codon in ['ATG']
-        return codon + hdr_seq.lower() + target_seq[3:]
+        assert hdr_tag in ('start_codon', 'stop_codon')
+        self.hdr_tag = hdr_tag
+        if hdr_tag == 'start_codon':
+            self.valid_codons = set(['ATG'])
+            self.insert_at = self._target_codon() + 3
+        else:
+            self.valid_codons = set(['TAG', 'TGA', 'TAA'])
+            self.insert_at = self._target_codon()
+        assert any(c in target_seq for c in self.valid_codons)
+
+        assert hdr_dist >= 0
+        self.hdr_dist = hdr_dist
+
+    def _target_codon(self) -> int:
+        for codon in self.valid_codons:
+            start = self.target_seq.find(codon)
+            if start >= 0:
+                return start
+        assert False
+
+    @property
+    def hdr_template(self) -> str:
+        return self._hdr_template(False)
+
+    @property
+    def hdr_template_mutated(self) -> str:
+        return self._hdr_template(True)
+
+    def _hdr_template(self, mutate: bool = False) -> str:
+        """
+        >>> HDR('ATGTCCCAGCCGGGAAT', 'NNN')._hdr_template()
+        'ATGnnnTCCCAGCCGGGAAT'
+        >>> HDR('TCCCAGCCGGGTGA', 'NNN', 'stop_codon')._hdr_template()
+        'TCCCAGCCGGGnnnTGA'
+        """
+        target_seq = self.mutated if mutate else self.target_seq
+        return (
+            target_seq[:self.insert_at] +
+            self.hdr_seq.lower() +
+            target_seq[self.insert_at:])
+
+    def _split_out_guide(self) -> tuple:
+        """
+        Based on example at https://czi.quip.com/YbAhAbOV4aXi/.
+
+        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
+        >>> hdr._split_out_guide()
+        ('', 'ATGGCTGAGCTGGAT', 'CCG', 'TTCGGC', '')
+        """
+        assert len(self.target_seq) >= 24, 'Need to include guide plus PAM'
+        # align to codons
+        last_codon = self.hdr_dist - (self.hdr_dist % 3)
+        mutate_to = self.insert_at + last_codon
+        # skip cut codon
+        after_cut = mutate_to + 3
+        # TODO (gdingle): need to align mutate_to with codons
+
+        # A max of 17 contiguous bp in the protospacer may survive HDR,
+        # so we only touch 5 codons in that sequence. 5 * 3 == 15.
+        # TODO (gdingle): stop_codons
+        assert self.hdr_tag == 'start_codon', 'not implemented'
+        if self.hdr_tag == 'start_codon':
+            return (
+                self.target_seq[:mutate_to - 15],
+                self.target_seq[mutate_to - 15:mutate_to],  # part before cut
+                self.target_seq[mutate_to:after_cut],
+                self.target_seq[after_cut:after_cut + 6],  # part after cut
+                self.target_seq[after_cut + 6:])
+        else:
+            return (
+                self.target_seq[:mutate_to],
+                self.target_seq[mutate_to:mutate_to + 15],  # part before cut
+                self.target_seq[mutate_to + 15:after_cut],
+                self.target_seq[after_cut:after_cut + 6],  # part after cut
+                self.target_seq[after_cut:])
+
+    @property
+    def mutated(self) -> str:
+        """
+        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGG', 'NNN', 'start_codon', 14)
+
+        # TODO (gdingle): make mutate_silently deterministic
+        >> hdr.mutated
+        'atggcagaacttgacCCgtacgt'
+        """
+        before, guide_left, remainder, guide_right, after = self._split_out_guide()
+        return ''.join((
+            before,
+            mutate_silently(guide_left),
+            remainder,
+            mutate_silently(guide_right),
+            after,
+        ))
 
 
-def get_hdr_primer(
-        primer_product: str,
-        hdr_template: str,
-        hdr_tag: str='start_codon') -> str:
-    """
-    Locates target codon in primer product then inserts HDR sequence.
-    >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'ATGnnn')
-    'ATGnnnTCCCAGCCGGGAAT'
-    >>> get_hdr_primer('AACAAGTGAATAAA', 'nnnTGA', 'stop_codon')
-    'AACAAGTGAAnnnTAAAAA'
-    """
-    validate_seq(primer_product)
-    validate_seq(hdr_template)
-    assert hdr_tag in ('start_codon', 'stop_codon')
-    if hdr_tag == 'start_codon':
-        assert hdr_template[0:3] == 'ATG'
-        codon_index = primer_product.find('ATG')
-        if codon_index == -1:
-            # TODO (gdingle): good return value?
-            return 'start_codon not found'
-        assert primer_product[codon_index:codon_index + 3] == 'ATG'
-        hdr_seq = hdr_template[3:].lower()
-        return primer_product[:codon_index] + \
-            get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
-
-    # TODO (gdingle): this is really uglly and should be refactored.
-    elif hdr_tag == 'stop_codon':
-        stop_codons = ['TAG', 'TGA', 'TAA']
-        assert hdr_template[-3:] in stop_codons, hdr_template
-        # TODO (gdingle): does this work? waht about triplets of amino acids?
-        stops = [primer_product.rfind(stop) for stop in stop_codons]
-        if all(s == -1 for s in stops):
-            return 'stop_codon not found'
-        # TODO (gdingle): is this biologically correct?
-        codon_index = max(stops)
-        assert primer_product[codon_index:codon_index + 3] in stop_codons
-        hdr_seq = hdr_template[:-3].lower()
-        return get_hdr_template(primer_product[:codon_index + 3], hdr_seq, hdr_tag) + \
-            primer_product[-3:]
-
-    assert False
-
-
-def mutate(row: dict, hdr_seq: str) -> str:
-    """
-    mutate from closest to PAM outwards, apply MIT score, halt at some threshold
-    mutate including PAM
-    adjust MIT score for 23bp length
-    """
-    hdr_template = row['hdr_template']
-    assert hdr_seq in hdr_template.upper()
-    # TODO (gdingle): handle guides on reverse as well
-    cut = hdr_template.find(hdr_seq) + len(hdr_seq) - row['hdr_dist']
-    # Align mutation region to nearest codon
-    assert len(hdr_seq) % 3 == 0
-    guide_right = cut - (cut % 3)
-    # A max of 17 contiguous bp in the protospacer may survive HDR,
-    # so we only touch 5 codons in that sequence
-    assert len(row['guide_seq']) == 20
-    guide_left = guide_right - 15
-    mutation_target_seq = hdr_template[guide_left:guide_right]
-    assert len(mutation_target_seq) == 15
-    new_hdr_template = (
-        hdr_template[:guide_left] +
-        mutate_guide_seq(mutation_target_seq) +
-        hdr_template[guide_right:]
-    )
-    assert len(new_hdr_template) == len(hdr_template)
-    return new_hdr_template
-
-
-def mutate_guide_seq(guide_seq: str) -> str:
+def mutate_silently(guide_seq: str) -> str:
     """
     Silently mutates input sequence by substituing a different
     codon that encodes the same amino acid wherever possible.
@@ -131,7 +139,7 @@ def mutate_guide_seq(guide_seq: str) -> str:
 
     Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
 
-    >>> mutate_guide_seq('TGTTGCGATGAC')
+    >>> mutate_silently('TGTTGCGATGAC')
     'tgctgtgacgat'
     """
     synonymous = {
@@ -165,7 +173,7 @@ def mutate_guide_seq(guide_seq: str) -> str:
         for aa, codons in synonymous.items()
         for codon in codons
     )
-    validate_seq(guide_seq)
+    _validate_seq(guide_seq)
     new_guide = ''
     for i in range(0, len(guide_seq), 3):
         codon = guide_seq[i:i + 3].upper()
@@ -177,6 +185,54 @@ def mutate_guide_seq(guide_seq: str) -> str:
     assert len(new_guide) == len(guide_seq)
     assert new_guide != guide_seq
     return new_guide
+
+
+def _validate_seq(seq: str):
+    assert all(b.upper() in 'AGCTN' for b in seq)
+
+
+# TODO (gdingle): we may not need this at all because we can create from hdr_template above
+# def get_hdr_primer(
+#         primer_product: str,
+#         hdr_template: str,
+#         hdr_tag: str='start_codon') -> str:
+#     """
+#     Locates target codon in primer product then inserts HDR sequence.
+#     >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'ATGnnn')
+#     'ATGnnnTCCCAGCCGGGAAT'
+#     >>> get_hdr_primer('AACAAGTGAATAAA', 'nnnTGA', 'stop_codon')
+#     'AACAAGTGAAnnnTAAAAA'
+#     """
+#     _validate_seq(primer_product)
+#     _validate_seq(hdr_template)
+#     assert hdr_tag in ('start_codon', 'stop_codon')
+#     if hdr_tag == 'start_codon':
+#         assert hdr_template[0:3] == 'ATG'
+#         codon_index = primer_product.find('ATG')
+#         if codon_index == -1:
+#             # TODO (gdingle): good return value?
+#             return 'start_codon not found'
+#         assert primer_product[codon_index:codon_index + 3] == 'ATG'
+#         hdr_seq = hdr_template[3:].lower()
+#         return primer_product[:codon_index] + \
+#             get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
+
+#     # TODO (gdingle): this is really uglly and should be refactored.
+#     elif hdr_tag == 'stop_codon':
+#         stop_codons = ['TAG', 'TGA', 'TAA']
+#         assert hdr_template[-3:] in stop_codons, hdr_template
+#         # TODO (gdingle): does this work? waht about triplets of amino acids?
+#         stops = [primer_product.rfind(stop) for stop in stop_codons]
+#         if all(s == -1 for s in stops):
+#             return 'stop_codon not found'
+#         # TODO (gdingle): is this biologically correct?
+#         codon_index = max(stops)
+#         assert primer_product[codon_index:codon_index + 3] in stop_codons
+#         hdr_seq = hdr_template[:-3].lower()
+#         return get_hdr_template(primer_product[:codon_index + 3], hdr_seq, hdr_tag) + \
+#             primer_product[-3:]
+
+#     assert False
 
 
 if __name__ == '__main__':
