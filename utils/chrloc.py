@@ -237,6 +237,7 @@ def get_guide_cut_to_insert(
     assert guide_loc in target_loc
     cut = guide_loc.cut.end
 
+    # TODO (gdingle): need to change this when we target before and after
     # Insert position is assumed to be always one codon in.
     # Insert happens to the left of the integer position.
     if hdr_tag == 'start_codon':
@@ -244,6 +245,7 @@ def get_guide_cut_to_insert(
     elif hdr_tag == 'stop_codon':
         insert = target_loc.end - 2
 
+    # TODO (gdingle): do we really want abs distance???
     return abs(cut - insert)
 
 

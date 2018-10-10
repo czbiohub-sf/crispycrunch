@@ -6,7 +6,10 @@ Transformations of genome sequences for HDR.
 class HDR:
     """
     Encapsulates all the data and operations of a sequence for homolgous
-    directed repair.
+    directed repair targeted at either a start codon or stop codon.
+
+    The target sequence should be in the direction of the gene. That is,
+    it have either a ATG or one of TAG, TGA, or TAA.
     """
 
     def __init__(
@@ -33,6 +36,35 @@ class HDR:
 
         assert hdr_dist >= 0
         self.hdr_dist = hdr_dist
+        # TODO (gdingle): infer whether forward or reverse guide
+
+    @property
+    def guide_direction(self):
+        """
+        Based on https://czi.quip.com/YbAhAbOV4aXi/ .
+
+        See get_guide_cut_to_insert.
+
+        # TODO (gdingle): fix ambiguity
+        We need to try both directions because hdr_dist is an absolute value.
+        There is a small chance that there could be PAMs in equidistant in both
+        directions.
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.guide_direction
+        '+'
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.guide_direction
+        '-'
+        """
+        cut_at = self.insert_at + self.hdr_dist
+        pam1 = self.target_seq[cut_at + 3:cut_at + 6]
+        pam2 = self.target_seq[cut_at - 6:cut_at - 3]
+        is_for = pam1.endswith('GG')
+        is_rev = pam2.startswith('CC')
+        assert is_for or is_rev, (pam1, pam2)
+        assert not (is_for and is_rev)
+        return '+' if is_for else '-'
 
     def _target_codon(self) -> int:
         for codon in self.valid_codons:
@@ -104,6 +136,8 @@ class HDR:
         >>> hdr.mutated
         'atggcggaactagacCCGtttgga'
         """
+
+        # TODO (gdingle): optimize mutation with mutated_score
         before, guide_left, remainder, guide_right, after = self._split_out_guide()
         return ''.join((
             before,
@@ -122,11 +156,12 @@ class HDR:
         """
         # TODO (gdingle): do for stop_codon
         cut_at = self.insert_at + self.hdr_dist
-        # guide is shifted to include PAM because we mutate it
+        # guide is shifted to include PAM because we mutate the PAM
         guide_right = cut_at + 6
         guide_left = cut_at - 14
 
         target_guide = self.target_seq[guide_left:guide_right]
+        # TODO (gdingle): make it work for reverse guide
         assert target_guide.endswith('GG')
 
         return mit_hit_score(
