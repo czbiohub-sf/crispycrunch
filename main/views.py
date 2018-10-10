@@ -514,16 +514,19 @@ class OrderFormView(DetailView):
 
         ws.title = title[0:31]  # Excel limits to 30 chars
         ws['A1'] = 'Well Position'
-        ws['B1'] = 'Name'
+        ws['B1'] = 'Sequence Name'
         ws['C1'] = 'Sequence'
 
-        for i, well_pos in enumerate(sheet.index):
-            index = str(i + 2)
-            ws['A' + index] = well_pos
-            # TODO (gdingle): what is the best name of each well for order form?
-            row = sheet.loc[well_pos]
-            ws['B' + index] = '{}{}'.format(row.guide_offset, row.guide_direction)
-            ws['C' + index] = row[self.seq_key]
+        for j, well_pos in enumerate(sheet.index):
+            for i, seq_key in enumerate(self.seq_keys):
+                index = str((j * len(self.seq_keys)) + i + 2)
+                ws['A' + index] = well_pos
+                # TODO (gdingle): is this a good name for each sequence?
+                row = sheet.loc[well_pos]
+                ws['B' + index] = '{} {}'.format(
+                    row['_crispor_guide_id'], seq_key,
+                )
+                ws['C' + index] = row[seq_key]
 
         return openpyxl.writer.excel.save_virtual_workbook(wb)
 
@@ -538,15 +541,13 @@ class OrderFormView(DetailView):
 class GuideOrderFormView(OrderFormView):
 
     model = GuideSelection
-    # TODO: include guide_pam or not?
-    seq_key = 'guide_seq'
+    seq_keys = ('guide_seq',)
 
 
 class PrimerOrderFormView(OrderFormView):
 
     model = PrimerSelection
-    # TODO (gdingle): IMPORTANT: how to order fwd and reverse primer at once?
-    seq_key = 'primer_seq_fwd'
+    seq_keys = ('primer_seq_fwd', 'primer_seq_rev')
 
 
 class IlluminaSheetView(View):
