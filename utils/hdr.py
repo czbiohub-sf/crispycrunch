@@ -101,6 +101,7 @@ class HDR:
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
         >>> hdr._split_out_guide()
         ('', 'ATGGCTGAGCTGGAT', 'CCG', 'TTCGGC', '')
+
         """
         assert len(self.target_seq) >= 24, 'Need to include guide plus PAM plus one for codon'
         # align to codons
@@ -108,7 +109,6 @@ class HDR:
         mutate_to = self.insert_at + last_codon
         # skip cut codon
         after_cut = mutate_to + 3
-        # TODO (gdingle): need to align mutate_to with codons
 
         # A max of 17 contiguous bp in the protospacer may survive HDR,
         # so we only touch 5 codons in that sequence. 5 * 3 == 15.
@@ -138,11 +138,11 @@ class HDR:
         """
 
         # TODO (gdingle): optimize mutation with mutated_score
-        before, guide_left, remainder, guide_right, after = self._split_out_guide()
+        before, guide_left, cut_codon, guide_right, after = self._split_out_guide()
         return ''.join((
             before,
             mutate_silently(guide_left),
-            remainder,
+            cut_codon,
             mutate_silently(guide_right),
             after,
         ))
