@@ -199,7 +199,7 @@ class GuideDesign(BaseModel):
         'hg19': 'Human',
     }
     HDR_TAG_TERMINUSES = [
-        # 40bp is encoded in protospacex
+        # 40bp is encoded in protospacex.py
         ('start_codon', 'Within 40bp after start codon'),
         ('stop_codon', 'Within 20bp before or after the stop codon')
     ]
@@ -214,16 +214,20 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): enforce match of ENST transcript and genome
     genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
 
-    pam = models.CharField(max_length=80, choices=[
-        ('NGG', '20bp-NGG (SpCas9, SpCas9-HF1, eSpCas9, ...)'),
-    ], default='NGG')
+    pam = models.CharField(
+        verbose_name='PAM',
+        help_text='Protospacer Adjacent Motif',
+        max_length=80,
+        choices=[('NGG', '20bp-NGG (SpCas9, SpCas9-HF1, eSpCas9, ...)'), ],
+        default='NGG')
 
     # TODO (gdingle): enforce must be ENST for HDR,
     # explain ENST is always converted to forward strand
     targets_raw = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
-        help_text='Chr location, seq, ENST, or gene. One per line. For reverse strand, write chr location right-to-left.',
+        verbose_name='Target regions',
+        help_text='Chromosome location, fasta sequence, ENST transcript ID, or gene name. One per line. No extra whitespace.',
         # TODO (gdingle): temp default for testing
         # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
@@ -243,12 +247,16 @@ class GuideDesign(BaseModel):
         default=[],
     )
 
-    hdr_tag = models.CharField(choices=HDR_TAG_TERMINUSES, blank=True, max_length=40,
-                               help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair)')
+    hdr_tag = models.CharField(
+        choices=HDR_TAG_TERMINUSES,
+        blank=True,
+        max_length=40,
+        verbose_name='Insert tag by HDR',
+        # TODO (gdingle): no longer GFP... switch to other name Neon something?
+        help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
 
     hdr_seq = models.CharField(
-        # TODO (gdingle): set a better max_length... see amplicon_length
-        max_length=65536,
+        max_length=160,
         validators=[validate_seq],
         blank=True,
         help_text='Sequence for Homology Directed Repair',
@@ -291,7 +299,7 @@ class GuideSelection(BaseModel):
         validators=[
             functools.partial(validate_num_wells, max=96 * 2),
             _validate_selected_guides],
-        help_text='Guides returned by Crispor')
+        help_text='Guides returned by Crispor. Filtered and ranked.')
 
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
@@ -311,6 +319,7 @@ class PrimerDesign(BaseModel):
     guide_selection = models.ForeignKey(
         GuideSelection, on_delete=models.CASCADE)
     primer_temp = models.IntegerField(
+        verbose_name='Primer melting temperature',
         default=60,
         validators=[
             MinValueValidator(58),
@@ -321,6 +330,8 @@ class PrimerDesign(BaseModel):
     # https://docs.google.com/document/d/1h_QOtsH6_uH5VeOCr0dBcUBFnQyamgpdQmupYWyvxo8/edit
     # TODO (gdingle): crispor has a preset list of values... mirror?
     max_amplicon_length = models.IntegerField(
+        verbose_name='Maximum amplicon length',
+        help_text='amplicon = primer product',
         default=400,
         validators=[
             # Constrain range to Biohub plausible experiments
