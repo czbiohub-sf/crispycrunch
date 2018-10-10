@@ -196,7 +196,6 @@ def get_guide_loc(
         guide_len: int = 20,
         guide_direction: str = '+') -> GuideChrLoc:
     """
-    # TODO (gdingle): is this actually correct def for guide_loc?
     >>> get_guide_loc(ChrLoc('chr7:5569177-5569415'), 191)
     ChrLoc('chr7:5569368-5569387:+')
     """
@@ -208,41 +207,6 @@ def get_guide_loc(
             # Minus one, for length inclusive
             start + guide_len - 1,
             guide_direction)
-    )
-
-
-def get_primer_loc(
-        primer_product: str,
-        guide_seq: str,
-        guide_loc: GuideChrLoc) -> ChrLoc:
-    """
-    Returns the chr loc of a primer product seq based on the known position of
-    the guide within it.
-
-    >>> get_primer_loc('''TGCTGGCTGGCCATTTCTAAACTTCCATTTGAATTTAANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-    ... NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-    ... NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN
-    ... NNNNNNNNNNNNNNNNNNNNNNNTATTACTTTTGTCTTCTACTAGCCAAAAGAATGTCAACAGAAATCAGAACATAACAC
-    ... TAAGTAAGTTTAACATGTACTTTTATTAACAACTTAATACAAGACTGTACACTGTAGGTGCTGAAATCAACCCACTCCT''',
-    ... 'AATACAAGACTGTACACTGT', GuideChrLoc('chr2:136114380-136114399:+'))
-    ChrLoc('chr2:136114025-136114423')
-    """
-    primer_product = primer_product.replace('\n', '')
-    # TODO (gdingle): time to start using seq objects? Biopython?
-    # See also validate_seq in validators.py
-    assert all(n in 'AGCTN' for n in primer_product)
-    assert all(n in 'AGCTN' for n in guide_seq)
-    assert guide_seq in primer_product
-    assert len(guide_loc) == len(guide_seq)
-
-    primer_start = guide_loc.start - primer_product.index(guide_seq)
-    primer_end = primer_start + len(primer_product) - 1
-    assert primer_end - primer_start <= 500, 'Primers should always be less than 500 bp for paired reads'
-    assert primer_end - primer_start == len(primer_product) - 1
-
-    # TODO (gdingle): should primer product include guide strand?
-    return ChrLoc(
-        'chr{}:{}-{}'.format(guide_loc.chr, primer_start, primer_end)
     )
 
 
@@ -281,6 +245,31 @@ def get_guide_cut_to_insert(
         insert = target_loc.end - 2
 
     return abs(cut - insert)
+
+
+def get_primer_loc(
+        primer_product: str,
+        guide_seq: str,
+        guide_loc: GuideChrLoc) -> ChrLoc:
+    """
+    Returns the chr loc of a primer product seq based on the known position of
+    the guide within it.
+
+    >>> get_primer_loc('NNNAATACAAGACTGTACACTGTNNN',
+    ... 'AATACAAGACTGTACACTGT', GuideChrLoc('chr2:11-30:+'))
+    ChrLoc('chr2:8-33')
+    """
+    assert guide_seq in primer_product
+    assert len(guide_loc) == len(guide_seq)
+
+    primer_start = guide_loc.start - primer_product.index(guide_seq)
+    primer_end = primer_start + len(primer_product) - 1
+    assert primer_end - primer_start == len(primer_product) - 1
+
+    # TODO (gdingle): should primer product include guide strand?
+    return ChrLoc(
+        'chr{}:{}-{}'.format(guide_loc.chr, primer_start, primer_end)
+    )
 
 
 if __name__ == '__main__':

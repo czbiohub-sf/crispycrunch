@@ -206,8 +206,9 @@ def _transform_primer_product(row) -> str:
         row['primer_product'],
         guide_seq,
         row['guide_loc'])
-    primer_product = conversions.chr_loc_to_seq(str(primer_loc), row['target_genome'])
-    return primer_product
+    return conversions.chr_loc_to_seq(
+        str(primer_loc),
+        row['target_genome'])
 
 
 def from_analysis(analysis: Analysis) -> DataFrame:
