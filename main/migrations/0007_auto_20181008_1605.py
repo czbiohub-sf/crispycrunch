@@ -3,7 +3,7 @@
 import django.contrib.postgres.fields
 import django.core.validators
 from django.db import migrations, models
-from lib import validators
+from utils import validators
 
 
 class Migration(migrations.Migration):

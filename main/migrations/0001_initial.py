@@ -5,7 +5,8 @@ import django.contrib.postgres.fields.jsonb
 import django.db.models.deletion
 import functools
 import main.models
-from lib import validators
+
+from utils import validators
 
 from django.db import migrations, models
 

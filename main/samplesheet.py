@@ -16,10 +16,10 @@ from pandas import DataFrame
 
 from django.core.files.uploadedfile import UploadedFile
 
-from lib import conversions
-from lib.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
-from lib.hdr import get_hdr_primer, get_hdr_template, mutate
+from utils import conversions
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
+from utils.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
+from utils.hdr import get_hdr_primer, get_hdr_template, mutate
 
 from crispresso.fastqs import reverse_complement
 

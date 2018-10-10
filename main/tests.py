@@ -2,7 +2,7 @@ import doctest
 
 from django.test import TestCase
 
-from lib import conversions, validators
+from utils import conversions, validators
 
 from main.models import *
 from main.samplesheet import *

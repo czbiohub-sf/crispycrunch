@@ -17,7 +17,7 @@ codon_stop is reversed operation of codon_start
 """
 # For doctest
 try:
-    from lib.validators import validate_seq
+    from utils.validators import validate_seq
 except ImportError:
     from validators import validate_seq  # type: ignore
 

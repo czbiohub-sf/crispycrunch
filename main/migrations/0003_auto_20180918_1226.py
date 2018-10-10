@@ -2,7 +2,7 @@
 
 import django.contrib.postgres.fields
 
-from lib import validators
+from utils import validators
 
 from django.db import migrations, models
 

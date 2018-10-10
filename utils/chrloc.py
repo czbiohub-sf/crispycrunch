@@ -31,6 +31,11 @@ class ChrLoc:
     ...
     ValueError: 2 is shorter than the min length of 20 for chr7:5569177-5569178.
 
+    >>> ChrLoc('chr7:0-1000')
+    Traceback (most recent call last):
+    ...
+    ValueError: Position must start at one not zero: "chr7:0-1000"
+
     Strands.
 
     >>> ChrLoc('chr7:5569177-5569415:+')
@@ -58,6 +63,9 @@ class ChrLoc:
 
         self.start = int(matches[2].replace(',', ''))
         self.end = int(matches[3].replace(',', ''))
+        if self.start == 0 or self.end == 0:
+            raise ValueError('Position must start at one not zero: "{}"'.format(value))
+
         assert self.start <= self.end, (self.start, self.end)
 
         if len(self) > self.max_length:
@@ -86,6 +94,20 @@ class ChrLoc:
         return f"ChrLoc('{self}')"
 
     def __eq__(self, other):
+        """
+        >>> ChrLoc('chr5:1-20') == ChrLoc('chr5:1-20')
+        True
+        >>> ChrLoc('chr5:1-40') == ChrLoc('chr5:1-20')
+        False
+        >>> ChrLoc('chr5:1-40') == 'chr5:1-40'
+        True
+        >>> ChrLoc('chr5:1-20:-') == ChrLoc('chr5:1-20:-')
+        True
+        >>> ChrLoc('chr5:1-20') == ChrLoc('chr5:1-20:-')
+        True
+        >>> ChrLoc('chr5:1-20:+') == ChrLoc('chr5:1-20:-')
+        False
+        """
         if isinstance(other, str):
             # TODO (gdingle): wise idea to promote on comparison?
             other = ChrLoc(other)
@@ -96,6 +118,20 @@ class ChrLoc:
                 and (self.strand == other.strand  # noqa
                      if self.strand and other.strand
                      else True))
+
+    def __contains__(self, other):
+        """
+        >>> ChrLoc('chr5:1-20') in ChrLoc('chr5:1-40')
+        True
+        >>> ChrLoc('chr5:1-40') in ChrLoc('chr5:1-20')
+        False
+        """
+        if isinstance(other, str):
+            # TODO (gdingle): wise idea to promote on comparison?
+            other = ChrLoc(other)
+        return (self.chr == other.chr and
+                self.start <= other.start and
+                self.end >= other.end)
 
     def copy(self, **kwargs) -> 'ChrLoc':
         """
@@ -140,12 +176,12 @@ class GuideChrLoc(ChrLoc):
     def cut(self):
         """
         Cut location is assumed to be always in between the 3rd and 4th
-        nucleotide in the guide.
+        nucleotide in the guide. ChrLoc always starts at 1.
         """
         if self.strand == '-':
             return self.copy(
-                start=self.start + 3,
-                end=self.start + 4
+                start=self.start + 2,
+                end=self.start + 3
             )
         else:
             return self.copy(
@@ -215,30 +251,34 @@ def get_guide_cut_to_insert(
         guide_loc: GuideChrLoc,
         hdr_tag: str = 'start_codon') -> int:
     """
-    Based on https://czi.quip.com/YbAhAbOV4aXi/
+    Based on example from https://czi.quip.com/YbAhAbOV4aXi/
 
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:134649077-134649174'),
-    ... GuideChrLoc('chr5:134649061-134649080:+'))
-    -2
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:134649077-134649174'),
-    ... GuideChrLoc('chr5:134649077-134649096:+'))
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40'),
+    ... GuideChrLoc('chr5:1-20:+'))
     14
 
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:134649077-134649174'),
-    ... GuideChrLoc('chr5:134649061-134649080:-'))
-    -15
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:134649077-134649174'),
-    ... GuideChrLoc('chr5:134649077-134649096:-'))
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40'),
+    ... GuideChrLoc('chr5:2-21:-'))
     1
-    """
-    cut = guide_loc.cut.start
 
-    # insert position is assumed to be always one codon in
+    insert between 17 and 18
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-20'),
+    ... GuideChrLoc('chr5:1-20:+'), 'stop_codon')
+    0
+
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-20'),
+    ... GuideChrLoc('chr5:1-20:-'), 'stop_codon')
+    14
+    """
+    assert guide_loc in target_loc
+    cut = guide_loc.cut.end
+
+    # Insert position is assumed to be always one codon in.
+    # Insert happens to the left of the integer position.
     if hdr_tag == 'start_codon':
         insert = target_loc.start + 3
-        # TODO (gdingle): verify if plus one needed
     elif hdr_tag == 'stop_codon':
-        insert = target_loc.end - 3
+        insert = target_loc.end - 2
 
     return abs(cut - insert)
 

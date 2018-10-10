@@ -8,7 +8,7 @@ import re
 from django.core.exceptions import ValidationError
 
 try:
-    from lib.chrloc import ChrLoc
+    from utils.chrloc import ChrLoc
 except ImportError:
     from chrloc import ChrLoc  # type: ignore
 

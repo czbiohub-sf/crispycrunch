@@ -34,11 +34,11 @@ from crispresso.fastqs import find_matching_pairs
 from crispresso.s3 import download_fastqs
 from protospacex import get_cds_chr_loc, get_cds_seq
 
-from lib import conversions
-from lib.validators import is_ensemble_transcript
 from main import samplesheet
 from main.forms import *
 from main.models import *
+from utils import conversions
+from utils.validators import is_ensemble_transcript
 
 # TODO (gdingle): move somewhere better
 CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'

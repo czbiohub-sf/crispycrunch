@@ -12,8 +12,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.text import slugify
 
-from lib.chrloc import ChrLoc
-from lib.validators import *
+from utils.chrloc import ChrLoc
+from utils.validators import *
 
 # TODO (gdingle): temp
 ENST_EXAMPLE = [
