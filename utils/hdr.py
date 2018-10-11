@@ -3,6 +3,7 @@ Transformations of genome sequences for HDR.
 """
 
 
+# TODO (gdingle): rename HdrSeq
 class HDR:
     """
     Encapsulates all the data and operations of a sequence for homolgous
@@ -36,19 +37,18 @@ class HDR:
 
         assert hdr_dist >= 0
         self.hdr_dist = hdr_dist
-        # TODO (gdingle): infer whether forward or reverse guide
 
     @property
     def guide_direction(self):
         """
-        Based on https://czi.quip.com/YbAhAbOV4aXi/ .
+        Get guide direction by expected PAM locations.
+
+        # TODO (gdingle): fix ambiguity ... take guide_direction in __init__?
+        We try both directions because we don't know guide direction yet.
+        There is a small chance that there could be PAMs equidistant in both
+        directions.
 
         See get_guide_cut_to_insert.
-
-        # TODO (gdingle): fix ambiguity
-        We need to try both directions because hdr_dist is an absolute value.
-        There is a small chance that there could be PAMs in equidistant in both
-        directions.
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_direction
@@ -57,7 +57,7 @@ class HDR:
         >>> hdr.guide_direction
         '-'
         """
-        cut_at = self.insert_at + self.hdr_dist
+        cut_at = self.cut_at
         pam1 = self.target_seq[cut_at + 3:cut_at + 6]
         pam2 = self.target_seq[cut_at - 6:cut_at - 3]
         is_for = pam1.endswith('GG')
@@ -65,6 +65,10 @@ class HDR:
         assert is_for or is_rev, (pam1, pam2)
         assert not (is_for and is_rev)
         return '+' if is_for else '-'
+
+    @property
+    def cut_at(self):
+        return self.insert_at + self.hdr_dist
 
     @property
     def guide_after_insert(self):
@@ -77,13 +81,10 @@ class HDR:
         >>> hdr.guide_after_insert
         'GCTGAGCTGGATCCGTTC'
         """
-        # TODO (gdingle): assumes hdr_dist is always positive
-        # TODO (gdingle): make it work for stop_codon
-        cut_at = self.insert_at + self.hdr_dist
         if self.guide_direction == '+':
-            return self.target_seq[self.insert_at:cut_at + 6]
+            return self.target_seq[self.insert_at:self.cut_at + 6]
         else:
-            return self.target_seq[self.insert_at:cut_at + 17]
+            return self.target_seq[self.insert_at:self.cut_at + 17]
 
     @property
     def guide_before_insert(self):
@@ -96,9 +97,7 @@ class HDR:
         >>> hdr.guide_before_insert
         'CCATG'
         """
-        # TODO (gdingle): assumes hdr_dist is always positive
-        # TODO (gdingle): make it work for stop_codon
-        cut_at = self.insert_at + self.hdr_dist
+        cut_at = self.cut_at
         if self.guide_direction == '+':
             return self.target_seq[cut_at - 17:self.insert_at]
         else:
@@ -117,6 +116,9 @@ class HDR:
 
     @property
     def hdr_template_mutated(self) -> str:
+        """
+        # TODO (gdingle): test me
+        """
         return self._hdr_template(True)
 
     def _hdr_template(self, mutate: bool = False) -> str:
@@ -179,6 +181,7 @@ class HDR:
         ))
 
     def _mutate_guide(self, guide_left: str, guide_right: str) -> str:
+        # TODO (gdingle): more elegant way... try reversing iterating codons, then reverse back
         # align to codons
         start_left = len(guide_left) % 3
         return ''.join((
