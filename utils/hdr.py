@@ -1,6 +1,7 @@
 """
 Transformations of genome sequences for HDR.
 """
+from typing import Iterator
 
 
 # TODO (gdingle): rename HdrSeq
@@ -11,6 +12,8 @@ class HDR:
 
     The target sequence should be in the direction of the gene. That is,
     it have either a ATG or one of TAG, TGA, or TAA.
+
+    target_mutation_score is the minimum MIT score needed to stop silent mutation.
     """
 
     def __init__(
@@ -18,7 +21,8 @@ class HDR:
             target_seq: str,
             hdr_seq: str,
             hdr_tag: str = 'start_codon',
-            hdr_dist: int = 0) -> None:
+            hdr_dist: int = 0,
+            target_mutation_score: int = 50) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
@@ -37,6 +41,9 @@ class HDR:
 
         assert hdr_dist >= 0
         self.hdr_dist = hdr_dist
+
+        assert target_mutation_score < 100 and target_mutation_score > 0
+        self.target_mutation_score = target_mutation_score
 
     @property
     def guide_direction(self):
@@ -71,37 +78,23 @@ class HDR:
         return self.insert_at + self.hdr_dist
 
     @property
-    def guide_after_insert(self):
+    def guide_seq(self):
         """
+        Returns 23bp guide sequence that includes PAM.
+
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.guide_after_insert
-        'GCTGAGCTGGATCCGTTCGG'
+        >>> hdr.guide_seq
+        'ATGGCTGAGCTGGATCCGTTCGG'
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr.guide_after_insert
-        'GCTGAGCTGGATCCGTTC'
-        """
-        if self.guide_direction == '+':
-            return self.target_seq[self.insert_at:self.cut_at + 6]
-        else:
-            return self.target_seq[self.insert_at:self.cut_at + 17]
-
-    @property
-    def guide_before_insert(self):
-        """
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.guide_before_insert
-        'ATG'
-
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr.guide_before_insert
-        'CCATG'
+        >>> hdr.guide_seq
+        'CCATGGCTGAGCTGGATCCGTTC'
         """
         cut_at = self.cut_at
         if self.guide_direction == '+':
-            return self.target_seq[cut_at - 17:self.insert_at]
+            return self.target_seq[cut_at - 17:cut_at + 6]
         else:
-            return self.target_seq[cut_at - 6:self.insert_at]
+            return self.target_seq[cut_at - 6:cut_at + 17]
 
     def _target_codon(self) -> int:
         for codon in self.valid_codons:
@@ -138,78 +131,87 @@ class HDR:
         """
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr._split_out_guide()
-        ('CC', 'ATG', 'GCTGAGCTGGATCCGTTCGG', 'C')
+        ('CC', 'ATGGCTGAGCTGGATCCGTTCGG', 'C')
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr._split_out_guide()
-        ('', 'CCATG', 'GCTGAGCTGGATCCGTTC', 'GGC')
+        ('', 'CCATGGCTGAGCTGGATCCGTTC', 'GGC')
         """
-        before = self.guide_before_insert
-        after = self.guide_after_insert
-        before_guide = self.target_seq[:self.insert_at - len(before)]
-        after_guide = self.target_seq[self.insert_at + len(after):]
-        parts = (before_guide, before, after, after_guide)
+        start = self.target_seq.index(self.guide_seq)
+        before_guide = self.target_seq[:start]
+        after_guide = self.target_seq[start + len(self.guide_seq):]
+        parts = (before_guide, self.guide_seq, after_guide)
         assert len(''.join(parts)) == len(self.target_seq)
         return parts
 
     @property
     def mutated(self) -> str:
-        """
-        Mutates guide region of target sequence by iterating outwards from
-        insertion point in both directions.
-
-        See also mutated_score, which obeys the same logic.
-
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.mutated
-        'CCatggcggaactagacccctttGGC'
-
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr.mutated
-        'CCatggcggaactagacccctttGGC'
-        """
-
         # TODO (gdingle): do we want to change guide_after_insert to always
         # include all PAM overlapping codons for possible mutation?
         # TODO (gdingle): optimize mutation with mutated_score
         # TODO (gdingle): do we want always mutate both sides or just the larger?
-        before, guide_left, guide_right, after = self._split_out_guide()
+        before, _, after = self._split_out_guide()
         return ''.join((
             before,
-            self._mutate_guide(guide_left, guide_right),
+            self.guide_mutated,
             after,
         ))
 
-    def _mutate_guide(self, guide_left: str, guide_right: str) -> str:
-        # TODO (gdingle): more elegant way... try reversing iterating codons, then reverse back
-        # align to codons
-        start_left = len(guide_left) % 3
+    @property
+    def guide_mutated(self) -> str:
+        """
+        Silently mutates codons in the guide sequence, going from the PAM inwards.
+
+        hdr_dist is relative to insert_at, which is at a codon boundary, so make
+        the start of mutation a multiple of three distant.
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.guide_mutated
+        'atggcggaaCTGGATCCGTTCGG'
+        >>> hdr.target_mutation_score = 99
+        >>> hdr.guide_mutated
+        'atggcgGAGCTGGATCCGTTCGG'
+        >>> hdr.target_mutation_score = 1
+        >>> hdr.guide_mutated
+        'atggcggaactaGATCCGTTCGG'
+
+        # >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        # >>> hdr.guide_mutated
+        # ''
+        """
+        # TODO (gdingle): make own function?
+        start_left = abs((self.hdr_dist - 17) % 3)
+
+        for mutated in mutate_silently(self.guide_seq[start_left:]):
+            score = mit_hit_score(mutated[:20].upper(), self.guide_seq[:20].upper())
+            if score < self.target_mutation_score:
+                break
+
         return ''.join((
-            guide_left[:start_left],
-            mutate_silently(guide_left[start_left:]),
-            mutate_silently(guide_right),
+            self.guide_seq[:start_left],
+            # TODO (gdingle): direction depending on guide direction
+            mutated,
         ))
 
     @property
     def mutated_score(self) -> float:
         """
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
-        >>> hdr.mutated_score
+        >> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
+        >> hdr.mutated_score
         8.609700038185587e-08
         """
         # TODO (gdingle): how to get proper direction to score?
         # that includes PAM?
-        before, guide_left, guide_right, after = self._split_out_guide()
-        mutated_guide = self._mutate_guide(guide_left, guide_right)
         return mit_hit_score(
-            mutated_guide[:20],
-            (guide_left + guide_right)[:20])
+            self.guide_mutated[:20],
+            self.guide_seq[:20])
 
 
-def mutate_silently(guide_seq: str) -> str:
+def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]:
     """
-    Silently mutates input sequence by substituing a different
-    codon that encodes the same amino acid wherever possible.
+    Generator that silently mutates input sequence by substituing a different
+    codon that encodes the same amino acid. Changes one codon per iteration.
+    Direction is from PAM inwards.
 
     The input is assumed to start with a codon of 3bp.
 
@@ -217,10 +219,28 @@ def mutate_silently(guide_seq: str) -> str:
 
     Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
 
-    >>> mutate_silently('TGTTGCGATGAC')
-    'tgctgtgacgat'
-    >>> mutate_silently('ATG')
+    >>> it = mutate_silently('TGTTGCGATGAC')
+    >>> next(it)
+    'tgcTGCGATGAC'
+    >>> next(it)
+    'tgctgtGATGAC'
+
+    No possible synonyms.
+    >>> next(mutate_silently('ATG'))
     'atg'
+
+    Incomplete codon.
+    >>> next(mutate_silently('AT'))
+    'AT'
+    >>> list(mutate_silently('ATGAT'))
+    ['atgAT', 'atgAT']
+
+    Right to left.
+    >>> it = mutate_silently('TGTTGCGATGAC', '+')
+    >>> next(it)
+    'TGTTGCGATgat'
+    >>> next(it)
+    'TGTTGCgacgat'
     """
     synonymous = {
         # TODO (gdingle): comment out rare codons
@@ -253,21 +273,39 @@ def mutate_silently(guide_seq: str) -> str:
         for codon in codons
     )
     _validate_seq(guide_seq)
-    new_guide = ''
-    for i in range(0, len(guide_seq), 3):
-        codon = guide_seq[i:i + 3].upper()
+
+    # TODO (gdingle):
+    if guide_direction == '+':
+        codons = _right_to_left_codons(guide_seq)
+    else:
+        codons = _left_to_right_codons(guide_seq)
+
+    new_guide = []
+    for codon in codons:
+
         if len(codon) < 3:
             # Exit loop on remaining bp
-            new_guide += codon
-            break
-        syns = list(synonymous[synonymous_index[codon]])
-        if len(syns) > 1:
+            new_guide.append(codon)
+        else:
+            # Make copy and remove current codon
+            syns = list(synonymous[synonymous_index[codon]])
             syns.remove(codon)
-        # TODO (gdingle): better to choose random syn?
-        new_guide += syns.pop().lower()
-    assert len(new_guide) == len(guide_seq)
-    assert new_guide != guide_seq
-    return new_guide
+
+            if len(syns):
+                # TODO (gdingle): better to choose random syn?
+                new_guide.append(syns.pop().lower())
+            else:
+                new_guide.append(codon.lower())
+
+        if guide_direction == '+':
+            new_guide_str = ''.join(new_guide[::-1])
+            combined = guide_seq[:-len(new_guide_str)] + new_guide_str
+        else:
+            new_guide_str = ''.join(new_guide)
+            combined = new_guide_str + guide_seq[len(new_guide_str):]
+
+        assert len(combined) == len(guide_seq), (combined, guide_seq)
+        yield combined
 
 
 def _validate_seq(seq: str):
@@ -338,6 +376,10 @@ def mit_hit_score(seq1: str, seq2: str) -> float:
 
     >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAA')
     100.0
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'GAAAAAAAAAAAAAAAAAAA')
+    100.0
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAG')
+    41.7
     >>> mit_hit_score('ZZZZZZZZZZZZZZZZZZZZ', 'AAAAAAAAAAAAAAAAAAAA')
     8.609700038185587e-08
     >>> mit_hit_score('AAGGCCAACCGGCGCCGCGC', 'GCGCGGCGCCGGTTGGCCTT')
@@ -379,6 +421,40 @@ def mit_hit_score(seq1: str, seq2: str) -> float:
         score3 = 1.0 / (mm_count**2)
 
     return score1 * score2 * score3 * 100
+
+
+def _right_to_left_codons(seq: str) -> Iterator[str]:
+    """
+    >>> it = _right_to_left_codons('TGTTGCGATGAC')
+    >>> next(it)
+    'GAC'
+    >>> next(it)
+    'GAT'
+    >>> next(it)
+    'TGC'
+    >>> next(it)
+    'TGT'
+    >>> next(it)
+    Traceback (most recent call last):
+    ...
+    StopIteration
+    """
+    for i in range(len(seq), 0, -3):
+        codon = seq[i - 3:i]
+        yield codon
+
+
+def _left_to_right_codons(seq: str) -> Iterator[str]:
+    """
+    >>> it = _left_to_right_codons('TGTTGCGATGAC')
+    >>> next(it)
+    'TGT'
+    >>> next(it)
+    'TGC'
+    """
+    for i in range(0, len(seq), 3):
+        codon = seq[i:i + 3]
+        yield codon
 
 
 if __name__ == '__main__':
