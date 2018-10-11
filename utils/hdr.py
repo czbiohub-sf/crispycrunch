@@ -144,7 +144,7 @@ class HDR:
     @property
     def guide_seq_aligned(self) -> str:
         """
-        Returns 21bp to 23bp subset of guide sequence aligned to codons.
+        Returns 21bp subset of guide sequence aligned to codons.
 
         Extra base pairs are removed from the PAM side, because that is
         where we want to mutate whole codons.
@@ -165,16 +165,18 @@ class HDR:
         >>> hdr.guide_seq
         'TGGCTGAGCTGGATCCGTTCGGG'
         >>> hdr.guide_seq_aligned
-        'TGGCTGAGCTGGATCCGTTCGGG'
+        'GCTGAGCTGGATCCGTTCGGG'
         """
 
         # TODO (gdingle): do we want to extend to include PAM?
 
         codon_offset = abs(self.hdr_dist % 3)
         if self.guide_direction == '+':
-            return self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
+            aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
+            return aligned[-21:]
         else:
-            return self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
+            aligned = self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
+            return aligned[:21]
 
     @property
     def guide_mutated(self) -> str:
@@ -234,7 +236,7 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     codon that encodes the same amino acid. Changes one codon per iteration.
     Direction is from PAM inwards.
 
-    The input is assumed to start with a codon of 3bp.
+    The input is assumed to a multiple of 3bp codons.
 
     Based on https://czi.quip.com/YbAhAbOV4aXi/.
 
@@ -249,12 +251,6 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     No possible synonyms.
     >>> next(mutate_silently('ATG'))
     'atg'
-
-    Incomplete codon.
-    >>> next(mutate_silently('AT'))
-    'AT'
-    >>> list(mutate_silently('ATGAT'))
-    ['atgAT', 'atgAT']
 
     Right to left.
     >>> it = mutate_silently('TGTTGCGATGAC', '+')
@@ -303,20 +299,15 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
 
     new_guide = []
     for codon in codons:
+        # Make copy and remove current codon
+        syns = list(synonymous[synonymous_index[codon]])
+        syns.remove(codon)
 
-        if len(codon) < 3:
-            # Exit loop on remaining bp
-            new_guide.append(codon)
+        if len(syns):
+            # TODO (gdingle): better to choose random syn?
+            new_guide.append(syns.pop().lower())
         else:
-            # Make copy and remove current codon
-            syns = list(synonymous[synonymous_index[codon]])
-            syns.remove(codon)
-
-            if len(syns):
-                # TODO (gdingle): better to choose random syn?
-                new_guide.append(syns.pop().lower())
-            else:
-                new_guide.append(codon.lower())
+            new_guide.append(codon.lower())
 
         if guide_direction == '+':
             new_guide_str = ''.join(new_guide[::-1])
