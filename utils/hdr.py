@@ -66,6 +66,44 @@ class HDR:
         assert not (is_for and is_rev)
         return '+' if is_for else '-'
 
+    @property
+    def guide_after_insert(self):
+        """
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.guide_after_insert
+        'GCTGAGCTGGATCCGTTCGG'
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.guide_after_insert
+        'GCTGAGCTGGATCCGTTC'
+        """
+        # TODO (gdingle): assumes hdr_dist is always positive
+        # TODO (gdingle): make it work for stop_codon
+        cut_at = self.insert_at + self.hdr_dist
+        if self.guide_direction == '+':
+            return self.target_seq[self.insert_at:cut_at + 6]
+        else:
+            return self.target_seq[self.insert_at:cut_at + 17]
+
+    @property
+    def guide_before_insert(self):
+        """
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.guide_before_insert
+        'ATG'
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.guide_before_insert
+        'CCATG'
+        """
+        # TODO (gdingle): assumes hdr_dist is always positive
+        # TODO (gdingle): make it work for stop_codon
+        cut_at = self.insert_at + self.hdr_dist
+        if self.guide_direction == '+':
+            return self.target_seq[cut_at - 17:self.insert_at]
+        else:
+            return self.target_seq[cut_at - 6:self.insert_at]
+
     def _target_codon(self) -> int:
         for codon in self.valid_codons:
             start = self.target_seq.find(codon)
@@ -96,53 +134,39 @@ class HDR:
 
     def _split_out_guide(self) -> tuple:
         """
-        Based on example at https://czi.quip.com/YbAhAbOV4aXi/.
-
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr._split_out_guide()
-        ('', 'ATGGCTGAGCTGGAT', 'CCG', 'TTCGGC', '')
+        ('CC', 'ATG', 'GCTGAGCTGGATCCGTTCGG', 'C')
 
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr._split_out_guide()
+        ('', 'CCATG', 'GCTGAGCTGGATCCGTTC', 'GGC')
         """
-        assert len(self.target_seq) >= 24, 'Need to include guide plus PAM plus one for codon'
-        # align to codons
-        last_codon = self.hdr_dist - (self.hdr_dist % 3)
-        mutate_to = self.insert_at + last_codon
-        # skip cut codon
-        after_cut = mutate_to + 3
-
-        # A max of 17 contiguous bp in the protospacer may survive HDR,
-        # so we only touch 5 codons in that sequence. 5 * 3 == 15.
-        # TODO (gdingle): stop_codons
-        assert self.hdr_tag == 'start_codon', 'not implemented'
-        if self.hdr_tag == 'start_codon':
-            return (
-                self.target_seq[:mutate_to - 15],
-                self.target_seq[mutate_to - 15:mutate_to],  # part before cut
-                self.target_seq[mutate_to:after_cut],
-                self.target_seq[after_cut:after_cut + 6],  # part after cut
-                self.target_seq[after_cut + 6:])
-        else:
-            return (
-                self.target_seq[:mutate_to],
-                self.target_seq[mutate_to:mutate_to + 15],  # part before cut
-                self.target_seq[mutate_to + 15:after_cut],
-                self.target_seq[after_cut:after_cut + 6],  # part after cut
-                self.target_seq[after_cut:])
+        before = self.guide_before_insert
+        after = self.guide_after_insert
+        before_guide = self.target_seq[:self.insert_at - len(before)]
+        after_guide = self.target_seq[self.insert_at + len(after):]
+        parts = (before_guide, before, after, after_guide)
+        assert len(''.join(parts)) == len(self.target_seq)
+        return parts
 
     @property
     def mutated(self) -> str:
         """
+        # TODO (gdingle): do we want to change guide_after_insert to always
+        # include all PAM overlapping codons for possible mutation?
+
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
         >>> hdr.mutated
-        'atggcggaactagacCCGtttgga'
+        'ttggcggaactagacccctttGGC'
         """
 
         # TODO (gdingle): optimize mutation with mutated_score
-        before, guide_left, cut_codon, guide_right, after = self._split_out_guide()
+        before, guide_left, guide_right, after = self._split_out_guide()
         return ''.join((
             before,
-            mutate_silently(guide_left),
-            cut_codon,
+            # Reverse to apply to 3bp codons, from insert outwards
+            mutate_silently(guide_left[::-1])[::-1],
             mutate_silently(guide_right),
             after,
         ))
@@ -152,7 +176,7 @@ class HDR:
         """
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
         >>> hdr.mutated_score
-        7.775213510406977e-06
+        8.092009673329497e-07
         """
         # TODO (gdingle): do for stop_codon
         cut_at = self.insert_at + self.hdr_dist
@@ -217,6 +241,10 @@ def mutate_silently(guide_seq: str) -> str:
     new_guide = ''
     for i in range(0, len(guide_seq), 3):
         codon = guide_seq[i:i + 3].upper()
+        if len(codon) < 3:
+            # Exit loop on remaining bp
+            new_guide += codon
+            break
         syns = list(synonymous[synonymous_index[codon]])
         if len(syns) > 1:
             syns.remove(codon)
@@ -228,8 +256,8 @@ def mutate_silently(guide_seq: str) -> str:
 
 
 def _validate_seq(seq: str):
-    assert all(b.upper() in 'AGCTN' for b in seq)
-    assert len(seq)
+    assert all(b.upper() in 'AGCTN' for b in seq), seq
+    assert len(seq), seq
 
 
 # TODO (gdingle): we may not need this at all because we can create from hdr_template above
