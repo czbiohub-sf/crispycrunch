@@ -1,16 +1,23 @@
 """
 Transformations of genome sequences for HDR.
+
+# TODO (gdingle):
+• what default MIT score threshold should we set for mutating a sequence from the original?
+• what synonymous codon to use when there are multiple alternatives?
+• is it okay to use MIT score on a sequence that does not end precisely in 3bp PAM as it was designed for?
 """
 from typing import Iterator
 
 
 class HDR:
     """
-    Encapsulates all the data and operations of a sequence for homolgous
-    directed repair targeted at either a start codon or stop codon.
+    Encapsulates all the HDR transformations of sequences described in
+    https://czi.quip.com/YbAhAbOV4aXi/ . Get a mutated HDR template that varies depending on start
+    or stop codon, the cut-to-insert distance, the strandedness of the guide, and the amount of
+    mutation desired.
 
     The target sequence should be in the direction of the gene. That is,
-    it have either a ATG or one of TAG, TGA, or TAA.
+    it has either a ATG or one of TAG, TGA, or TAA.
 
     target_mutation_score is the minimum MIT score needed to stop silent mutation.
     """
@@ -32,9 +39,11 @@ class HDR:
         self.hdr_tag = hdr_tag
         if hdr_tag == 'start_codon':
             self.valid_codons = set(['ATG'])
+            # just after start codon
             self.insert_at = self._target_codon() + 3
         else:
             self.valid_codons = set(['TAG', 'TGA', 'TAA'])
+            # just before stop codon
             self.insert_at = self._target_codon()
         assert any(c in target_seq for c in self.valid_codons)
 
@@ -49,10 +58,10 @@ class HDR:
         """
         Get guide direction by expected PAM locations.
 
-        # TODO (gdingle): fix ambiguity ... take guide_direction in __init__?
         We try both directions because we don't know guide direction yet.
         There is a small chance that there could be PAMs equidistant in both
         directions.
+        # TODO (gdingle): fix ambiguity ... take guide_direction in __init__?
 
         See get_guide_cut_to_insert.
 
@@ -109,7 +118,9 @@ class HDR:
     @property
     def hdr_template_mutated(self) -> str:
         """
-        # TODO (gdingle): test me
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.hdr_template_mutated
+        'CCATGnnnGCTGAGCTGGATCCGtttGGC'
         """
         return self._hdr_template(True)
 
@@ -168,7 +179,7 @@ class HDR:
         'GCTGAGCTGGATCCGTTCGGG'
         """
 
-        # TODO (gdingle): do we want to extend to include PAM?
+        # TODO (gdingle): do we want to extend to always include entire PAM?
 
         codon_offset = abs(self.hdr_dist % 3)
         if self.guide_direction == '+':
@@ -182,9 +193,6 @@ class HDR:
     def guide_mutated(self) -> str:
         """
         Silently mutates codons in the guide sequence, going from the PAM side inwards.
-
-        hdr_dist is relative to insert_at, which is at a codon boundary, so make
-        the start of mutation a multiple of three distant.
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_mutated
@@ -204,7 +212,7 @@ class HDR:
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
-        # in 3bp PAM? should we try to align the hit_score_m? lols
+        # in 3bp PAM? should we try to align to the hit_score_m? lols
 
         for mutated in mutate_silently(self.guide_seq_aligned, self.guide_direction):
             score = mit_hit_score(
@@ -237,8 +245,6 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     Direction is from PAM inwards.
 
     The input is assumed to a multiple of 3bp codons.
-
-    Based on https://czi.quip.com/YbAhAbOV4aXi/.
 
     Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
 
@@ -291,7 +297,6 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     )
     _validate_seq(guide_seq)
 
-    # TODO (gdingle):
     if guide_direction == '+':
         codons = _right_to_left_codons(guide_seq)
     else:
