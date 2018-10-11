@@ -144,7 +144,10 @@ class HDR:
     @property
     def guide_seq_aligned(self) -> str:
         """
-        Subset of guide sequence aligned to codons.
+        Returns 21bp to 23bp subset of guide sequence aligned to codons.
+
+        Extra base pairs are removed from the PAM side, because that is
+        where we want to mutate whole codons.
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_seq
@@ -157,16 +160,21 @@ class HDR:
         'CCATGGCTGAGCTGGATCCGTTC'
         >>> hdr.guide_seq_aligned
         'ATGGCTGAGCTGGATCCGTTC'
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGG', 'NNN', hdr_dist=15)
+        >>> hdr.guide_seq
+        'TGGCTGAGCTGGATCCGTTCGGG'
+        >>> hdr.guide_seq_aligned
+        'TGGCTGAGCTGGATCCGTTCGGG'
         """
 
         # TODO (gdingle): do we want to extend to include PAM?
 
+        codon_offset = abs(self.hdr_dist % 3)
         if self.guide_direction == '+':
-            codon_offset = abs(self.hdr_dist % 3)
-            return self.guide_seq[:-codon_offset]
+            return self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
         else:
-            codon_offset = 3 - abs(self.hdr_dist % 3)
-            return self.guide_seq[codon_offset:]
+            return self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
 
     @property
     def guide_mutated(self) -> str:
