@@ -4,7 +4,6 @@ Transformations of genome sequences for HDR.
 from typing import Iterator
 
 
-# TODO (gdingle): rename HdrSeq
 class HDR:
     """
     Encapsulates all the data and operations of a sequence for homolgous
@@ -22,7 +21,7 @@ class HDR:
             hdr_seq: str,
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
-            target_mutation_score: int = 50) -> None:
+            target_mutation_score: float = 50.0) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
@@ -180,9 +179,14 @@ class HDR:
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCGttt'
+
+        Varying target score.
         >>> hdr.target_mutation_score = 1
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATcccttt'
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.guide_mutated
+        'ATGGCTGAGCTGgaccccttt'
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr.guide_mutated
@@ -206,16 +210,14 @@ class HDR:
     @property
     def mutated_score(self) -> float:
         """
-        >> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
-        >> hdr.mutated_score
-        8.609700038185587e-08
+        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
+        >>> hdr.mutated_score
+        0.05972723076923077
         """
-        # TODO (gdingle): how to get proper direction to score?
-        # that includes PAM?
         return mit_hit_score(
             self.guide_mutated,
-            self.guide_seq,
-            self.guide_direction,)
+            self.guide_seq_aligned,
+            self.guide_direction)
 
 
 def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]:
@@ -322,50 +324,6 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
 def _validate_seq(seq: str):
     assert all(b.upper() in 'AGCTN' for b in seq), seq
     assert len(seq), seq
-
-
-# TODO (gdingle): we may not need this at all because we can create from hdr_template above
-# def get_hdr_primer(
-#         primer_product: str,
-#         hdr_template: str,
-#         hdr_tag: str='start_codon') -> str:
-#     """
-#     Locates target codon in primer product then inserts HDR sequence.
-#     >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'ATGnnn')
-#     'ATGnnnTCCCAGCCGGGAAT'
-#     >>> get_hdr_primer('AACAAGTGAATAAA', 'nnnTGA', 'stop_codon')
-#     'AACAAGTGAAnnnTAAAAA'
-#     """
-#     _validate_seq(primer_product)
-#     _validate_seq(hdr_template)
-#     assert hdr_tag in ('start_codon', 'stop_codon')
-#     if hdr_tag == 'start_codon':
-#         assert hdr_template[0:3] == 'ATG'
-#         codon_index = primer_product.find('ATG')
-#         if codon_index == -1:
-#             # TODO (gdingle): good return value?
-#             return 'start_codon not found'
-#         assert primer_product[codon_index:codon_index + 3] == 'ATG'
-#         hdr_seq = hdr_template[3:].lower()
-#         return primer_product[:codon_index] + \
-#             get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
-
-#     # TODO (gdingle): this is really uglly and should be refactored.
-#     elif hdr_tag == 'stop_codon':
-#         stop_codons = ['TAG', 'TGA', 'TAA']
-#         assert hdr_template[-3:] in stop_codons, hdr_template
-#         # TODO (gdingle): does this work? waht about triplets of amino acids?
-#         stops = [primer_product.rfind(stop) for stop in stop_codons]
-#         if all(s == -1 for s in stops):
-#             return 'stop_codon not found'
-#         # TODO (gdingle): is this biologically correct?
-#         codon_index = max(stops)
-#         assert primer_product[codon_index:codon_index + 3] in stop_codons
-#         hdr_seq = hdr_template[:-3].lower()
-#         return get_hdr_template(primer_product[:codon_index + 3], hdr_seq, hdr_tag) + \
-#             primer_product[-3:]
-
-#     assert False
 
 
 def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
@@ -486,6 +444,50 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
     for i in range(0, len(seq), 3):
         codon = seq[i:i + 3]
         yield codon
+
+
+# TODO (gdingle): we may not need this at all because we can create from hdr_template above
+# def get_hdr_primer(
+#         primer_product: str,
+#         hdr_template: str,
+#         hdr_tag: str='start_codon') -> str:
+#     """
+#     Locates target codon in primer product then inserts HDR sequence.
+#     >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'ATGnnn')
+#     'ATGnnnTCCCAGCCGGGAAT'
+#     >>> get_hdr_primer('AACAAGTGAATAAA', 'nnnTGA', 'stop_codon')
+#     'AACAAGTGAAnnnTAAAAA'
+#     """
+#     _validate_seq(primer_product)
+#     _validate_seq(hdr_template)
+#     assert hdr_tag in ('start_codon', 'stop_codon')
+#     if hdr_tag == 'start_codon':
+#         assert hdr_template[0:3] == 'ATG'
+#         codon_index = primer_product.find('ATG')
+#         if codon_index == -1:
+#             # TODO (gdingle): good return value?
+#             return 'start_codon not found'
+#         assert primer_product[codon_index:codon_index + 3] == 'ATG'
+#         hdr_seq = hdr_template[3:].lower()
+#         return primer_product[:codon_index] + \
+#             get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
+
+#     # TODO (gdingle): this is really uglly and should be refactored.
+#     elif hdr_tag == 'stop_codon':
+#         stop_codons = ['TAG', 'TGA', 'TAA']
+#         assert hdr_template[-3:] in stop_codons, hdr_template
+#         # TODO (gdingle): does this work? waht about triplets of amino acids?
+#         stops = [primer_product.rfind(stop) for stop in stop_codons]
+#         if all(s == -1 for s in stops):
+#             return 'stop_codon not found'
+#         # TODO (gdingle): is this biologically correct?
+#         codon_index = max(stops)
+#         assert primer_product[codon_index:codon_index + 3] in stop_codons
+#         hdr_seq = hdr_template[:-3].lower()
+#         return get_hdr_template(primer_product[:codon_index + 3], hdr_seq, hdr_tag) + \
+#             primer_product[-3:]
+
+#     assert False
 
 
 if __name__ == '__main__':
