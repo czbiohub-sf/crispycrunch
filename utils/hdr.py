@@ -28,8 +28,8 @@ class HDR:
             hdr_seq: str,
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
-            target_mutation_score: float = 50.0,
-            guide_direction='') -> None:
+            guide_direction: str = '',
+            target_mutation_score: float = 50.0) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq

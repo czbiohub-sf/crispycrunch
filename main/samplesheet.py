@@ -148,7 +148,8 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
                 row['primer_product'],
                 guide_selection.guide_design.hdr_seq,
                 guide_selection.guide_design.hdr_tag,
-                row['hdr_dist']).template,
+                row['hdr_dist'],
+                row['_guide_direction']).template,
             # TODO (gdingle): return mutated optionally here
             axis=1)
         max_amplicon_length = primer_selection.primer_design.max_amplicon_length
@@ -398,7 +399,8 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
             row['target_seq'],
             hdr_seq,
             hdr_tag,
-            row['hdr_dist']).template,
+            row['hdr_dist'],
+            row['_guide_direction']).template,
         axis=1,
     )
     sheet['hdr_rebind'] = sheet.apply(
@@ -415,7 +417,8 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
             row['target_seq'],
             hdr_seq,
             hdr_tag,
-            row['hdr_dist']).template_mutated if row['hdr_rebind'] else '',
+            row['hdr_dist'],
+            row['_guide_direction']).template_mutated if row['hdr_rebind'] else '',
         axis=1)
 
     return sheet
