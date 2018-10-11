@@ -232,7 +232,7 @@ def get_guide_cut_to_insert(
 
     >>> get_guide_cut_to_insert(ChrLoc('chr5:1-20'),
     ... GuideChrLoc('chr5:1-20:-'), 'stop_codon')
-    14
+    -14
     """
     assert guide_loc in target_loc
     cut = guide_loc.cut.end
@@ -245,8 +245,8 @@ def get_guide_cut_to_insert(
     elif hdr_tag == 'stop_codon':
         insert = target_loc.end - 2
 
-    # TODO (gdingle): do we really want abs distance???
-    return abs(cut - insert)
+    # TODO (gdingle): do we want abs distance???
+    return cut - insert
 
 
 def get_primer_loc(

@@ -153,22 +153,38 @@ class HDR:
     @property
     def mutated(self) -> str:
         """
-        # TODO (gdingle): do we want to change guide_after_insert to always
-        # include all PAM overlapping codons for possible mutation?
+        Mutates guide region of target sequence by iterating outwards from
+        insertion point in both directions.
 
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
+        See also mutated_score, which obeys the same logic.
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.mutated
-        'ttggcggaactagacccctttGGC'
+        'CCatggcggaactagacccctttGGC'
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.mutated
+        'CCatggcggaactagacccctttGGC'
         """
 
+        # TODO (gdingle): do we want to change guide_after_insert to always
+        # include all PAM overlapping codons for possible mutation?
         # TODO (gdingle): optimize mutation with mutated_score
+        # TODO (gdingle): do we want always mutate both sides or just the larger?
         before, guide_left, guide_right, after = self._split_out_guide()
         return ''.join((
             before,
-            # Reverse to apply to 3bp codons, from insert outwards
-            mutate_silently(guide_left[::-1])[::-1],
-            mutate_silently(guide_right),
+            self._mutate_guide(guide_left, guide_right),
             after,
+        ))
+
+    def _mutate_guide(self, guide_left: str, guide_right: str) -> str:
+        # align to codons
+        start_left = len(guide_left) % 3
+        return ''.join((
+            guide_left[:start_left],
+            mutate_silently(guide_left[start_left:]),
+            mutate_silently(guide_right),
         ))
 
     @property
@@ -176,21 +192,15 @@ class HDR:
         """
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
         >>> hdr.mutated_score
-        8.092009673329497e-07
+        8.609700038185587e-08
         """
-        # TODO (gdingle): do for stop_codon
-        cut_at = self.insert_at + self.hdr_dist
-        # guide is shifted to include PAM because we mutate the PAM
-        guide_right = cut_at + 6
-        guide_left = cut_at - 14
-
-        target_guide = self.target_seq[guide_left:guide_right]
-        # TODO (gdingle): make it work for reverse guide
-        assert target_guide.endswith('GG')
-
+        # TODO (gdingle): how to get proper direction to score?
+        # that includes PAM?
+        before, guide_left, guide_right, after = self._split_out_guide()
+        mutated_guide = self._mutate_guide(guide_left, guide_right)
         return mit_hit_score(
-            self.mutated[guide_left:guide_right],
-            target_guide)
+            mutated_guide[:20],
+            (guide_left + guide_right)[:20])
 
 
 def mutate_silently(guide_seq: str) -> str:
@@ -206,6 +216,8 @@ def mutate_silently(guide_seq: str) -> str:
 
     >>> mutate_silently('TGTTGCGATGAC')
     'tgctgtgacgat'
+    >>> mutate_silently('ATG')
+    'atg'
     """
     synonymous = {
         # TODO (gdingle): comment out rare codons
@@ -321,6 +333,10 @@ def mit_hit_score(seq1: str, seq2: str) -> float:
     float
         MIT mismatch score between the two sequences
 
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAA')
+    100.0
+    >>> mit_hit_score('ZZZZZZZZZZZZZZZZZZZZ', 'AAAAAAAAAAAAAAAAAAAA')
+    8.609700038185587e-08
     >>> mit_hit_score('AAGGCCAACCGGCGCCGCGC', 'GCGCGGCGCCGGTTGGCCTT')
     6.039504885480631e-06
     >>> mit_hit_score('GAAGGCCAACCGGCGCCGCG', 'CGCGGCGCCGGTTGGCCTTC')
