@@ -172,8 +172,8 @@ class GuideDesignView(CreatePlusView):
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
         pre_filter = obj.wells_per_target * 5  # 5 based on safe-harbor experiment
-        largs = [[target_seq, obj.experiment.name, obj.genome, obj.pam, target, pre_filter]
-                 for target_seq, target in zip(obj.target_seqs, obj.targets)]
+        largs = [[target, obj.experiment.name, obj.genome, obj.pam, target, pre_filter]
+                 for target in obj.targets]
         batch.start(largs, [-2])
 
         return obj
@@ -295,7 +295,8 @@ class PrimerDesignProgressView(View):
 
     def get(self, request, **kwargs):
         primer_design = PrimerDesign.objects.get(id=kwargs['id'])
-        batch_status = webscraperequest.CrisporPrimerBatchWebRequest(primer_design).get_batch_status()
+        batch_status = webscraperequest.CrisporPrimerBatchWebRequest(
+            primer_design).get_batch_status()
 
         if not batch_status.is_successful:
             return render(request, self.template_name, locals())

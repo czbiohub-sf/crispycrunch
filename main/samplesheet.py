@@ -16,10 +16,10 @@ from pandas import DataFrame
 
 from django.core.files.uploadedfile import UploadedFile
 
-from utils import conversions
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
+from utils import conversions
+from utils import hdr
 from utils.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
-from utils.hdr import get_hdr_primer, get_hdr_template, mutate
 
 from crispresso.fastqs import reverse_complement
 
@@ -132,7 +132,8 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
         # See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
         sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0][0]
         sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1][0]
-        assert primer_pair[0][1].startswith(primer_pair[0][0]), 'Primer product should start with forward primer'
+        assert primer_pair[0][1].startswith(
+            primer_pair[0][0]), 'Primer product should start with forward primer'
         sheet['primer_product'][mask1 & mask2] = primer_pair[0][1]
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
@@ -143,10 +144,12 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     if guide_selection.guide_design.hdr_seq:
         sheet['primer_product'] = sheet.apply(
-            lambda row: get_hdr_primer(
+            lambda row: hdr.HDR(
                 row['primer_product'],
-                row['hdr_template'],
-                guide_selection.guide_design.hdr_tag),
+                guide_selection.guide_design.hdr_seq,
+                guide_selection.guide_design.hdr_tag,
+                row['hdr_dist']).template,
+            # TODO (gdingle): return mutated optionally here
             axis=1)
         max_amplicon_length = primer_selection.primer_design.max_amplicon_length
         sheet['primer_product'] = sheet.apply(
@@ -391,11 +394,11 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
     sheet['hdr_template'] = sheet.apply(
         # TODO (gdingle): do reverse complement of hdr_seq if guide is negative strand after construction
         # TODO (gdingle): what's the max length of the template? is it the full cds?
-        lambda row: get_hdr_template(
+        lambda row: hdr.HDR(
             row['target_seq'],
             hdr_seq,
             hdr_tag,
-        ),
+            row['hdr_dist']).template,
         axis=1,
     )
     sheet['hdr_rebind'] = sheet.apply(
@@ -408,7 +411,11 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
 
     # TODO (gdingle): override hdr_template when good enough
     sheet['hdr_mutated'] = sheet.apply(
-        lambda row: mutate(row, hdr_seq) if row['hdr_rebind'] else '',
+        lambda row: hdr.HDR(
+            row['target_seq'],
+            hdr_seq,
+            hdr_tag,
+            row['hdr_dist']).template_mutated if row['hdr_rebind'] else '',
         axis=1)
 
     return sheet

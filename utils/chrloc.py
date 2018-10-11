@@ -153,7 +153,7 @@ class GuideChrLoc(ChrLoc):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        assert len(self) == 20
+        assert len(self) == 20, (args, len(self))
         assert self.strand
 
     @property
@@ -196,16 +196,26 @@ def get_guide_loc(
         guide_len: int = 20,
         guide_direction: str = '+') -> GuideChrLoc:
     """
-    >>> get_guide_loc(ChrLoc('chr7:5569177-5569415'), 191)
-    ChrLoc('chr7:5569368-5569387:+')
+    Example forward:
+    AAGATAGGTGATGAAGGAGGGTCCCCAGG
+          GGTGATGAAGGAGGGTCCCC
+
+    >>> get_guide_loc(ChrLoc('chr7:1-29'), 26)
+    ChrLoc('chr7:7-26:+')
+
+    Example reverse:
+    CCATGGCTGAGCTGGATCCGTTCGGC
+       TGGCTGAGCTGGATCCG
+
+    >>> get_guide_loc(ChrLoc('chr7:1-26'), 0, 20, '-')
+    ChrLoc('chr7:4-23:-')
     """
-    start = target_loc.start + guide_offset
+    pam = target_loc.start + guide_offset
     return GuideChrLoc(
         'chr{}:{}-{}:{}'.format(
             target_loc.chr,
-            start,
-            # Minus one, for length inclusive
-            start + guide_len - 1,
+            pam + 3 if guide_direction == '-' else pam - guide_len,
+            pam + guide_len + 2 if guide_direction == '-' else pam - 1,
             guide_direction)
     )
 

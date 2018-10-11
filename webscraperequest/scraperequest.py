@@ -391,7 +391,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if 'Found no possible guide sequence' in soup.get_text():
                 return dict(
                     target=self.target,
-                    seq=self.data['seq'],
                     guide_seqs={
                         'not found': 'not found',
                         # TODO (gdingle): make url on error work somehow
@@ -401,7 +400,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if 'Server error: could not run command' in soup.get_text():
                 return dict(
                     target=self.target,
-                    seq=self.data['seq'],
                     guide_seqs={
                         'server error': 'server error',
                         # TODO (gdingle): make url on error work somehow
@@ -411,7 +409,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if 'are not valid in the genome' in soup.get_text():
                 return dict(
                     target=self.target,
-                    seq=self.data['seq'],
                     guide_seqs={
                         'invalid chromosome range': 'invalid chromosome range',
                         # TODO (gdingle): make url on error work somehow
@@ -458,7 +455,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if not rows:
                 return dict(
                     target=self.target,
-                    seq=self.data['seq'],
                     guide_seqs={'not found': 'not found'},
                 )
 
@@ -472,8 +468,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                                   for t in rows)
 
         return dict(
-            # TODO (gdingle): why is this seq off by one from input seq?
-            # seq=soup.find(class_='title').find('a').get_text(),
             target=self.target,
             url=url,
             batch_id=batch_id,

@@ -112,25 +112,25 @@ class HDR:
         assert False
 
     @property
-    def hdr_template(self) -> str:
-        return self._hdr_template(False)
-
-    @property
-    def hdr_template_mutated(self) -> str:
+    def template(self) -> str:
         """
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.hdr_template_mutated
-        'CCATGnnnGCTGAGCTGGATCCGtttGGC'
-        """
-        return self._hdr_template(True)
-
-    def _hdr_template(self, mutate: bool = False) -> str:
-        """
-        >>> HDR('ATGTCCCAGCCGGGAAT', 'NNN')._hdr_template()
+        >>> HDR('ATGTCCCAGCCGGGAAT', 'NNN').template
         'ATGnnnTCCCAGCCGGGAAT'
-        >>> HDR('TCCCAGCCGGGTGA', 'NNN', 'stop_codon')._hdr_template()
+        >>> HDR('TCCCAGCCGGGTGA', 'NNN', 'stop_codon').template
         'TCCCAGCCGGGnnnTGA'
         """
+        return self._template(False)
+
+    @property
+    def template_mutated(self) -> str:
+        """
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.template_mutated
+        'CCATGnnnGCTGAGCTGGATCCGtttGGC'
+        """
+        return self._template(True)
+
+    def _template(self, mutate: bool = False) -> str:
         target_seq = self.mutated if mutate else self.target_seq
         return (
             target_seq[:self.insert_at] +
