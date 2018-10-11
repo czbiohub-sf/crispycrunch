@@ -127,71 +127,81 @@ class HDR:
             self.hdr_seq.lower() +
             target_seq[self.insert_at:])
 
-    def _split_out_guide(self) -> tuple:
-        """
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr._split_out_guide()
-        ('CC', 'ATGGCTGAGCTGGATCCGTTCGG', 'C')
-
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr._split_out_guide()
-        ('', 'CCATGGCTGAGCTGGATCCGTTC', 'GGC')
-        """
-        start = self.target_seq.index(self.guide_seq)
-        before_guide = self.target_seq[:start]
-        after_guide = self.target_seq[start + len(self.guide_seq):]
-        parts = (before_guide, self.guide_seq, after_guide)
-        assert len(''.join(parts)) == len(self.target_seq)
-        return parts
-
     @property
     def mutated(self) -> str:
-        # TODO (gdingle): do we want to change guide_after_insert to always
-        # include all PAM overlapping codons for possible mutation?
-        # TODO (gdingle): optimize mutation with mutated_score
-        # TODO (gdingle): do we want always mutate both sides or just the larger?
-        before, _, after = self._split_out_guide()
+        """
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.mutated
+        'CCATGGCTGAGCTGGATCCGtttGGC'
+        """
+        start = self.target_seq.index(self.guide_seq_aligned)
+        mutated = self.guide_mutated
         return ''.join((
-            before,
-            self.guide_mutated,
-            after,
+            self.target_seq[:start],
+            mutated,
+            self.target_seq[start + len(mutated):],
         ))
+
+    @property
+    def guide_seq_aligned(self) -> str:
+        """
+        Subset of guide sequence aligned to codons.
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.guide_seq
+        'ATGGCTGAGCTGGATCCGTTCGG'
+        >>> hdr.guide_seq_aligned
+        'ATGGCTGAGCTGGATCCGTTC'
+
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.guide_seq
+        'CCATGGCTGAGCTGGATCCGTTC'
+        >>> hdr.guide_seq_aligned
+        'ATGGCTGAGCTGGATCCGTTC'
+        """
+
+        # TODO (gdingle): do we want to extend to include PAM?
+
+        if self.guide_direction == '+':
+            codon_offset = abs(self.hdr_dist % 3)
+            return self.guide_seq[:-codon_offset]
+        else:
+            codon_offset = 3 - abs(self.hdr_dist % 3)
+            return self.guide_seq[codon_offset:]
 
     @property
     def guide_mutated(self) -> str:
         """
-        Silently mutates codons in the guide sequence, going from the PAM inwards.
+        Silently mutates codons in the guide sequence, going from the PAM side inwards.
 
         hdr_dist is relative to insert_at, which is at a codon boundary, so make
         the start of mutation a multiple of three distant.
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_mutated
-        'atggcggaaCTGGATCCGTTCGG'
-        >>> hdr.target_mutation_score = 99
-        >>> hdr.guide_mutated
-        'atggcgGAGCTGGATCCGTTCGG'
+        'ATGGCTGAGCTGGATCCGttt'
         >>> hdr.target_mutation_score = 1
         >>> hdr.guide_mutated
-        'atggcggaactaGATCCGTTCGG'
+        'ATGGCTGAGCTGGATcccttt'
 
-        # >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        # >>> hdr.guide_mutated
-        # ''
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.guide_mutated
+        'atggcgGAGCTGGATCCGTTC'
         """
-        # TODO (gdingle): make own function?
-        start_left = abs((self.hdr_dist - 17) % 3)
 
-        for mutated in mutate_silently(self.guide_seq[start_left:]):
-            score = mit_hit_score(mutated[:20].upper(), self.guide_seq[:20].upper())
-            if score < self.target_mutation_score:
+        # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
+        # in 3bp PAM? should we try to align the hit_score_m? lols
+
+        for mutated in mutate_silently(self.guide_seq_aligned, self.guide_direction):
+            score = mit_hit_score(
+                mutated.upper(),
+                self.guide_seq_aligned.upper(),
+                self.guide_direction,
+            )
+            if score <= self.target_mutation_score:
                 break
 
-        return ''.join((
-            self.guide_seq[:start_left],
-            # TODO (gdingle): direction depending on guide direction
-            mutated,
-        ))
+        return mutated
 
     @property
     def mutated_score(self) -> float:
@@ -203,8 +213,9 @@ class HDR:
         # TODO (gdingle): how to get proper direction to score?
         # that includes PAM?
         return mit_hit_score(
-            self.guide_mutated[:20],
-            self.guide_seq[:20])
+            self.guide_mutated,
+            self.guide_seq,
+            self.guide_direction,)
 
 
 def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]:
@@ -357,7 +368,7 @@ def _validate_seq(seq: str):
 #     assert False
 
 
-def mit_hit_score(seq1: str, seq2: str) -> float:
+def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
     """Compute MIT mismatch score between two 20-mers
 
     See 'Scores of single hits' on http://crispr.mit.edu/about
@@ -369,11 +380,14 @@ def mit_hit_score(seq1: str, seq2: str) -> float:
     seq1, seq2 : sequence
         two 20-mers to compare
 
+    guide_direction : optional direction for starting with PAM
+
     Returns
     -------
     float
         MIT mismatch score between the two sequences
 
+    Extremes.
     >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAA')
     100.0
     >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'GAAAAAAAAAAAAAAAAAAA')
@@ -382,19 +396,36 @@ def mit_hit_score(seq1: str, seq2: str) -> float:
     41.7
     >>> mit_hit_score('ZZZZZZZZZZZZZZZZZZZZ', 'AAAAAAAAAAAAAAAAAAAA')
     8.609700038185587e-08
+
+    Realistic.
     >>> mit_hit_score('AAGGCCAACCGGCGCCGCGC', 'GCGCGGCGCCGGTTGGCCTT')
     6.039504885480631e-06
     >>> mit_hit_score('GAAGGCCAACCGGCGCCGCG', 'CGCGGCGCCGGTTGGCCTTC')
     1.6703747039472636e-05
+
+    Other direction.
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'GAAAAAAAAAAAAAAAAAAA', '-')
+    41.7
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAG', '-')
+    100.0
     """
     # aka Matrix "M"
     hit_score_m = [0, 0, 0.014, 0, 0, 0.395, 0.317, 0, 0.389, 0.079, 0.445, 0.508,
                    0.613, 0.851, 0.732, 0.828, 0.615, 0.804, 0.685, 0.583]
 
-    assert(len(seq1) == 20)
-    max_dist = 19
+    # Go towards PAM
+    if guide_direction == '-':
+        seq1 = seq1[::-1]
+        seq2 = seq2[::-1]
 
     assert(len(seq1) == len(seq2)), (seq1, seq2)
+
+    # Use most important 20bp only
+    seq1 = seq1[-20:]
+    seq2 = seq2[-20:]
+
+    assert(len(seq1) == 20)
+    max_dist = 19
 
     dists = []  # distances between mismatches, for part 2
     mm_count = 0  # number of mismatches, for part 3
