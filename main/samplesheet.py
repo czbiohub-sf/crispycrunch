@@ -319,7 +319,6 @@ def _new_samplesheet() -> DataFrame:
             '_crispor_batch_id',
             '_crispor_pam_id',
             '_crispor_guide_id',
-            # TODO (gdingle): donor or HDR?
             'hdr_dist',
             'hdr_template',
             'hdr_rebind',
@@ -328,7 +327,7 @@ def _new_samplesheet() -> DataFrame:
             'primer_seq_rev',
             # TODO (gdingle): rename to reference amplicon?
             'primer_product',
-            # TODO (gdingle): ever useful
+            # TODO (gdingle): ever useful?
             # 'well_name',
             's3_bucket',
             's3_prefix',
@@ -405,7 +404,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
     )
     sheet['hdr_rebind'] = sheet.apply(
         # less than 14 nucleotides* of the original protospacer remaining to be safe
-        lambda row: row['hdr_dist'] >= 14,
+        lambda row: abs(row['hdr_dist']) >= 14,
         axis=1,
     )
 

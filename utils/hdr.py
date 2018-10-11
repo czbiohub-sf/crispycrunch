@@ -48,7 +48,7 @@ class HDR:
             self.insert_at = self._target_codon()
         assert any(c in target_seq for c in self.valid_codons)
 
-        assert hdr_dist >= 0
+        assert abs(hdr_dist) < len(target_seq)
         self.hdr_dist = hdr_dist
 
         assert target_mutation_score < 100 and target_mutation_score > 0
@@ -59,6 +59,16 @@ class HDR:
             self.guide_direction = guide_direction
         else:
             self.guide_direction = self._guide_direction()
+
+    def __repr__(self):
+        return "HDR('{}', '{}', '{}', {}, '{}', {})".format(
+            self.target_seq,
+            self.hdr_seq,
+            self.hdr_tag,
+            self.hdr_dist,
+            self.guide_direction,
+            self.target_mutation_score,
+        )
 
     def _guide_direction(self) -> str:
         """
@@ -453,50 +463,6 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
     for i in range(0, len(seq), 3):
         codon = seq[i:i + 3]
         yield codon
-
-
-# TODO (gdingle): we may not need this at all because we can create from hdr_template above
-# def get_hdr_primer(
-#         primer_product: str,
-#         hdr_template: str,
-#         hdr_tag: str='start_codon') -> str:
-#     """
-#     Locates target codon in primer product then inserts HDR sequence.
-#     >>> get_hdr_primer('ATGTCCCAGCCGGGAAT', 'ATGnnn')
-#     'ATGnnnTCCCAGCCGGGAAT'
-#     >>> get_hdr_primer('AACAAGTGAATAAA', 'nnnTGA', 'stop_codon')
-#     'AACAAGTGAAnnnTAAAAA'
-#     """
-#     _validate_seq(primer_product)
-#     _validate_seq(hdr_template)
-#     assert hdr_tag in ('start_codon', 'stop_codon')
-#     if hdr_tag == 'start_codon':
-#         assert hdr_template[0:3] == 'ATG'
-#         codon_index = primer_product.find('ATG')
-#         if codon_index == -1:
-#             # TODO (gdingle): good return value?
-#             return 'start_codon not found'
-#         assert primer_product[codon_index:codon_index + 3] == 'ATG'
-#         hdr_seq = hdr_template[3:].lower()
-#         return primer_product[:codon_index] + \
-#             get_hdr_template(primer_product[codon_index:], hdr_seq, hdr_tag)
-
-#     # TODO (gdingle): this is really uglly and should be refactored.
-#     elif hdr_tag == 'stop_codon':
-#         stop_codons = ['TAG', 'TGA', 'TAA']
-#         assert hdr_template[-3:] in stop_codons, hdr_template
-#         # TODO (gdingle): does this work? waht about triplets of amino acids?
-#         stops = [primer_product.rfind(stop) for stop in stop_codons]
-#         if all(s == -1 for s in stops):
-#             return 'stop_codon not found'
-#         # TODO (gdingle): is this biologically correct?
-#         codon_index = max(stops)
-#         assert primer_product[codon_index:codon_index + 3] in stop_codons
-#         hdr_seq = hdr_template[:-3].lower()
-#         return get_hdr_template(primer_product[:codon_index + 3], hdr_seq, hdr_tag) + \
-#             primer_product[-3:]
-
-#     assert False
 
 
 if __name__ == '__main__':
