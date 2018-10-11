@@ -28,7 +28,8 @@ class HDR:
             hdr_seq: str,
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
-            target_mutation_score: float = 50.0) -> None:
+            target_mutation_score: float = 50.0,
+            guide_direction='') -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
@@ -53,25 +54,30 @@ class HDR:
         assert target_mutation_score < 100 and target_mutation_score > 0
         self.target_mutation_score = target_mutation_score
 
-    @property
-    def guide_direction(self):
+        if guide_direction:
+            assert guide_direction in ('+', '-')
+            self.guide_direction = guide_direction
+        else:
+            self.guide_direction = self._guide_direction()
+
+    def _guide_direction(self) -> str:
         """
-        Get guide direction by expected PAM locations.
+        Infer guide direction by expected PAM locations.
 
         We try both directions because we don't know guide direction yet.
         There is a small chance that there could be PAMs equidistant in both
         directions.
-        # TODO (gdingle): fix ambiguity ... take guide_direction in __init__?
 
         See get_guide_cut_to_insert.
 
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.guide_direction
+        >>> hdr._guide_direction()
         '+'
         >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr.guide_direction
+        >>> hdr._guide_direction()
         '-'
         """
+
         cut_at = self.cut_at
         pam1 = self.target_seq[cut_at + 3:cut_at + 6]
         pam2 = self.target_seq[cut_at - 6:cut_at - 3]
@@ -114,10 +120,9 @@ class HDR:
     @property
     def template(self) -> str:
         """
-        >>> HDR('ATGTCCCAGCCGGGAAT', 'NNN').template
-        'ATGnnnTCCCAGCCGGGAAT'
-        >>> HDR('TCCCAGCCGGGTGA', 'NNN', 'stop_codon').template
-        'TCCCAGCCGGGnnnTGA'
+        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.template
+        'CCATGnnnGCTGAGCTGGATCCGTTCGGC'
         """
         return self._template(False)
 
