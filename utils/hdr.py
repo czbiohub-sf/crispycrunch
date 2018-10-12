@@ -19,6 +19,8 @@ class HDR:
     The target sequence should be in the direction of the gene. That is,
     it has either a ATG or one of TAG, TGA, or TAA.
 
+    The target sequence must be codon aligned!
+
     target_mutation_score is the minimum MIT score needed to stop silent mutation.
     """
 
@@ -32,21 +34,13 @@ class HDR:
             target_mutation_score: float = 50.0) -> None:
 
         _validate_seq(target_seq)
+        assert len(target_seq) % 3 == 0, 'must be codon aligned'
         self.target_seq = target_seq
         _validate_seq(hdr_seq)
         self.hdr_seq = hdr_seq
 
         assert hdr_tag in ('start_codon', 'stop_codon')
         self.hdr_tag = hdr_tag
-        if hdr_tag == 'start_codon':
-            self.valid_codons = set(['ATG'])
-            # just after start codon
-            self.insert_at = self._target_codon() + 3
-        else:
-            self.valid_codons = set(['TAG', 'TGA', 'TAA'])
-            # just before stop codon
-            self.insert_at = self._target_codon()
-        assert any(c in target_seq for c in self.valid_codons)
 
         assert abs(hdr_dist) < len(target_seq)
         self.hdr_dist = hdr_dist
@@ -62,6 +56,16 @@ class HDR:
             # self._guide_direction()
         else:
             self.guide_direction = self._guide_direction()
+
+        if hdr_tag == 'start_codon':
+            self.boundary_codons = set(['ATG'])
+            # just after start codon
+            self.insert_at = self._target_codon_at() + 3
+        else:
+            self.boundary_codons = set(['TAG', 'TGA', 'TAA'])
+            # just before stop codon
+            self.insert_at = self._target_codon_at()
+        assert any(c in target_seq for c in self.boundary_codons)
 
     def __repr__(self):
         return "HDR('{}', '{}', '{}', {}, '{}', {})".format(
@@ -83,10 +87,10 @@ class HDR:
 
         See get_guide_cut_to_insert.
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr._guide_direction()
         '+'
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr._guide_direction()
         '-'
         """
@@ -111,11 +115,11 @@ class HDR:
         """
         Returns 23bp guide sequence that includes PAM.
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_seq
         'ATGGCTGAGCTGGATCCGTTCGG'
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr.guide_seq
         'CCATGGCTGAGCTGGATCCGTTC'
         """
@@ -127,31 +131,27 @@ class HDR:
         assert len(guide_seq) == 23
         return guide_seq
 
-    def _target_codon(self) -> int:
-        for codon in self.valid_codons:
-            if self.hdr_tag == 'stop_codon':
-                start = self.target_seq.rfind(codon)
-            else:
-                start = self.target_seq.find(codon)
-            if start >= 0:
-                return start
+    def _target_codon_at(self) -> int:
+        for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
+            if codon in self.boundary_codons:
+                return i * 3
         assert False
 
     @property
     def template(self) -> str:
         """
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.template
-        'CCATGnnnGCTGAGCTGGATCCGTTCGGC'
+        'GCCATGnnnGCTGAGCTGGATCCGTTCGGC'
         """
         return self._template(False)
 
     @property
     def template_mutated(self) -> str:
         """
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.template_mutated
-        'CCATGnnnGCTGAGCTGGATCCGtttGGC'
+        'GCCATGnnnGCTGAGCTGGATCCGtttGGC'
         """
         return self._template(True)
 
@@ -165,9 +165,9 @@ class HDR:
     @property
     def mutated(self) -> str:
         """
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.mutated
-        'CCATGGCTGAGCTGGATCCGtttGGC'
+        'GCCATGGCTGAGCTGGATCCGtttGGC'
         """
         start = self.target_seq.index(self.guide_seq_aligned)
         mutated = self.guide_mutated
@@ -185,19 +185,19 @@ class HDR:
         Extra base pairs are removed from the PAM side, because that is
         where we want to mutate whole codons.
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_seq
         'ATGGCTGAGCTGGATCCGTTCGG'
         >>> hdr.guide_seq_aligned
         'ATGGCTGAGCTGGATCCGTTC'
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr.guide_seq
         'CCATGGCTGAGCTGGATCCGTTC'
         >>> hdr.guide_seq_aligned
         'ATGGCTGAGCTGGATCCGTTC'
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGG', 'NNN', hdr_dist=15)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGG', 'NNN', hdr_dist=15)
         >>> hdr.guide_seq
         'TGGCTGAGCTGGATCCGTTCGGG'
         >>> hdr.guide_seq_aligned
@@ -219,7 +219,7 @@ class HDR:
         """
         Silently mutates codons in the guide sequence, going from the PAM side inwards.
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCGttt'
 
@@ -231,7 +231,7 @@ class HDR:
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGgaccccttt'
 
-        >>> hdr = HDR('CCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr.guide_mutated
         'atggcgGAGCTGGATCCGTTC'
         """

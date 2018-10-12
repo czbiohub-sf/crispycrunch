@@ -135,24 +135,31 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
     if guide_selection.guide_design.hdr_seq:
+        guide_design = guide_selection.guide_design
         sheet['primer_product'] = sheet.apply(
+            # TODO (gdingle): how to codon-align?
+            # Assumes primer_seq_fwd is always 20bp
+            # TODO (gdingle): ryan leenay says primer needs to be codon-aware
             lambda row: hdr.HDR(
                 row['primer_product'],
-                guide_selection.guide_design.hdr_seq,
-                guide_selection.guide_design.hdr_tag,
+                guide_design.hdr_seq,
+                guide_design.hdr_tag,
                 row['hdr_dist'],
-                row['_guide_direction']).template,
+                # TODO (gdingle): fix me
+                row['_guide_direction']).template if False else 'not codon aligned',
             # TODO (gdingle): return mutated optionally here
             axis=1)
 
         # TODO (gdingle): fix root cause of issues
         def warn_hdr_primer(row) -> str:
             primer_product = row['primer_product']
+            if ' ' in primer_product:
+                return primer_product
             max_amplicon_length = primer_selection.primer_design.max_amplicon_length
             plen = len(primer_product)
             if plen > max_amplicon_length:
                 return f'too long: {plen}bp'
-            hdr_seq = guide_selection.guide_design.hdr_seq
+            hdr_seq = guide_design.hdr_seq
             arms = primer_product.upper().split(hdr_seq)
             lal, ral = len(arms[0]), len(arms[1])
             if min(lal, ral) < 55:
@@ -428,18 +435,18 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
 
     # TODO (gdingle): temp for comparing guide seq
     # TODO (gdingle): add in PAM?
-    sheet['hdr_guide_match'] = sheet.apply(
-        lambda row: [
-            hdr.HDR(
-                row['target_seq'],
-                hdr_seq,
-                hdr_tag,
-                row['hdr_dist'],
-                row['_guide_direction']).guide_seq,
-            row['guide_seq'] if row['_guide_direction'] == '+' else reverse_complement(
-                row['guide_seq']),
-        ],
-        axis=1)
+    # sheet['hdr_guide_match'] = sheet.apply(
+    #     lambda row: [
+    #         hdr.HDR(
+    #             row['target_seq'],
+    #             hdr_seq,
+    #             hdr_tag,
+    #             row['hdr_dist'],
+    #             row['_guide_direction']).guide_seq,
+    #         row['guide_seq'] if row['_guide_direction'] == '+' else reverse_complement(
+    #             row['guide_seq']),
+    #     ],
+    #     axis=1)
 
     return sheet
 

@@ -108,12 +108,10 @@ class GuideDesignView(CreatePlusView):
         if guide_design.cds_index is not None:
             assert all(is_ensemble_transcript(t) for t in targets)
             assert genome == 'hg38', 'only implemented for hg38'
-            mx, mn = guide_design.cds_max_min
             func = functools.partial(
                 get_cds_chr_loc,
                 cds_index=guide_design.cds_index,
-                max_length=mx,
-                min_length=mn)
+                length=guide_design.cds_length)
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
@@ -135,13 +133,11 @@ class GuideDesignView(CreatePlusView):
         # TODO (gdingle): investigate why get_cds_seq returns diff than chr_loc_to_seq
         # and fix in case of ENST and no hdr_tag
         if guide_design.cds_index is not None:  # hdr
-            mx, mn = guide_design.cds_max_min
             assert genome == 'hg38', 'only implemented for hg38'
             func = functools.partial(
                 get_cds_seq,
                 cds_index=guide_design.cds_index,
-                max_length=mx,
-                min_length=mn)
+                length=guide_design.cds_length)
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             assert False, 'not implemented'
         else:
@@ -214,7 +210,6 @@ class GuideSelectionView(CreatePlusView):
         """
         by = 'distance' if guide_design.hdr_seq else 'score'
         top = guide_design.wells_per_target
-        cds_index = guide_design.cds_index
 
         guide_seqs = guide_data['guide_seqs']
         if not guide_seqs or guide_seqs.get('not found'):
@@ -240,9 +235,9 @@ class GuideSelectionView(CreatePlusView):
                 # TODO (gdingle): what about forward and reverse?
                 # we should really rank by cut to insert distance
                 guide_offset = int(t[0][1:-1])
-                if cds_index == -1:
+                if guide_design.cds_index == -1:
                     # Reproduce protospacex min_length fetch behavior
-                    mid = guide_design.cds_max_min[1] // 2
+                    mid = guide_design.cds_length // 2
                     return abs(mid - guide_offset)
                 else:
                     return guide_offset

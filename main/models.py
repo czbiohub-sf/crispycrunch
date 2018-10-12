@@ -199,9 +199,9 @@ class GuideDesign(BaseModel):
         'hg19': 'Human',
     }
     HDR_TAG_TERMINUSES = [
-        # See cds_max_min below
-        ('start_codon', 'Within 40bp after start codon'),
-        ('stop_codon', 'Within 40bp before or 40bp after stop codon')
+        # See cds_length below
+        ('start_codon', 'Within 36bp after start codon'),
+        ('stop_codon', 'Within 36bp before or after stop codon')
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
         # TODO (gdingle): if negative guide, do reverse complement
@@ -285,13 +285,13 @@ class GuideDesign(BaseModel):
             raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
 
     @property
-    def cds_max_min(self):
+    def cds_length(self):
         if not self.hdr_seq:
-            return tuple([])
+            return -1
         if self.hdr_tag == 'start_codon':
-            return (40, 40)
+            return 36
         elif self.hdr_tag == 'stop_codon':
-            return (80, 80)
+            return 72
         else:
             raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
 

@@ -258,6 +258,7 @@ def get_guide_cut_to_insert(
     if hdr_tag == 'start_codon':
         insert = target_loc.start + 3
     elif hdr_tag == 'stop_codon':
+        # TODO: IMPORTANT THIS IS NO LONGER VALID WHEN STOP CODON CAN BY ANYWHERE
         insert = target_loc.end - 2
 
     # TODO (gdingle): do we want abs distance???

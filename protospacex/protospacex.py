@@ -227,7 +227,7 @@ def get_cds_seq(
     cds_seq = record.seq[start:end]
 
     assert len(cds_seq) == length
-    assert len(cds_seq[:codon_at]) % 3 == 0, 'must be codon aligned'
+    assert len(cds_seq) % 3 == 0, 'must be codon aligned'
 
     if cds_index == 0:
         assert cds_seq[codon_at:codon_at + 3] == 'ATG'
