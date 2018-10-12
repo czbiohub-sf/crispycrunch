@@ -49,15 +49,6 @@ class HDR:
         assert target_mutation_score < 100 and target_mutation_score > 0
         self.target_mutation_score = target_mutation_score
 
-        if guide_direction:
-            assert guide_direction in ('+', '-')
-            self.guide_direction = guide_direction
-            # Run inference to double check... this is failing for some!
-            # # TODO (gdingle): fix me IMPORTANT!
-            # self._guide_direction()
-        else:
-            self.guide_direction = self._guide_direction()
-
         if hdr_tag == 'start_codon':
             self.boundary_codons = set(['ATG'])
             # just after start codon
@@ -67,6 +58,15 @@ class HDR:
             # just before stop codon
             self.insert_at = self._target_codon_at()
         assert any(c in target_seq for c in self.boundary_codons)
+
+        if guide_direction:
+            assert guide_direction in ('+', '-')
+            self.guide_direction = guide_direction
+            # Run inference to double check... this is failing for some!
+            # # TODO (gdingle): fix me IMPORTANT!
+            # self._guide_direction()
+        else:
+            self.guide_direction = self._guide_direction()
 
     def __repr__(self):
         return "HDR('{}', '{}', '{}', {}, '{}', {})".format(
@@ -234,7 +234,7 @@ class HDR:
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
         >>> hdr.guide_mutated
-        'atggcgGAGCTGGATCCGTTC'
+        'atggccGAGCTGGATCCGTTC'
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
@@ -268,7 +268,8 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     """
     Generator that silently mutates input sequence by substituing a different
     codon that encodes the same amino acid. Changes one codon per iteration.
-    Direction is from PAM inwards.
+    Direction is from PAM inwards. The new codon is the selected by frequency
+    in the human genome.
 
     The input is assumed to a multiple of 3bp codons.
 
@@ -292,8 +293,6 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     'TGTTGCgacgat'
     """
     synonymous = {
-        # TODO (gdingle): comment out rare codons
-        # see https://www.genscript.com/tools/codon-frequency-table
         'CYS': ['TGT', 'TGC'],
         'ASP': ['GAT', 'GAC'],
         'SER': ['TCT', 'TCG', 'TCA', 'TCC', 'AGC', 'AGT'],
@@ -316,6 +315,74 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
         'GLU': ['GAG', 'GAA'],
         'TYR': ['TAT', 'TAC'],
     }
+    # Fraction of occurences among synonyms in Human genome.
+    # see https://www.genscript.com/tools/codon-frequency-table
+    syn_fractions = {
+        'ATG': 1,
+        'TGG': 1,
+        'CAG': 0.75,
+        'CAC': 0.59,
+        'AAG': 0.58,
+        'GAG': 0.58,
+        'TAC': 0.57,
+        'TTC': 0.55,
+        'TGC': 0.55,
+        'AAC': 0.54,
+        'GAC': 0.54,
+        'TGA': 0.52,
+        'ATC': 0.48,
+        'GTG': 0.47,
+        'AAT': 0.46,
+        'GAT': 0.46,
+        'TTT': 0.45,
+        'TGT': 0.45,
+        'TAT': 0.43,
+        'AAA': 0.42,
+        'GAA': 0.42,
+        'CTG': 0.41,
+        'CAT': 0.41,
+        'GCC': 0.4,
+        'ATT': 0.36,
+        'ACC': 0.36,
+        'GGC': 0.34,
+        'CCC': 0.33,
+        'TAA': 0.28,
+        'CCT': 0.28,
+        'ACA': 0.28,
+        'CCA': 0.27,
+        'GCT': 0.26,
+        'CAA': 0.25,
+        'GGA': 0.25,
+        'GGG': 0.25,
+        'GTC': 0.24,
+        'ACT': 0.24,
+        'AGC': 0.24,
+        'GCA': 0.23,
+        'TCC': 0.22,
+        'CGG': 0.21,
+        'TAG': 0.2,
+        'CTC': 0.2,
+        'AGA': 0.2,
+        'AGG': 0.2,
+        'CGC': 0.19,
+        'GTT': 0.18,
+        'TCT': 0.18,
+        'ATA': 0.16,
+        'GGT': 0.16,
+        'TCA': 0.15,
+        'AGT': 0.15,
+        'TTG': 0.13,
+        'CTT': 0.13,
+        'ACG': 0.12,
+        'GTA': 0.11,
+        'CCG': 0.11,
+        'CGA': 0.11,
+        'GCG': 0.11,
+        'CGT': 0.08,
+        'TTA': 0.07,
+        'CTA': 0.07,
+        'TCG': 0.06,
+    }
     synonymous_index = dict(
         (codon, aa)
         for aa, codons in synonymous.items()
@@ -335,8 +402,10 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
         syns.remove(codon)
 
         if len(syns):
+            fractions = tuple((syn_fractions[syn], syn) for syn in syns)
             # TODO (gdingle): better to choose random syn?
-            new_guide.append(syns.pop().lower())
+            top = max(fractions)[1]
+            new_guide.append(top.lower())
         else:
             new_guide.append(codon.lower())
 
