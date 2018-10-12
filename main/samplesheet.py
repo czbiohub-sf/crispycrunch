@@ -135,50 +135,53 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
     if guide_selection.guide_design.hdr_seq:
-        guide_design = guide_selection.guide_design
-        sheet['primer_product'] = sheet.apply(
-            # TODO (gdingle): how to codon-align?
-            # Assumes primer_seq_fwd is always 20bp
-            # TODO (gdingle): ryan leenay says primer needs to be codon-aware
-            lambda row: hdr.HDR(
-                row['primer_product'],
-                guide_design.hdr_seq,
-                guide_design.hdr_tag,
-                row['hdr_dist'],
-                # TODO (gdingle): fix me
-                row['_guide_direction']).template if False else 'not codon aligned',
-            # TODO (gdingle): return mutated optionally here
-            axis=1)
-
-        # TODO (gdingle): fix root cause of issues
-        def warn_hdr_primer(row) -> str:
-            primer_product = row['primer_product']
-            if ' ' in primer_product:
-                return primer_product
-            max_amplicon_length = primer_selection.primer_design.max_amplicon_length
-            plen = len(primer_product)
-            if plen > max_amplicon_length:
-                return f'too long: {plen}bp'
-            hdr_seq = guide_design.hdr_seq
-            arms = primer_product.upper().split(hdr_seq)
-            lal, ral = len(arms[0]), len(arms[1])
-            if min(lal, ral) < 55:
-                return 'homology arm too short: {}bp'.format(min(lal, ral))
-            return primer_product
-
-        sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
+        sheet = _set_hdr_primer(
+            sheet,
+            guide_selection.guide_design,
+            primer_selection.primer_design.max_amplicon_length)
 
     return sheet
 
 
-# TODO (gdingle): try using bolton itertools remap?
+def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
+    sheet['primer_product'] = sheet.apply(
+        # TODO (gdingle): how to codon-align?
+        # Assumes primer_seq_fwd is always 20bp
+        # TODO (gdingle): ryan leenay says primer needs to be codon-aware
+        lambda row: hdr.HDR(
+            row['primer_product'],
+            guide_design.hdr_seq,
+            guide_design.hdr_tag,
+            row['hdr_dist'],
+            # TODO (gdingle): fix me
+            row['_guide_direction']).template if False else 'not codon aligned',
+        # TODO (gdingle): return mutated optionally here
+        axis=1)
+
+    # TODO (gdingle): fix root cause of issues
+    def warn_hdr_primer(row) -> str:
+        primer_product = row['primer_product']
+        if ' ' in primer_product:
+            return primer_product
+        plen = len(primer_product)
+        if plen > max_amplicon_length:
+            return f'too long: {plen}bp'
+        hdr_seq = guide_design.hdr_seq
+        arms = primer_product.upper().split(hdr_seq)
+        lal, ral = len(arms[0]), len(arms[1])
+        if min(lal, ral) < 55:
+            return 'homology arm too short: {}bp'.format(min(lal, ral))
+        return primer_product
+
+    sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
+    return sheet
 
 
 def _flatten_guide_data(
     guide_selection: GuideSelection
-
-
 ) -> List[Tuple[str, str, str, str, str]]:
+
+    # TODO (gdingle): try using bolton itertools remap?
 
     guide_design = guide_selection.guide_design
     # Ungroup guide data into rows
