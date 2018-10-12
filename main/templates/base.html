@@ -5,6 +5,12 @@
 <head>
   <title>{% block title %}{{request.resolver_match.url_name}}{% endblock %}</title>
   <link rel="shortcut icon" href="/static/biohub-icon.png" />
+  {# Override global base font size. See https://stackoverflow.com/questions/28678542/how-to-change-bootstraps-global-default-font-size. #}
+  <style type="text/css">
+    html {
+      font-size: 18px;
+    }
+  </style>
   {% bootstrap_css %}
   {% bootstrap_javascript jquery='slim' %}
   {% block head %}{% endblock head %}
@@ -34,7 +40,7 @@
   {% if form.is_multipart %}
   <form enctype="multipart/form-data" method="post" class="form col-sm-8">
   {% else %}
-  <form method="post" class="form col-sm-8">
+  <form method="post" class="form col-sm-12">
   {% endif %}
     {% csrf_token %}
     {% bootstrap_form form %}
