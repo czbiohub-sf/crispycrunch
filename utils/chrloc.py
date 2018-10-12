@@ -200,7 +200,7 @@ def get_guide_loc(
     AAGATAGGTGATGAAGGAGGGTCCCCAGG
           GGTGATGAAGGAGGGTCCCC
 
-    >>> get_guide_loc(ChrLoc('chr7:1-29'), 26)
+    >>> get_guide_loc(ChrLoc('chr7:1-30'), 26)
     ChrLoc('chr7:7-26:+')
 
     Example reverse:
@@ -220,6 +220,34 @@ def get_guide_loc(
     )
 
 
+def get_insert(
+        target_loc: ChrLoc,
+        hdr_tag: str = 'start_codon') -> int:
+    """
+    Get the desired insert point assuming the start or stop codon
+    is in the expected place. See protospacex._get_start_end.
+
+    >>> get_insert(ChrLoc('chr5:1-30'))
+    4
+    >>> get_insert(ChrLoc('chr5:1-60'))
+    4
+    >>> get_insert(ChrLoc('chr5:1-30'), 'stop_codon')
+    13
+    >>> get_insert(ChrLoc('chr5:1-60'), 'stop_codon')
+    28
+    """
+    # Insert happens to the left of the integer position.
+    if hdr_tag == 'start_codon':
+        # Insert position is assumed to be always one codon in.
+        return target_loc.start + 3
+    elif hdr_tag == 'stop_codon':
+        assert len(target_loc) % 2 == 0, len(target_loc)
+        mid = len(target_loc) // 2
+        return target_loc.start + mid - 3
+    else:
+        assert False
+
+
 def get_guide_cut_to_insert(
         target_loc: ChrLoc,
         guide_loc: GuideChrLoc,
@@ -235,33 +263,16 @@ def get_guide_cut_to_insert(
     ... GuideChrLoc('chr5:2-21:-'))
     1
 
-    insert between 17 and 18
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-20'),
+    # 30bp target, stop codon ends at 16, insert at 13
+    # 20bp guide, end of cut is at 18
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-30'),
     ... GuideChrLoc('chr5:1-20:+'), 'stop_codon')
-    0
-
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-20'),
-    ... GuideChrLoc('chr5:1-20:-'), 'stop_codon')
-    -14
-
-    Problem case.
-    # >>> get_guide_cut_to_insert(ChrLoc('chr19:1-30:-'),
-    # ... GuideChrLoc('chr19:5-24:-'), 'stop_codon')
-    # -20
+    5
     """
     assert guide_loc in target_loc
     cut = guide_loc.cut.end
 
-    # TODO (gdingle): need to change this when we target before and after
-    # Insert position is assumed to be always one codon in.
-    # Insert happens to the left of the integer position.
-    if hdr_tag == 'start_codon':
-        insert = target_loc.start + 3
-    elif hdr_tag == 'stop_codon':
-        # TODO: IMPORTANT THIS IS NO LONGER VALID WHEN STOP CODON CAN BY ANYWHERE
-        insert = target_loc.end - 2
-
-    # TODO (gdingle): do we want abs distance???
+    insert = get_insert(target_loc, hdr_tag)
     return cut - insert
 
 

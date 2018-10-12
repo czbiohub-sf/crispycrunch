@@ -395,7 +395,6 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 
 
 def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
-    # assert False, (sheet[['target_loc', 'guide_loc']])
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
