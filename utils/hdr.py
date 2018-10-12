@@ -34,7 +34,8 @@ class HDR:
             target_mutation_score: float = 50.0) -> None:
 
         _validate_seq(target_seq)
-        assert len(target_seq) % 3 == 0, 'must be codon aligned'
+        # TODO (gdingle): too strict?
+        # assert len(target_seq) % 3 == 0, 'must be codon aligned'
         self.target_seq = target_seq
         _validate_seq(hdr_seq)
         self.hdr_seq = hdr_seq

@@ -144,19 +144,33 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
 
 def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
-    sheet['primer_product'] = sheet.apply(
-        # TODO (gdingle): how to codon-align?
-        # Assumes primer_seq_fwd is always 20bp
-        # TODO (gdingle): ryan leenay says primer needs to be codon-aware
-        lambda row: hdr.HDR(
-            row['primer_product'],
+    # TODO (gdingle): ryan leenay says primer needs to be codon-aware
+    # TODO (gdingle): figure out primers and HDR... align to guide then to hdr_dist?
+    sheet['primer_product'] = 'need to align to codon'
+    return sheet
+
+    def get_primer_product(row):
+        primer_product = row['primer_product']
+        if row['_guide_direction'] == '+':
+            guide_seq = row['guide_seq']
+        else:
+            guide_seq = reverse_complement(row['guide_seq'])
+
+        # TODO (gdingle): this doesn't work
+        # guide_offset = primer_product.index(guide_seq)
+        # start = (row['hdr_dist'] + 2) % 3
+        # assert False, (guide_offset % 3, row['hdr_dist'] % 3, start)
+        phdr = hdr.HDR(
+            primer_product[start:],
             guide_design.hdr_seq,
             guide_design.hdr_tag,
             row['hdr_dist'],
             # TODO (gdingle): fix me
-            row['_guide_direction']).template if False else 'not codon aligned',
-        # TODO (gdingle): return mutated optionally here
-        axis=1)
+            row['_guide_direction'])
+        return primer_product[:start] + phdr.template
+
+    sheet['primer_product'] = sheet.apply(get_primer_product,
+                                          axis=1)
 
     # TODO (gdingle): fix root cause of issues
     def warn_hdr_primer(row) -> str:
