@@ -67,7 +67,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     try:
         description = response_data['desc'].split(':')
         species = description[1]
-        chromosome_number = int(description[2])
+        chromosome_number = description[2] # may be X
         sequence_left = int(description[3])
         sequence_right = int(description[4])
         transcript_strand = int(description[5])

@@ -42,6 +42,8 @@ class ChrLoc:
     ChrLoc('chr7:5569177-5569415:+')
     >>> ChrLoc('chr7:5569177-5569415:-')
     ChrLoc('chr7:5569177-5569415:-')
+
+    >>> ChrLoc('chr22:20117650-20117685')
     """
     # See also CHR_REGEX in conversions.py
     CHR_REGEX = r'^chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])(:[+\-1])?$'
@@ -59,7 +61,7 @@ class ChrLoc:
             raise ValueError('Cannot parse chromosome location from "{}"'.format(value))
 
         self.chr = matches[1]  # remember chrX
-        assert self.chr in ('X', 'Y') or int(self.chr) in range(1, 21)
+        assert self.chr in ('X', 'Y') or int(self.chr) in range(1, 23)
 
         self.start = int(matches[2].replace(',', ''))
         self.end = int(matches[3].replace(',', ''))
