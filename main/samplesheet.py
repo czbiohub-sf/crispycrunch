@@ -326,6 +326,8 @@ def _new_samplesheet() -> DataFrame:
             'hdr_template',
             'hdr_rebind',
             'hdr_mutated',
+            # TODO (gdingle): temp
+            'hdr_guide_match',
             'primer_seq_fwd',
             'primer_seq_rev',
             # TODO (gdingle): rename to reference amplicon?
@@ -422,6 +424,21 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
             hdr_tag,
             row['hdr_dist'],
             row['_guide_direction']).template_mutated if row['hdr_rebind'] else '',
+        axis=1)
+
+    # TODO (gdingle): temp for comparing guide seq
+    # TODO (gdingle): add in PAM?
+    sheet['hdr_guide_match'] = sheet.apply(
+        lambda row: [
+            hdr.HDR(
+                row['target_seq'],
+                hdr_seq,
+                hdr_tag,
+                row['hdr_dist'],
+                row['_guide_direction']).guide_seq,
+            row['guide_seq'] if row['_guide_direction'] == '+' else reverse_complement(
+                row['guide_seq']),
+        ],
         axis=1)
 
     return sheet

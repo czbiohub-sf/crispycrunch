@@ -181,10 +181,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 def get_cds_seq(
         ensembl_transcript_id: str,
         cds_index: int = 0,
-        max_length: int = 40,
-        min_length: int = 30) -> str:
+        length: int = 36) -> str:
     """
-    Convience function to return base pair sequence of a codon.
+    Return base pair sequence surrounding codon.
 
     The codon may the start or stop codon or other depending on cds_index.
 
@@ -196,45 +195,44 @@ def get_cds_seq(
     Start codon.
 
     >>> get_cds_seq('ENST00000398844')
-    'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAG'
+    'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCC'
 
     >>> get_cds_seq('ENST00000411809')
-    'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAG'
+    'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGAC'
 
     Stop codon.
 
     >>> get_cds_seq('ENST00000398844', -1)
-    'AGCAACAAGTGAATAAATGAATGAATGAAGAAATT'
+    'CAACAAGTGAATAAATGAATGAATGAAGAAATTTGA'
 
     >>> get_cds_seq('ENST00000411809', -1)
-    'TCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAA'
+    'GCCAATTTTAGCAAATAAGAGATTGTAAAAGAAGCA'
 
-    Length 40.
-    >>> len(get_cds_seq('ENST00000221801', -1, 999, min_length=30))
-    40
+    Length 30.
+    >>> len(get_cds_seq('ENST00000221801', -1, length=30))
+    30
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
     location = cds[cds_index].location
 
-    # enforce max_length and min_length
-    start, end = _get_start_end(
+    # enforce length
+    start, end, codon_at = _get_start_end(
         location,
-        min_length,
-        max_length,
+        length,
         cds_index
     )
 
     cds_seq = record.seq[start:end]
 
-    assert len(cds_seq) >= min_length
-    assert len(cds_seq) <= max_length
+    assert len(cds_seq) == length
+    assert len(cds_seq[:codon_at]) % 3 == 0, 'must be codon aligned'
 
     if cds_index == 0:
-        assert cds_seq[0:3] == 'ATG'
+        assert cds_seq[codon_at:codon_at + 3] == 'ATG'
     elif cds_index == -1:
-        assert any((codon in cds_seq) for codon in ['TAG', 'TGA', 'TAA'])
+        assert cds_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
 
     return str(cds_seq)
 
@@ -242,66 +240,57 @@ def get_cds_seq(
 def get_cds_chr_loc(
         ensembl_transcript_id: str,
         cds_index: int = 0,
-        max_length: int = 40,
-        # TODO (gdingle): consider lowering to min required by Crispor
-        # or skip the next one or two codons
-        # or warn or filter out in _top_guides
-
-        # TODO (gdingle): for cds_index -1, we don't care about cutting
-        # into non-coding region of tail of gene, so expand always max_length/2=20 on both sides
-        min_length: int = 30) -> str:
+        length: int = 36) -> str:
     """
-    Convience function to return genome region of codon.
+    Return genome region surrounding codon.
 
     The codon may the start or stop codon or other depending on cds_index.
 
-    max_length truncates the codon to the first max_length base pairs.
-        If start codon, within max_length *after* codon.
-        If stop codon, within max_length *centered* on codon.
-
-    min_length extends the return seq past the CDS.
-        If start codon, within min_length *after* codon.
-        If stop codon, within min_length *centered* on codon.
+    length specifies the region around the codon
+        If start codon, within length *after* codon.
+        If stop codon, within length *centered* on codon.
 
     If stop codon, the start is adjusted, if start codon, the end is adjusted.
+
+    length must be divisible by 2 and 3 to maintain codon frame and symmetry.
 
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
-    >>> get_cds_chr_loc('ENST00000398844', max_length=999)
-    'chr5:134649077-134649173'
+    >>> get_cds_chr_loc('ENST00000398844', length=990)
+    'chr5:134649077-134650066'
 
-    >>> get_cds_chr_loc('ENST00000411809', max_length=999)
-    'chr5:157786494-157786534'
+    >>> get_cds_chr_loc('ENST00000411809', length=990)
+    'chr5:157786494-157787483'
 
-    Min length.
+    Length.
 
-    >>> get_cds_chr_loc('ENST00000221801', max_length=999, min_length=30)
-    'chr19:39834572-39834601'
+    >>> get_cds_chr_loc('ENST00000221801', length=990)
+    'chr19:39834572-39835561'
 
-    >>> get_cds_chr_loc('ENST00000398844', -1, 100, 100)
-    'chr5:134725045-134725144'
+    >>> get_cds_chr_loc('ENST00000398844', -1, 90)
+    'chr5:134725050-134725139'
 
     Get last codon.
 
-    >>> get_cds_chr_loc('ENST00000398844', -1, 999)
-    'chr5:134724980-134725109'
+    >>> get_cds_chr_loc('ENST00000398844', -1, 990)
+    'chr5:134724600-134725589'
 
-    >>> get_cds_chr_loc('ENST00000411809', -1, 999)
-    'chr5:157857472-157857833'
+    >>> get_cds_chr_loc('ENST00000411809', -1, 990)
+    'chr5:157857324-157858313'
 
-    Min length, last codon.
+    Length, last codon.
 
-    >>> get_cds_chr_loc('ENST00000221801', -1, 999, min_length=30)
-    'chr19:39846310-39846349'
+    >>> get_cds_chr_loc('ENST00000221801', -1, length=30)
+    'chr19:39846320-39846349'
 
-    Max length.
+    Length.
 
     >>> get_cds_chr_loc('ENST00000398844')
-    'chr5:134649077-134649116'
+    'chr5:134649077-134649112'
 
     >>> get_cds_chr_loc('ENST00000398844', -1)
-    'chr5:134725075-134725109'
+    'chr5:134725077-134725112'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -332,11 +321,10 @@ def get_cds_chr_loc(
     end = sequence_left + cds_location.end
     assert end - start == len(cds_seq)
 
-    # enforce max_length and min_length
-    start, end = _get_start_end(
+    # enforce length
+    start, end, codon_at = _get_start_end(
         FeatureLocation(start, end),
-        min_length,
-        max_length,
+        length,
         cds_index
     )
 
@@ -349,22 +337,28 @@ def get_cds_chr_loc(
 
 def _get_start_end(
         location: FeatureLocation,
-        min_length: int,
-        max_length: int,
+        length: int,
         cds_index: int) -> tuple:
-    assert max_length >= min_length
+    assert length > 0
+
+    def divisible(i: int) -> bool:
+        return i % 3 == 0 and i % 2 == 0
+
+    if not divisible(length):
+        raise ValueError(
+            f'length {length} must be divisible by 3 and 2 to ensure codon frame and symmetry')
+
     start = location.start
     end = location.end
     if cds_index == -1:  # stop codon
-        start = max(start, end - max_length // 2)
-        start = min(start, end - min_length // 2)
-        end = end + min_length // 2
+        start = end - length // 2
+        codon_at = end - 3
+        end = end + length // 2
     elif cds_index == 0:  # start codon
-        end = min(end, start + max_length)
-        end = max(end, start + min_length)
-    assert end - start >= min_length
-    assert end - start <= max_length
-    return start, end
+        end = start + length
+        codon_at = start
+    assert end - start == length
+    return start, end, codon_at - start
 
 
 if __name__ == '__main__':
@@ -374,7 +368,7 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
 
-    # s = get_cds_chr_loc('ENST00000221801', -1, 999, 0)
+    # s = get_cds_chr_loc('ENST00000221801', -1, 990, 0)
     # print(s)
     # s = get_cds_seq('ENST00000221801', -1)
     # print(s, len(s))
