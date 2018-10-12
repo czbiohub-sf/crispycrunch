@@ -144,12 +144,22 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
                 row['_guide_direction']).template,
             # TODO (gdingle): return mutated optionally here
             axis=1)
-        max_amplicon_length = primer_selection.primer_design.max_amplicon_length
-        sheet['primer_product'] = sheet.apply(
-            lambda row: row['primer_product']
-            if len(row['primer_product']) <= max_amplicon_length
-            else 'too long: {}bp'.format(len(row['primer_product'])),
-            axis=1)
+
+        # TODO (gdingle): fix root cause of issues
+        def warn_hdr_primer(row) -> str:
+            primer_product = row['primer_product']
+            max_amplicon_length = primer_selection.primer_design.max_amplicon_length
+            plen = len(primer_product)
+            if plen > max_amplicon_length:
+                return f'too long: {plen}bp'
+            hdr_seq = guide_selection.guide_design.hdr_seq
+            arms = primer_product.upper().split(hdr_seq)
+            lal, ral = len(arms[0]), len(arms[1])
+            if min(lal, ral) < 55:
+                return 'homology arm too short: {}bp'.format(min(lal, ral))
+            return primer_product
+
+        sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
 
     return sheet
 
@@ -159,6 +169,8 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
 def _flatten_guide_data(
     guide_selection: GuideSelection
+
+
 ) -> List[Tuple[str, str, str, str, str]]:
 
     guide_design = guide_selection.guide_design
