@@ -67,7 +67,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     try:
         description = response_data['desc'].split(':')
         species = description[1]
-        chromosome_number = description[2] # may be X
+        chromosome_number = description[2]  # may be X
         sequence_left = int(description[3])
         sequence_right = int(description[4])
         transcript_strand = int(description[5])
@@ -226,7 +226,7 @@ def get_cds_seq(
 
     cds_seq = record.seq[start:end]
 
-    assert len(cds_seq) == length
+    assert len(cds_seq) == length, len(cds_seq)
     assert len(cds_seq) % 3 == 0, 'must be codon aligned'
 
     if cds_index == 0:

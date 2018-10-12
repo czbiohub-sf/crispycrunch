@@ -331,7 +331,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             'submit': 'SUBMIT',
         }
         self.endpoint = 'http://crispor.tefor.net/crispor.py'
-        self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
+        self.request = requests.Request(  # type: ignore
+            'POST', self.endpoint, data=self.data).prepare()
         self.target = target or seq
         self.pre_filter = pre_filter
 
@@ -478,7 +479,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
-            offtargets_url=self.endpoint + '?batchId={}&download=offtargets&format=tsv'.format(batch_id),
+            offtargets_url=self.endpoint + \
+            '?batchId={}&download=offtargets&format=tsv'.format(batch_id),
         )
 
 
@@ -521,7 +523,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         self.pam_id = pam_id
         quoted_pam_id = urllib.parse.quote(pam_id)  # percent encode the '+' symbol
         self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
-            '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(**locals())
+            '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(
+                **locals())
         self.target = target  # just for metadata
         self.request = requests.Request('GET', self.endpoint).prepare()  # type: ignore
 
@@ -576,7 +579,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         ontargetPcr = soup.find(id='ontargetPcr')
         table = ontargetPcr.find_next(class_='primerTable')
         message = ontargetPcr.find_next('strong')
-        if message and 'Warning: No primers were found' in message.get_text():
+        if message and 'Warning' in message.get_text():
             return {}  # will be interpreted as 'not found'
             # TODO (gdingle): better to raise exception?
             # raise ValueError('Cripor at {}: "{}"'.format(
@@ -703,7 +706,8 @@ class TagInRequest(AbstractScrapeRequest):
         )
 
         metadata = data_user[0][0]
-        metadata['chr_loc'] = 'chr{}:{}-{}'.format(metadata['chrm'], metadata['tx_start'], metadata['tx_stop'])
+        metadata['chr_loc'] = 'chr{}:{}-{}'.format(metadata['chrm'],
+                                                   metadata['tx_start'], metadata['tx_stop'])
         # This is the narrower range that contains all sgRNA guides.
         metadata['guide_chr_range'] = 'chr{}:{}-{}'.format(
             metadata['chrm'],
