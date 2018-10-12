@@ -99,18 +99,21 @@ class GuideDesignView(CreatePlusView):
 
     # TODO (gdingle): we really need to store this in a new model field
     # and preserve the original input
-    def _normalize_targets(self, targets, genome, cds_index):
+    def _normalize_targets(self, targets, genome, guide_design):
         # TODO (gdingle): handle mix of target types
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): gggenome all seqs
             return targets
 
-        if cds_index is not None:
+        if guide_design.cds_index is not None:
             assert all(is_ensemble_transcript(t) for t in targets)
             assert genome == 'hg38', 'only implemented for hg38'
+            mx, mn = guide_design.cds_max_min
             func = functools.partial(
                 get_cds_chr_loc,
-                cds_index=cds_index)
+                cds_index=guide_design.cds_index,
+                max_length=mx,
+                min_length=mn)
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
@@ -124,18 +127,21 @@ class GuideDesignView(CreatePlusView):
 
         return normalized
 
-    def _get_target_seqs(self, targets, genome, cds_index):
+    def _get_target_seqs(self, targets, genome, guide_design):
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
         # TODO (gdingle): investigate why get_cds_seq returns diff than chr_loc_to_seq
         # and fix in case of ENST and no hdr_tag
-        if cds_index is not None:  # hdr
+        if guide_design.cds_index is not None:  # hdr
+            mx, mn = guide_design.cds_max_min
             assert genome == 'hg38', 'only implemented for hg38'
             func = functools.partial(
                 get_cds_seq,
-                cds_index=cds_index)
+                cds_index=guide_design.cds_index,
+                max_length=mx,
+                min_length=mn)
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             assert False, 'not implemented'
         else:
@@ -162,12 +168,12 @@ class GuideDesignView(CreatePlusView):
         obj.targets = self._normalize_targets(
             obj.targets_raw,
             obj.genome,
-            obj.cds_index
+            obj
         )
         obj.target_seqs = self._get_target_seqs(
             obj.targets_raw,
             obj.genome,
-            obj.cds_index
+            obj
         )
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
@@ -228,14 +234,18 @@ class GuideSelectionView(CreatePlusView):
         def func(t):
             if by == 'score':
                 return int(scores[t[0]])
-            # TODO (gdingle): what about forward and reverse?
-            # how does that relate to distance?
-            # TODO (gdingle): weigh score somehow as well instead of filtering above?
             elif by == 'distance':
                 # s29+, s26+, etc
                 # change dist depending on codon target
-                # TODO (gdingle): how to express guide offset when stop_codon?
-                return int(t[0][1:-1]) * cds_index or 1
+                # TODO (gdingle): what about forward and reverse?
+                # we should really rank by cut to insert distance
+                guide_offset = int(t[0][1:-1])
+                if cds_index == -1:
+                    # Reproduce protospacex min_length fetch behavior
+                    mid = guide_design.cds_max_min[1] // 2
+                    return abs(mid - guide_offset)
+                else:
+                    return guide_offset
 
         guide_seqs = sorted(
             guide_seqs.items(),

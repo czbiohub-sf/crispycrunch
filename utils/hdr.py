@@ -128,14 +128,15 @@ class HDR:
         return guide_seq
 
     def _target_codon(self) -> int:
+        start = -1
         for codon in self.valid_codons:
             if self.hdr_tag == 'stop_codon':
-                start = self.target_seq.rfind(codon)
+                # TODO (gdingle):
+                start = max(start, self.target_seq.rfind(codon))
             else:
-                start = self.target_seq.find(codon)
-            if start >= 0:
-                return start
-        assert False
+                start = min(start, self.target_seq.find(codon))
+        assert start > -1
+        return start
 
     @property
     def template(self) -> str:
@@ -476,9 +477,9 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    # cut_at = hdr.cut_at
-    # print(hdr.insert_at, cut_at, cut_at - 6, cut_at + 17)
-    # s = hdr.target_seq[cut_at - 6:cut_at + 17]
-    # print(s)
+    # import doctest
+    # doctest.testmod()
+
+    hdr = HDR('TGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGAATGAATGAAGAAATTTGACTTATTTTTAAGGAATGTCACG',
+              'NNN', 'stop_codon', -66, '-', 50.0)
+    print(hdr.insert_at)

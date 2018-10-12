@@ -199,9 +199,9 @@ class GuideDesign(BaseModel):
         'hg19': 'Human',
     }
     HDR_TAG_TERMINUSES = [
-        # 40bp is encoded in protospacex.py
+        # See cds_max_min below
         ('start_codon', 'Within 40bp after start codon'),
-        ('stop_codon', 'Within 20bp before or after the stop codon')
+        ('stop_codon', 'Within 40bp before or 40bp after stop codon')
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
         # TODO (gdingle): if negative guide, do reverse complement
@@ -281,6 +281,17 @@ class GuideDesign(BaseModel):
             return 0
         elif self.hdr_tag == 'stop_codon':
             return -1
+        else:
+            raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
+
+    @property
+    def cds_max_min(self):
+        if not self.hdr_seq:
+            return tuple([])
+        if self.hdr_tag == 'start_codon':
+            return (40, 40)
+        elif self.hdr_tag == 'stop_codon':
+            return (80, 80)
         else:
             raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
 
@@ -416,7 +427,8 @@ class Analysis(BaseModel):
                                  help_text='The S3 directory that contains the FastQ files to be analyzed'
                                  )
 
-    results_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
+    results_data = JSONField(default=list, blank=True,
+                             help_text='Data returned by external service')
     fastq_data = JSONField(default=list, blank=True)
 
     def __str__(self):
