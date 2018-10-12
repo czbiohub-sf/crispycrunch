@@ -74,14 +74,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
     sheet['_guide_direction'] = [g[1][-1] for g in guides]
 
-    # TODO (gdingle): use this in test somehow
-    # Does not include PAM, always +3 of guide_offset
-    # sheet['guide_offset2'] = sheet.apply(
-    #     lambda row: row['target_seq'].find(
-    #         row['guide_seq'] if row['_guide_direction'] == '+' else reverse_complement(row['guide_seq'])),
-    #     axis=1,
-    # )
-
     # TODO (gdingle): is this correct? off by one? reverse strand?
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
@@ -310,7 +302,6 @@ def _new_samplesheet() -> DataFrame:
             'target_loc',
             'target_seq',
             'guide_offset',
-            'guide_offset2',
             'guide_loc',
             '_guide_direction',
             'guide_seq',
@@ -383,6 +374,7 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 
 
 def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
+    # assert False, (sheet[['target_loc', 'guide_loc']])
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],

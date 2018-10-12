@@ -243,6 +243,11 @@ def get_guide_cut_to_insert(
     >>> get_guide_cut_to_insert(ChrLoc('chr5:1-20'),
     ... GuideChrLoc('chr5:1-20:-'), 'stop_codon')
     -14
+
+    Problem case.
+    # >>> get_guide_cut_to_insert(ChrLoc('chr19:1-30:-'),
+    # ... GuideChrLoc('chr19:5-24:-'), 'stop_codon')
+    # -20
     """
     assert guide_loc in target_loc
     cut = guide_loc.cut.end

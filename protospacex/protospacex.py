@@ -191,6 +191,8 @@ def get_cds_seq(
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
+    For param docs, see get_cds_chr_loc
+
     Start codon.
 
     >>> get_cds_seq('ENST00000398844')
@@ -202,11 +204,14 @@ def get_cds_seq(
     Stop codon.
 
     >>> get_cds_seq('ENST00000398844', -1)
-    'TGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGA'
+    'AGCAACAAGTGAATAAATGAATGAATGAAGAAATT'
 
     >>> get_cds_seq('ENST00000411809', -1)
-    'GCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAA'
+    'TCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAA'
 
+    Length 40.
+    >>> len(get_cds_seq('ENST00000221801', -1, 999, min_length=30))
+    40
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -214,22 +219,22 @@ def get_cds_seq(
     location = cds[cds_index].location
 
     # enforce max_length and min_length
-    assert max_length >= min_length
-    start = location.start
-    end = location.end
-    if cds_index == -1:  # stop codon
-        start = max(start, end - max_length)
-        start = min(start, end - min_length)
-    elif cds_index == 0:  # start codon
-        end = min(end, start + max_length)
-        end = max(end, start + min_length)
+    start, end = _get_start_end(
+        location,
+        min_length,
+        max_length,
+        cds_index
+    )
 
     cds_seq = record.seq[start:end]
+
+    assert len(cds_seq) >= min_length
+    assert len(cds_seq) <= max_length
 
     if cds_index == 0:
         assert cds_seq[0:3] == 'ATG'
     elif cds_index == -1:
-        assert cds_seq[-3:] in ['TAG', 'TGA', 'TAA']
+        assert any((codon in cds_seq) for codon in ['TAG', 'TGA', 'TAA'])
 
     return str(cds_seq)
 
@@ -251,8 +256,12 @@ def get_cds_chr_loc(
     The codon may the start or stop codon or other depending on cds_index.
 
     max_length truncates the codon to the first max_length base pairs.
+        If start codon, within max_length *after* codon.
+        If stop codon, within max_length *centered* on codon.
 
     min_length extends the return seq past the CDS.
+        If start codon, within min_length *after* codon.
+        If stop codon, within min_length *centered* on codon.
 
     If stop codon, the start is adjusted, if start codon, the end is adjusted.
 
@@ -271,20 +280,20 @@ def get_cds_chr_loc(
     'chr19:39834572-39834601'
 
     >>> get_cds_chr_loc('ENST00000398844', -1, 100, 100)
-    'chr5:134724995-134725094'
+    'chr5:134725045-134725144'
 
     Get last codon.
 
     >>> get_cds_chr_loc('ENST00000398844', -1, 999)
-    'chr5:134724980-134725094'
+    'chr5:134724980-134725109'
 
     >>> get_cds_chr_loc('ENST00000411809', -1, 999)
-    'chr5:157857472-157857818'
+    'chr5:157857472-157857833'
 
     Min length, last codon.
 
     >>> get_cds_chr_loc('ENST00000221801', -1, 999, min_length=30)
-    'chr19:39846305-39846334'
+    'chr19:39846310-39846349'
 
     Max length.
 
@@ -292,7 +301,7 @@ def get_cds_chr_loc(
     'chr5:134649077-134649116'
 
     >>> get_cds_chr_loc('ENST00000398844', -1)
-    'chr5:134725055-134725094'
+    'chr5:134725075-134725109'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -324,13 +333,12 @@ def get_cds_chr_loc(
     assert end - start == len(cds_seq)
 
     # enforce max_length and min_length
-    assert max_length >= min_length
-    if cds_index == -1:  # stop codon
-        start = max(start, end - max_length)
-        start = min(start, end - min_length)
-    else:
-        end = min(end, start + max_length)
-        end = max(end, start + min_length)
+    start, end = _get_start_end(
+        FeatureLocation(start, end),
+        min_length,
+        max_length,
+        cds_index
+    )
 
     return 'chr{}:{}-{}'.format(
         chromosome_number,
@@ -339,18 +347,34 @@ def get_cds_chr_loc(
     )
 
 
+def _get_start_end(
+        location: FeatureLocation,
+        min_length: int,
+        max_length: int,
+        cds_index: int) -> tuple:
+    assert max_length >= min_length
+    start = location.start
+    end = location.end
+    if cds_index == -1:  # stop codon
+        start = max(start, end - max_length // 2)
+        start = min(start, end - min_length // 2)
+        end = end + min_length // 2
+    elif cds_index == 0:  # start codon
+        end = min(end, start + max_length)
+        end = max(end, start + min_length)
+    assert end - start >= min_length
+    assert end - start <= max_length
+    return start, end
+
+
 if __name__ == '__main__':
-    # TODO: something is wrong with this compared to
-    # CCDS database... CDS locations are not the same
-    # see https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000105202;r=19:39834458-39846414;t=ENST00000221801
-    # get_cds_chr_loc('ENST00000221801', -1
+    import requests_cache  # type: ignore
+    requests_cache.install_cache()
 
     import doctest
     doctest.testmod()
 
-    # import requests_cache
-    # requests_cache.install_cache()
     # s = get_cds_chr_loc('ENST00000221801', -1, 999, 0)
     # print(s)
     # s = get_cds_seq('ENST00000221801', -1)
-    # print(s)
+    # print(s, len(s))

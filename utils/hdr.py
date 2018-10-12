@@ -57,6 +57,9 @@ class HDR:
         if guide_direction:
             assert guide_direction in ('+', '-')
             self.guide_direction = guide_direction
+            # Run inference to double check... this is failing for some!
+            # # TODO (gdingle): fix me IMPORTANT!
+            # self._guide_direction()
         else:
             self.guide_direction = self._guide_direction()
 
@@ -99,7 +102,9 @@ class HDR:
 
     @property
     def cut_at(self):
-        return self.insert_at + self.hdr_dist
+        cut_at = self.insert_at + self.hdr_dist
+        assert cut_at > 0
+        return cut_at
 
     @property
     def guide_seq(self):
@@ -116,13 +121,18 @@ class HDR:
         """
         cut_at = self.cut_at
         if self.guide_direction == '+':
-            return self.target_seq[cut_at - 17:cut_at + 6]
+            guide_seq = self.target_seq[cut_at - 17:cut_at + 6]
         else:
-            return self.target_seq[cut_at - 6:cut_at + 17]
+            guide_seq = self.target_seq[cut_at - 6:cut_at + 17]
+        assert len(guide_seq) == 23
+        return guide_seq
 
     def _target_codon(self) -> int:
         for codon in self.valid_codons:
-            start = self.target_seq.find(codon)
+            if self.hdr_tag == 'stop_codon':
+                start = self.target_seq.rfind(codon)
+            else:
+                start = self.target_seq.find(codon)
             if start >= 0:
                 return start
         assert False
@@ -468,3 +478,7 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+    # cut_at = hdr.cut_at
+    # print(hdr.insert_at, cut_at, cut_at - 6, cut_at + 17)
+    # s = hdr.target_seq[cut_at - 6:cut_at + 17]
+    # print(s)
