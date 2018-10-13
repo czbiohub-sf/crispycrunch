@@ -81,10 +81,7 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
 
 
 if __name__ == '__main__':
-    doctest.testmod()
+    # doctest.testmod()
 
-    # TODO (gdingle): double check with protospacex seqs
-    # reverse strand ENST, forward query
-    # print(chr_loc_to_seq('chr5:157857472-157857818'))
-    # reverse strand ENTS, reverse query
-    # print(chr_loc_to_seq('chr5:157857818-157857472'))
+    print(chr_loc_to_seq('chr7:2251813-2251848'))
+    print(chr_loc_to_seq('chr7:2251848-2251813'))

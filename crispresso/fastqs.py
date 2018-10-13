@@ -209,5 +209,5 @@ def _get_seq_lines(fastq: str) -> List[str]:
 
 
 if __name__ == '__main__':
-    doctest.testmod(optionflags=doctest.FAIL_FAST)
-    # print(reverse_complement('ACTGTTTTAGAGGTAAACTA'))
+    # doctest.testmod(optionflags=doctest.FAIL_FAST)
+    print(reverse_complement('ATGACTGGCCGCGCGATGGACCCGCTGCCCGCGGCT'))

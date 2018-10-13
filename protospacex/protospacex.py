@@ -368,7 +368,10 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
 
-    # s = get_cds_chr_loc('ENST00000221801', -1, 990, 0)
+    # chr_loc = get_cds_chr_loc('ENST00000221801')
     # print(s)
-    # s = get_cds_seq('ENST00000221801', -1)
+    # s = get_cds_seq('ENST00000221801')
     # print(s, len(s))
+
+    # from utils.conversions import *
+    # print(chr_loc_to_seq(chr_loc))

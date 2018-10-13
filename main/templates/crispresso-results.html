@@ -32,8 +32,8 @@
       <th>Well Position</th>
       {% endif %}
       {# TODO: show target here? <th>Target</th> #}
-      <th>Report</th>
       <th>Zip</th>
+      <th>Report</th>
       {% for stat_name in sheet.to_records.0.report_stats %}
       <th title="{{ stat_name }}">{{ stat_name|truncatechars:32 }}</th>
       {% endfor %}
@@ -45,8 +45,12 @@
     <td>{{ row.index }}</td>
     {% endif %}
     {# <td>{{ row.target_loc }}</td> #}
-    <td><a target="_blank" href="{{ row.report_url }}">open</a></td>
-    <td><a target="_blank" href="{{ row.report_zip }}">download</a></td>
+    <td><a target="_blank" href="{{ row.report_zip }}" class="btn btn-primary btn-sm">
+      download
+    </a></td>
+    <td><a target="_blank" href="{{ row.report_url }}" class="btn btn-outline-primary btn-sm">
+      open
+    </a></td>
     {% for stat in row.report_stats.values %}
     <td class="text-right">{{ stat|intcomma }}</td>
     {% endfor %}
@@ -55,7 +59,7 @@
 </table>
 
 <h4>
-  <a href="#inputsTable" data-toggle="collapse">Crispresso Inputs</a>
+  <a href="#inputsTable" data-toggle="collapse" class="btn btn-outline-secondary btn-sm">Crispresso Inputs</a>
 </h4>
 <div id="inputsTable" class="small collapse">
   <table class="table">

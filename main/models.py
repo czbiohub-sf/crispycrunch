@@ -20,7 +20,8 @@ from utils.validators import *
 # TODO (gdingle): temp
 
 N_TERMINUS_EXAMPLES = [
-  'ENST00000066544',
+  # TODO (gdingle): understand why all commented out are "not found"
+  # 'ENST00000066544',
   'ENST00000222990',
   'ENST00000225728',
   'ENST00000250498',
@@ -48,16 +49,16 @@ N_TERMINUS_EXAMPLES = [
   'ENST00000339839',
   'ENST00000342382',
   'ENST00000345519',
-  'ENST00000361564',
+  # 'ENST00000361564',
   'ENST00000367607',
   'ENST00000370277',
   'ENST00000394903',
   'ENST00000431606',
   'ENST00000455511',
-  'ENST00000529196',
+  # 'ENST00000529196',
   'ENST00000579978',
   'ENST00000610888',
-  'ENST00000615911',
+  # 'ENST00000615911',
   'ENST00000621663',
 ]
 C_TERMINUS_EXAMPLES = [
@@ -339,8 +340,8 @@ class GuideDesign(BaseModel):
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
         # default=ENST_EXAMPLE,
-        default=N_TERMINUS_EXAMPLES,
-        # default=C_TERMINUS_EXAMPLES,
+        # default=N_TERMINUS_EXAMPLES,
+        default=C_TERMINUS_EXAMPLES,
     )
 
     targets = fields.ArrayField(

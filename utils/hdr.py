@@ -62,8 +62,7 @@ class HDR:
         if guide_direction:
             assert guide_direction in ('+', '-')
             self.guide_direction = guide_direction
-            # Run inference to double check... this is failing for some!
-            # # TODO (gdingle): fix me IMPORTANT!
+            # TODO (gdingle): Run inference to double check
             # self._guide_direction()
         else:
             self.guide_direction = self._guide_direction()

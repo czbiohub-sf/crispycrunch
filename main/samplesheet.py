@@ -21,6 +21,7 @@ from utils import conversions
 from utils import hdr
 from utils.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
 
+# TODO (gdingle): move to conversions
 from crispresso.fastqs import reverse_complement
 
 logger = logging.getLogger(__name__)
