@@ -79,7 +79,8 @@ def matches_fastq_pair(
     if parallelize:
         with ProcessPoolExecutor(2) as pool:
             f1 = pool.submit(partial(in_fastq, fastq_r1, primer_seq_fwd, guide_seq, 4))
-            f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_fwd, reverse_complement(guide_seq), 4))
+            f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_fwd,
+                                     reverse_complement(guide_seq), 4))
         in_r1 = f1.result()
         in_r2 = f2.result()
     else:
@@ -209,5 +210,5 @@ def _get_seq_lines(fastq: str) -> List[str]:
 
 
 if __name__ == '__main__':
-    # doctest.testmod(optionflags=doctest.FAIL_FAST)
-    print(reverse_complement('ATGACTGGCCGCGCGATGGACCCGCTGCCCGCGGCT'))
+    doctest.testmod(optionflags=doctest.FAIL_FAST)
+    # print(reverse_complement('CGGGCAGCGGGTCCATCGCG'))

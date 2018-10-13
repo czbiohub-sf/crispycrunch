@@ -147,47 +147,69 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
     # TODO (gdingle): ryan leenay says primer needs to be codon-aware
     # TODO (gdingle): figure out primers and HDR... align to guide then to hdr_dist?
-    sheet['primer_product'] = 'need to align to codon'
-    return sheet
+    # sheet['primer_product'] = 'need to align to codon'
+    # return sheet
 
     def get_primer_product(row):
         primer_product = row['primer_product']
-        if row['_guide_direction'] == '+':
-            guide_seq = row['guide_seq']
-        else:
-            guide_seq = reverse_complement(row['guide_seq'])
 
-        # TODO (gdingle): this doesn't work
-        # guide_offset = primer_product.index(guide_seq)
-        # start = (row['hdr_dist'] + 2) % 3
-        # assert False, (guide_offset % 3, row['hdr_dist'] % 3, start)
-        phdr = hdr.HDR(
-            primer_product[start:],
+        if ' ' in primer_product:
+            # previous warning
+            return primer_product
+
+        guide_seq_aligned = hdr.HDR(
+            row['target_seq'],
             guide_design.hdr_seq,
             guide_design.hdr_tag,
             row['hdr_dist'],
-            # TODO (gdingle): fix me
-            row['_guide_direction'])
-        return primer_product[:start] + phdr.template
+            row['_guide_direction']).guide_seq_aligned
 
-    sheet['primer_product'] = sheet.apply(get_primer_product,
-                                          axis=1)
+        guide_offset = primer_product.find(guide_seq_aligned)
+        # TODO (gdingle): why doesn't this work?
+        # if row['_guide_direction'] == '+':
+        # if guide_offset == -1:
+        #     guide_offset = primer_product.find(reverse_complement(guide_seq_aligned))
+        # TODO (gdingle): reverse primer_product also?
+        # primer_product = reverse_complement(primer_product)
+
+        if guide_offset == -1:
+            return 'guide not found: ' + primer_product
+
+        start = guide_offset % 3
+        before, primer_product_aligned = \
+            primer_product[:start], primer_product[start:]
+        assert before + primer_product_aligned == primer_product
+
+        hdr_primer_product = hdr.HDR(
+            primer_product_aligned,
+            guide_design.hdr_seq,
+            guide_design.hdr_tag,
+            row['hdr_dist'],
+            row['_guide_direction']).template
+        assert len(before) + len(hdr_primer_product) == len(primer_product) + \
+            len(guide_design.hdr_seq)
+        return before + hdr_primer_product
 
     # TODO (gdingle): fix root cause of issues
     def warn_hdr_primer(row) -> str:
         primer_product = row['primer_product']
+
         if ' ' in primer_product:
+            # previous warning
             return primer_product
+
         plen = len(primer_product)
         if plen > max_amplicon_length:
             return f'too long: {plen}bp'
-        hdr_seq = guide_design.hdr_seq
-        arms = primer_product.upper().split(hdr_seq)
-        lal, ral = len(arms[0]), len(arms[1])
-        if min(lal, ral) < 55:
-            return 'homology arm too short: {}bp'.format(min(lal, ral))
+
+        arms = primer_product.upper().split(guide_design.hdr_seq)
+        larm, rarm = len(arms[0]), len(arms[1])
+        if min(larm, rarm) < 55:
+            return 'homology arm too short: {}bp: {}'.format(min(larm, rarm), primer_product)
+
         return primer_product
 
+    sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
     return sheet
 
@@ -217,6 +239,18 @@ def _flatten_guide_data(
 
 
 def _transform_primer_product(row) -> str:
+    """
+    This is only necessary because Crispor returns NNNs in primer product.
+
+    Max says: "I am masking repeats to N when sending the sequence to
+    primer3. This was a major request by some labs, as they found that the
+    primer3 primers were sometimes not specific at all. What I SHOULD do
+    one day would be to run the primers through bwa to check their
+    uniqueness, but since i'm not doing that right now, I simply mask the
+    repeats, which is at least something to reduce the amount of
+    nonspecific binding. "
+    """
+
     # Only look up product from chr loc if crispor returns mysterious Ns
     if 'N' not in row['primer_product']:
         return row['primer_product']
@@ -229,7 +263,7 @@ def _transform_primer_product(row) -> str:
     if guide_seq not in row['primer_product']:
         # TODO (gdingle): use yellow highlighting of crispor to determine
         # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
-        return 'not found'
+        return 'too many repeats: ' + row['primer_product']
 
     logger.warning('Replacing Ns in primer product for {} guide {}'.format(
         row['target_loc'], row['guide_seq']))

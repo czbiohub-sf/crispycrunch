@@ -369,7 +369,7 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
 
 def _validate_seq(seq: str):
     assert all(b.upper() in 'AGCTN' for b in seq), seq
-    assert len(seq), seq
+    assert len(seq) >= 3, seq
 
 
 def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
@@ -495,7 +495,3 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-    # cut_at = hdr.cut_at
-    # print(hdr.insert_at, cut_at, cut_at - 6, cut_at + 17)
-    # s = hdr.target_seq[cut_at - 6:cut_at + 17]
-    # print(s)
