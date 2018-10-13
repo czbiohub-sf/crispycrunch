@@ -200,12 +200,12 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         plen = len(primer_product)
         if plen > max_amplicon_length:
-            return f'too long: {plen}bp'
+            return f'too long, {plen}bp: {primer_product}'
 
         arms = primer_product.upper().split(guide_design.hdr_seq)
         larm, rarm = len(arms[0]), len(arms[1])
         if min(larm, rarm) < 55:
-            return 'homology arm too short: {}bp: {}'.format(min(larm, rarm), primer_product)
+            return 'homology arm too short, {}bp: {}'.format(min(larm, rarm), primer_product)
 
         return primer_product
 
