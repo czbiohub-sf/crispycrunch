@@ -58,6 +58,7 @@ class HDR:
             # just before stop codon
             self.insert_at = self._target_codon_at()
         assert any(c in target_seq for c in self.boundary_codons)
+        #TODO (yjl): not stringent enough; check boundary_codons in set of just codons
 
         if guide_direction:
             assert guide_direction in ('+', '-')
@@ -205,7 +206,9 @@ class HDR:
         """
 
         # TODO (gdingle): do we want to extend to always include entire PAM?
-
+        # TODO (yjl): we should include more codons on the PAM side, so to enable
+        # mutations there
+        # TODO(yjl): can we assume there are 21 basepairs of codons in guide_aligned sequence?
         codon_offset = abs(self.hdr_dist % 3)
         if self.guide_direction == '+':
             aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
@@ -351,6 +354,7 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
         if len(syns):
             fractions = tuple((syn_fractions[syn], syn) for syn in syns)
             # TODO (gdingle): better to choose random syn?
+            # TODO (yjl): best to choose furthest syn, then top fraction syn
             top = max(fractions)[1]
             new_guide.append(top.lower())
         else:
