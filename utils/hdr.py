@@ -47,6 +47,14 @@ class HDR:
         assert target_mutation_score < 100 and target_mutation_score > 0
         self.target_mutation_score = target_mutation_score
 
+        if guide_direction:
+            assert guide_direction in ('+', '-')
+            self.guide_direction = guide_direction
+            # TODO (gdingle): Run inference to double check
+            # self._guide_direction()
+        else:
+            self.guide_direction = self._guide_direction()
+
         if hdr_tag == 'start_codon':
             self.boundary_codons = set(['ATG'])
             # just after start codon
@@ -57,14 +65,6 @@ class HDR:
             self.insert_at = self._target_codon_at()
         assert any(c in target_seq for c in self.boundary_codons)
         # TODO (yjl): not stringent enough; check boundary_codons in set of just codons
-
-        if guide_direction:
-            assert guide_direction in ('+', '-')
-            self.guide_direction = guide_direction
-            # TODO (gdingle): Run inference to double check
-            # self._guide_direction()
-        else:
-            self.guide_direction = self._guide_direction()
 
     def __repr__(self):
         return "HDR('{}', '{}', '{}', {}, '{}', {})".format(

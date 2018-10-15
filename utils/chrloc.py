@@ -43,7 +43,10 @@ class ChrLoc:
     >>> ChrLoc('chr7:5569177-5569415:-')
     ChrLoc('chr7:5569177-5569415:-')
 
-    >>> ChrLoc('chr22:20117650-20117685')
+    >>> ChrLoc('chr7:5569177-5569415:+').as_strand_direction
+    'chr7:5569177-5569415'
+    >>> ChrLoc('chr7:5569177-5569415:-').as_strand_direction
+    'chr7:5569415-5569177'
     """
     # See also CHR_REGEX in conversions.py
     CHR_REGEX = r'^chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])(:[+\-1])?$'
@@ -88,6 +91,14 @@ class ChrLoc:
         return 'chr{}:{}-{}{}'.format(
             self.chr, self.start, self.end,
             ':' + self.strand if self.strand else '')
+
+    @property
+    def as_strand_direction(self):
+        return 'chr{}:{}-{}'.format(
+            self.chr,
+            self.start if self.strand == '+' else self.end,
+            self.end if self.strand == '+' else self.start,
+        )
 
     def __hash__(self):
         return hash(str(self))

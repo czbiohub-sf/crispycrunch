@@ -197,7 +197,8 @@ def reverse_complement(seq: str) -> str:
     >>> reverse_complement(seq_out) == seq_in
     True
     """
-    complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
+    complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A',
+        'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
     return ''.join(complement[base] for base in reversed(seq))
 
 

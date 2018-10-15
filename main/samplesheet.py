@@ -164,9 +164,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['hdr_dist'],
             row['_guide_direction']).guide_seq_aligned
 
-        # Crispor: Your guide sequence is on the reverse strand relative to the
-        # genome sequence, so it is reverse complemented in the sequence below.
-        if row['_guide_direction'] != row['target_loc'].strand:
+        # Crispor returns primer products by strand. Normalize to positive strand.
+        if row['target_loc'].strand == '-':
             primer_product = reverse_complement(primer_product)
 
         guide_offset = primer_product.find(guide_seq_aligned)
@@ -189,6 +188,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_guide_direction']).template
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(guide_design.hdr_seq)
+
+        # TODO: Normalize back to direction of Crispor return?
         return before + hdr_primer_product
 
     # TODO (gdingle): fix root cause of issues

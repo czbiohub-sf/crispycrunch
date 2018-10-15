@@ -366,13 +366,23 @@ if __name__ == '__main__':
     import requests_cache  # type: ignore
     requests_cache.install_cache()
 
-    import doctest
-    doctest.testmod()
+    # import doctest
+    # doctest.testmod()
 
-    # chr_loc = get_cds_chr_loc('ENST00000221801')
-    # print(s)
-    # s = get_cds_seq('ENST00000221801')
-    # print(s, len(s))
+    def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
+        url = 'http://togows.org/api/ucsc/{}/{}.fasta'.format(
+            genome, chr_loc)
+        response = requests.get(url)
+        response.raise_for_status()
+        return _reformat_fasta(response.text)
 
-    # from utils.conversions import *
-    # print(chr_loc_to_seq(chr_loc))
+    def _reformat_fasta(fasta: str) -> str:
+        return ''.join(fasta.split('\n')[1:])
+
+    chr_loc = ChrLoc(get_cds_chr_loc('ENST00000221801'))
+    print(chr_loc)
+
+    s = get_cds_seq('ENST00000221801')
+    print(s, len(s))
+
+    print(chr_loc_to_seq(chr_loc))
