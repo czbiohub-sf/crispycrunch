@@ -105,6 +105,7 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): gggenome all seqs
             return targets
 
+        # This is needed to get strand of transcript
         if guide_design.cds_index is not None:
             assert all(is_ensemble_transcript(t) for t in targets), 'must be ENST for HDR'
             assert genome == 'hg38', 'only implemented for hg38'
