@@ -60,7 +60,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [ChrLoc(g[0] + ':' + g[1][-1]) for g in guides]
+    sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -164,15 +164,16 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['hdr_dist'],
             row['_guide_direction']).guide_seq_aligned
 
+        # Crispor: Your guide sequence is on the reverse strand relative to the
+        # genome sequence, so it is reverse complemented in the sequence below.
+        if row['_guide_direction'] != row['target_loc'].strand:
+            primer_product = reverse_complement(primer_product)
+
         guide_offset = primer_product.find(guide_seq_aligned)
-        # TODO (gdingle): why doesn't this work?
-        # if row['_guide_direction'] == '+':
-        # if guide_offset == -1:
-        #     guide_offset = primer_product.find(reverse_complement(guide_seq_aligned))
-        # TODO (gdingle): reverse primer_product also?
-        # primer_product = reverse_complement(primer_product)
 
         if guide_offset == -1:
+            logger.warning('Could not find guide {} in primer {} for target {}'.format(
+                row['guide_seq'], primer_product, row['target_loc']))
             return 'guide not found: ' + primer_product
 
         start = guide_offset % 3
@@ -273,9 +274,13 @@ def _transform_primer_product(row) -> str:
         row['primer_product'],
         guide_seq,
         row['guide_loc'])
-    return conversions.chr_loc_to_seq(
+    converted = conversions.chr_loc_to_seq(
         str(primer_loc),
         row['target_genome'])
+    assert converted.startswith(row['primer_seq_fwd'])
+    assert converted.endswith(reverse_complement(row['primer_seq_rev']))
+
+    return converted
 
 
 def from_analysis(analysis: Analysis) -> DataFrame:

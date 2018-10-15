@@ -12,14 +12,14 @@ from typing import Iterator
 class HDR:
     """
     Encapsulates all the HDR transformations of sequences described in
-    https://czi.quip.com/YbAhAbOV4aXi/ . Get a mutated HDR template that varies depending on start
-    or stop codon, the cut-to-insert distance, the strandedness of the guide, and the amount of
-    mutation desired.
+    https://czi.quip.com/YbAhAbOV4aXi/ . Get a mutated HDR template that varies
+    depending on start or stop codon, the cut-to-insert distance, the
+    strandedness of the guide, and the amount of mutation desired.
 
-    The target sequence should be in the direction of the gene. That is,
-    it has either a ATG or one of TAG, TGA, or TAA.
+    The target sequence should be in the direction of the gene. Reading from
+    left to right, it should have either a ATG or one of TAG, TGA, or TAA.
 
-    The target sequence must be codon aligned!
+    The target sequence must be codon aligned so the target codon can be found!
 
     target_mutation_score is the minimum MIT score needed to stop silent mutation.
     """
@@ -34,8 +34,6 @@ class HDR:
             target_mutation_score: float = 50.0) -> None:
 
         _validate_seq(target_seq)
-        # TODO (gdingle): too strict?
-        # assert len(target_seq) % 3 == 0, 'must be codon aligned'
         self.target_seq = target_seq
         _validate_seq(hdr_seq)
         self.hdr_seq = hdr_seq
@@ -58,7 +56,7 @@ class HDR:
             # just before stop codon
             self.insert_at = self._target_codon_at()
         assert any(c in target_seq for c in self.boundary_codons)
-        #TODO (yjl): not stringent enough; check boundary_codons in set of just codons
+        # TODO (yjl): not stringent enough; check boundary_codons in set of just codons
 
         if guide_direction:
             assert guide_direction in ('+', '-')
@@ -105,6 +103,12 @@ class HDR:
         assert not (is_for and is_rev)
         return '+' if is_for else '-'
 
+    def _target_codon_at(self) -> int:
+        for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
+            if codon in self.boundary_codons:
+                return i * 3
+        assert False
+
     @property
     def cut_at(self):
         cut_at = self.insert_at + self.hdr_dist
@@ -132,11 +136,42 @@ class HDR:
         assert len(guide_seq) == 23
         return guide_seq
 
-    def _target_codon_at(self) -> int:
-        for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
-            if codon in self.boundary_codons:
-                return i * 3
-        assert False
+    @property
+    def guide_seq_aligned(self) -> str:
+        """
+        Returns 21bp subset of guide sequence aligned to codons.
+
+        Extra base pairs are removed from the PAM side, because that is
+        where we want to mutate whole codons.
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.guide_seq
+        'ATGGCTGAGCTGGATCCGTTCGG'
+        >>> hdr.guide_seq_aligned
+        'ATGGCTGAGCTGGATCCGTTC'
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr.guide_seq
+        'CCATGGCTGAGCTGGATCCGTTC'
+        >>> hdr.guide_seq_aligned
+        'ATGGCTGAGCTGGATCCGTTC'
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGG', 'NNN', hdr_dist=15)
+        >>> hdr.guide_seq
+        'TGGCTGAGCTGGATCCGTTCGGG'
+        >>> hdr.guide_seq_aligned
+        'GCTGAGCTGGATCCGTTCGGG'
+        """
+
+        # TODO (gdingle): do we want to extend to always include entire PAM?
+
+        codon_offset = abs(self.hdr_dist % 3)
+        if self.guide_direction == '+':
+            aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
+            return aligned[-21:]
+        else:
+            aligned = self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
+            return aligned[:21]
 
     @property
     def template(self) -> str:
@@ -177,45 +212,6 @@ class HDR:
             mutated,
             self.target_seq[start + len(mutated):],
         ))
-
-    @property
-    def guide_seq_aligned(self) -> str:
-        """
-        Returns 21bp subset of guide sequence aligned to codons.
-
-        Extra base pairs are removed from the PAM side, because that is
-        where we want to mutate whole codons.
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.guide_seq
-        'ATGGCTGAGCTGGATCCGTTCGG'
-        >>> hdr.guide_seq_aligned
-        'ATGGCTGAGCTGGATCCGTTC'
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr.guide_seq
-        'CCATGGCTGAGCTGGATCCGTTC'
-        >>> hdr.guide_seq_aligned
-        'ATGGCTGAGCTGGATCCGTTC'
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGG', 'NNN', hdr_dist=15)
-        >>> hdr.guide_seq
-        'TGGCTGAGCTGGATCCGTTCGGG'
-        >>> hdr.guide_seq_aligned
-        'GCTGAGCTGGATCCGTTCGGG'
-        """
-
-        # TODO (gdingle): do we want to extend to always include entire PAM?
-        # TODO (yjl): we should include more codons on the PAM side, so to enable
-        # mutations there
-        # TODO(yjl): can we assume there are 21 basepairs of codons in guide_aligned sequence?
-        codon_offset = abs(self.hdr_dist % 3)
-        if self.guide_direction == '+':
-            aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
-            return aligned[-21:]
-        else:
-            aligned = self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
-            return aligned[:21]
 
     @property
     def guide_mutated(self) -> str:
@@ -497,5 +493,6 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    # import doctest
+    # doctest.testmod()
+    primer = 'CTTAGTCTCACCCACGCCAGGGAGCTGGTGGGGTGGTGTCTGAATAGCAAAGATGTGCGAACAAACCAAATCAGGAAAACTGCAAAGAGTACCTTAGTCTTTCTAGACGCTACAAGAGCCTTCTCTCCTCTCTGTCCAAATATTAACCCTGCCAAGAGTAAGGCCTGGAAGGAGGCCACGGGGAAGAGGTCTGGGTCAAGGAGAGTTCCATCTGCGAAGACTCCAAGATCAGAGAGCTACTCACCTGTCTCCATAGCGACAGCAGCGGCCATAACAAACGAAGACACCAAAACGCCACC'

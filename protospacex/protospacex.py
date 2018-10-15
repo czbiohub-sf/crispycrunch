@@ -258,39 +258,39 @@ def get_cds_chr_loc(
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
     >>> get_cds_chr_loc('ENST00000398844', length=990)
-    'chr5:134649077-134650066'
+    'chr5:134649077-134650066:+'
 
     >>> get_cds_chr_loc('ENST00000411809', length=990)
-    'chr5:157786494-157787483'
+    'chr5:157786494-157787483:-'
 
     Length.
 
     >>> get_cds_chr_loc('ENST00000221801', length=990)
-    'chr19:39834572-39835561'
+    'chr19:39834572-39835561:-'
 
     >>> get_cds_chr_loc('ENST00000398844', -1, 90)
-    'chr5:134725050-134725139'
+    'chr5:134725050-134725139:+'
 
     Get last codon.
 
     >>> get_cds_chr_loc('ENST00000398844', -1, 990)
-    'chr5:134724600-134725589'
+    'chr5:134724600-134725589:+'
 
     >>> get_cds_chr_loc('ENST00000411809', -1, 990)
-    'chr5:157857324-157858313'
+    'chr5:157857324-157858313:-'
 
     Length, last codon.
 
     >>> get_cds_chr_loc('ENST00000221801', -1, length=30)
-    'chr19:39846320-39846349'
+    'chr19:39846320-39846349:-'
 
     Length.
 
     >>> get_cds_chr_loc('ENST00000398844')
-    'chr5:134649077-134649112'
+    'chr5:134649077-134649112:+'
 
     >>> get_cds_chr_loc('ENST00000398844', -1)
-    'chr5:134725077-134725112'
+    'chr5:134725077-134725112:+'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -328,10 +328,11 @@ def get_cds_chr_loc(
         cds_index
     )
 
-    return 'chr{}:{}-{}'.format(
+    return 'chr{}:{}-{}:{}'.format(
         chromosome_number,
         start,
         end - 1,  # change to inclusive range
+        '+' if record.annotations['transcript_strand'] == 1 else '-',
     )
 
 
