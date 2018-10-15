@@ -63,6 +63,10 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
+    target_inputs = [g[5] for g in guides if g[5] != g[0]]
+    if target_inputs:
+        sheet['target_input'] = target_inputs
+
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g[2] for g in guides), 'Expecting trailing PAM'
     assert all(len(g[2]) == 24 for g in guides), 'Expecting 20bp guide'
@@ -218,7 +222,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
 def _flatten_guide_data(
     guide_selection: GuideSelection
-) -> List[Tuple[str, str, str, str, str]]:
+) -> List[Tuple[str, str, str, str, str, str]]:
 
     # TODO (gdingle): try using bolton itertools remap?
 
@@ -229,12 +233,14 @@ def _flatten_guide_data(
                                   for g in guide_design.guide_data
                                   if g.get('batch_id'))  # filter out errors
     target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
+    target_loc_to_target_raw = dict(zip(guide_design.targets, guide_design.targets_raw))
     selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
                                for g in guide_design.guide_data
                                if g['target'] in guide_selection.selected_guides]
     guides = [(target_loc, offset, seq,
                target_loc_to_batch_id[target_loc],
-               target_loc_to_target_seq[target_loc])
+               target_loc_to_target_seq[target_loc],
+               target_loc_to_target_raw[target_loc])
               for target_loc, selected in selected_guides_ordered
               for offset, seq in selected.items()]
     return guides
@@ -376,6 +382,7 @@ def _new_samplesheet() -> DataFrame:
         columns=[
             'target_genome',
             'target_pam',
+            'target_input',
             'target_loc',
             'target_seq',
             'guide_offset',
@@ -513,7 +520,7 @@ def _set_scores(
         sheet: DataFrame,
         guide_design: GuideDesign,
         # TODO (gdingle): figure out shorter type sig for guides
-        guides: List[Tuple[str, str, str, str, str]]) -> DataFrame:
+        guides: List[Tuple[str, str, str, str, str, str]]) -> DataFrame:
     # Get first score by target and offset, MIT score
     scores = dict((row['target'], row['scores'])
                   for row in guide_design.guide_data

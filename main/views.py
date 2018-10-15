@@ -106,7 +106,7 @@ class GuideDesignView(CreatePlusView):
             return targets
 
         if guide_design.cds_index is not None:
-            assert all(is_ensemble_transcript(t) for t in targets)
+            assert all(is_ensemble_transcript(t) for t in targets), 'must be ENST for HDR'
             assert genome == 'hg38', 'only implemented for hg38'
             func = functools.partial(
                 get_cds_chr_loc,
@@ -382,7 +382,7 @@ class ExperimentSummaryView(View):
 
     def _prepare_sheet(self, sheet):
         """Modify sheet for optimal rendering"""
-        sheet = sheet.loc[:, 'target_loc':]  # type: ignore
+        sheet = sheet.loc[:, 'target_input':]  # type: ignore
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
         sheet = sheet.dropna(axis=1, how='all')
         sheet.insert(0, 'well_pos', sheet.index)
