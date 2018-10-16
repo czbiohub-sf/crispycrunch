@@ -218,11 +218,10 @@ def get_cds_seq(
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
-    location = cds[cds_index].location
 
     # enforce length
     start, end, codon_at = _get_start_end(
-        location,
+        cds[cds_index].location,
         length,
         cds_index
     )
@@ -387,12 +386,25 @@ def _get_start_end(
     return start, end, codon_at - start
 
 
+# TODO (gdingle): do we really need this for anything?
+def get_exon_junctions(ensembl_transcript_id: str) -> list:
+    """
+    >>> get_exon_junctions('ENST00000221801')
+    [124, 5798, 6001, 6182, 7380, 8704, 9859, 11747, 11957]
+    """
+    record = fetch_ensembl_transcript(ensembl_transcript_id)
+    exons = [f for f in record.features if f.type == 'exon']
+    assert len(exons)
+    locations = [int(exon.location.end) for exon in exons]
+    return locations
+
+
 if __name__ == '__main__':
     import requests_cache  # type: ignore
     requests_cache.install_cache()
 
-    import doctest
-    doctest.testmod()
+    # import doctest
+    # doctest.testmod()
 
     # TODO (gdingle): exon junctions
     # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away

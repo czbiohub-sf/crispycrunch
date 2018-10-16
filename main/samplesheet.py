@@ -77,7 +77,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     # See http://crispor.tefor.net/manual/.
     # DEFINITION: number of chars before the first char of NGG PAM
     sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
-    sheet['_guide_direction'] = [g[1][-1] for g in guides]
+    sheet['_guide_strand'] = [g[1][-1] for g in guides]
 
     # TODO (gdingle): is this correct? off by one? reverse strand?
     sheet['guide_loc'] = sheet.apply(
@@ -85,7 +85,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
             row['target_loc'],
             row['guide_offset'],
             len(row['guide_seq']),
-            row['_guide_direction']),
+            row['_guide_strand']),
         axis=1,
     )
 
@@ -94,17 +94,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     # TODO (gdingle): put into unit test
     if guide_design.hdr_seq:
         sheet = _set_hdr_cols(sheet, guide_design.hdr_seq, guide_design.hdr_tag)
-
-    # TODO (gdingle): is this really the best unique name?
-    # Example: "hg38:chr2:136116735-136116754:-"
-    # TODO (gdingle): ever useful?
-    # sheet['well_name'] = sheet.apply(
-    #     lambda row: '{}:{}:{}'.format(
-    #         row['target_genome'],
-    #         row['guide_loc'],
-    #         row['_guide_direction']),
-    #     axis=1,
-    # )
 
     sheet['_crispor_batch_id'] = [g[3] for g in guides]
     sheet['_crispor_pam_id'] = [g[1] for g in guides]
@@ -166,7 +155,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             guide_design.hdr_seq,
             guide_design.hdr_tag,
             row['hdr_dist'],
-            row['_guide_direction']).guide_seq_aligned
+            row['_guide_strand']).guide_seq_aligned
 
         # Crispor returns primer products by strand. Normalize to positive strand.
         if row['target_loc'].strand == '-':
@@ -189,7 +178,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             guide_design.hdr_seq,
             guide_design.hdr_tag,
             row['hdr_dist'],
-            row['_guide_direction']).template
+            row['_guide_strand']).template
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(guide_design.hdr_seq)
 
@@ -263,7 +252,7 @@ def _transform_primer_product(row) -> str:
     if 'N' not in row['primer_product']:
         return row['primer_product']
 
-    if row['_guide_direction'] == '+':
+    if row['_guide_strand'] == '+':
         guide_seq = row['guide_seq']
     else:
         guide_seq = reverse_complement(row['guide_seq'])
@@ -277,6 +266,7 @@ def _transform_primer_product(row) -> str:
         row['target_loc'], row['guide_seq']))
 
     # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
+    # TODO (gdingle): this appears to be broken because of below
     primer_loc = get_primer_loc(
         row['primer_product'],
         guide_seq,
@@ -284,10 +274,15 @@ def _transform_primer_product(row) -> str:
     converted = conversions.chr_loc_to_seq(
         str(primer_loc),
         row['target_genome'])
-    assert converted.startswith(row['primer_seq_fwd'])
-    assert converted.endswith(reverse_complement(row['primer_seq_rev']))
 
-    return converted
+    if row['target_loc'].strand == '+':
+        assert row['primer_product'].startswith(row['primer_seq_fwd'])
+        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_rev']))
+    else:
+        assert row['primer_product'].startswith(row['primer_seq_rev'])
+        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_fwd']))
+
+    return 'converted: ' + converted
 
 
 def from_analysis(analysis: Analysis) -> DataFrame:
@@ -387,7 +382,7 @@ def _new_samplesheet() -> DataFrame:
             'target_seq',
             'guide_offset',
             'guide_loc',
-            '_guide_direction',
+            '_guide_strand',
             'guide_seq',
             'guide_pam',
             'guide_score',
@@ -398,8 +393,6 @@ def _new_samplesheet() -> DataFrame:
             'hdr_template',
             'hdr_rebind',
             'hdr_mutated',
-            # TODO (gdingle): temp
-            'hdr_guide_match',
             'primer_seq_fwd',
             'primer_seq_rev',
             # TODO (gdingle): rename to reference amplicon?
@@ -476,7 +469,7 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
             hdr_seq,
             hdr_tag,
             row['hdr_dist'],
-            row['_guide_direction']).template,
+            row['_guide_strand']).template,
         axis=1,
     )
     sheet['hdr_rebind'] = sheet.apply(
@@ -485,32 +478,19 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
         axis=1,
     )
 
-    # TODO (gdingle): move to hdr.py and write test cases
-
     # TODO (gdingle): override hdr_template when good enough
-    sheet['hdr_mutated'] = sheet.apply(
-        lambda row: hdr.HDR(
+    def mutate(row):
+        if not row['hdr_rebind']:
+            return ''
+        mutated = hdr.HDR(
             row['target_seq'],
             hdr_seq,
             hdr_tag,
             row['hdr_dist'],
-            row['_guide_direction']).template_mutated if row['hdr_rebind'] else '',
-        axis=1)
+            row['_guide_strand']).template_mutated
+        return mutated
 
-    # TODO (gdingle): temp for comparing guide seq
-    # TODO (gdingle): add in PAM?
-    # sheet['hdr_guide_match'] = sheet.apply(
-    #     lambda row: [
-    #         hdr.HDR(
-    #             row['target_seq'],
-    #             hdr_seq,
-    #             hdr_tag,
-    #             row['hdr_dist'],
-    #             row['_guide_direction']).guide_seq,
-    #         row['guide_seq'] if row['_guide_direction'] == '+' else reverse_complement(
-    #             row['guide_seq']),
-    #     ],
-    #     axis=1)
+    sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
 
     return sheet
 
