@@ -494,16 +494,24 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
 
         assert len(cds_seq) <= len(row['target_seq'])
 
+        #  Jason Li: The exon-proximal side of the junction is relatively
+        #  unimportant to the intron-proximal (exon-distal) side of each
+        #  junction, meaning we only want to avoid the 3 nts on the intron side
+        #  of things
         if hdr_tag == 'start_codon':
             index = index + len(cds_seq)
+            cut_in_junction = row_hdr.cut_at > index and row_hdr.cut_at - index <= 3
+            junction = row_hdr.mutated[index:index + 3]
+        else:
+            cut_in_junction = index > row_hdr.cut_at and index - row_hdr.cut_at <= 3
+            junction = row_hdr.mutated[index - 3:index]
 
-        if abs(row_hdr.cut_at - index) < 3:
-            return 'cut intron/exon junction: ' + row_hdr.template_mutated
+        if cut_in_junction:
+            return 'cut in intron/exon junction: ' + row_hdr.template_mutated
 
-        junction = row_hdr.mutated[index - 3:index + 3]
         # Lowercase means mutated
         if any(c.lower() == c for c in junction):
-            return 'mutated intron/exon junction: ' + row_hdr.template_mutated
+            return 'mutation in intron/exon junction: ' + row_hdr.template_mutated
 
         return row_hdr.template_mutated
 
