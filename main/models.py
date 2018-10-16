@@ -340,8 +340,8 @@ class GuideDesign(BaseModel):
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
         # default=ENST_EXAMPLE,
-        default=N_TERMINUS_EXAMPLES,
-        # default=C_TERMINUS_EXAMPLES,
+        # default=N_TERMINUS_EXAMPLES,
+        default=C_TERMINUS_EXAMPLES,
     )
 
     targets = fields.ArrayField(

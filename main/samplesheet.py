@@ -17,6 +17,7 @@ from pandas import DataFrame
 from django.core.files.uploadedfile import UploadedFile
 
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
+from protospacex import get_cds_seq
 from utils import conversions
 from utils import hdr
 from utils.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
@@ -28,24 +29,8 @@ logger = logging.getLogger(__name__)
 
 
 def from_experiment(experiment: Experiment) -> DataFrame:
-    sheet = _new_samplesheet()
-
-    # Special pandas attribute for preserving metadata across transforms
-    # TODO (gdingle): this is not actually working :'(
-    # sheet._metadata = [
-    #     'experiment_id',
-    #     'experiment_name',
-    #     'experiment_description',
-    #     'experiment_create_time',
-    #     'experimenter_name',
-    # ]
-    # sheet.experiment_id = experiment.id
-    # sheet.experiment_name = experiment.name
-    # sheet.experiment_description = experiment.description
-    # sheet.experiment_create_time = experiment.create_time
-    # sheet.experimenter_name = experiment.researcher.full_name
-
-    return sheet
+    # TODO (gdingle): how to assign metadata? nothing seems to work... see stackoverflow
+    return _new_samplesheet()
 
 
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
@@ -63,9 +48,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
     sheet['target_seq'] = [g[4] for g in guides]
 
-    target_inputs = [g[5] for g in guides if g[5] != g[0]]
-    if target_inputs:
-        sheet['target_input'] = target_inputs
+    # Add original target string if different
+    sheet['target_input'] = [(g[5] if g[5] != g[0] else None) for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g[2] for g in guides), 'Expecting trailing PAM'
@@ -93,7 +77,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # TODO (gdingle): put into unit test
     if guide_design.hdr_seq:
-        sheet = _set_hdr_cols(sheet, guide_design.hdr_seq, guide_design.hdr_tag)
+        sheet = _set_hdr_cols(sheet, guide_design)
 
     sheet['_crispor_batch_id'] = [g[3] for g in guides]
     sheet['_crispor_pam_id'] = [g[1] for g in guides]
@@ -260,7 +244,7 @@ def _transform_primer_product(row) -> str:
     if guide_seq not in row['primer_product']:
         # TODO (gdingle): use yellow highlighting of crispor to determine
         # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
-        return 'too many repeats: ' + row['primer_product']
+        return 'too many repeat Ns: ' + row['primer_product']
 
     logger.warning('Replacing Ns in primer product for {} guide {}'.format(
         row['target_loc'], row['guide_seq']))
@@ -282,7 +266,7 @@ def _transform_primer_product(row) -> str:
         assert row['primer_product'].startswith(row['primer_seq_rev'])
         assert row['primer_product'].endswith(reverse_complement(row['primer_seq_fwd']))
 
-    return 'converted: ' + converted
+    return 'Ns converted: ' + converted
 
 
 def from_analysis(analysis: Analysis) -> DataFrame:
@@ -309,13 +293,6 @@ def from_excel(file: UploadedFile) -> DataFrame:
 
 
 def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
-
-    # TODO (gdingle): does this metadata stick?
-    sheet._metadata = [
-        'analysis_id',
-        'analysis_create_time',
-        'analyst_name',
-    ]
     sheet.analysis_id = analysis.id
     sheet.analysis_create_time = analysis.create_time
     sheet.analyst_name = analysis.researcher.full_name
@@ -452,7 +429,10 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     return temp_sheet.to_dict(orient='records')
 
 
-def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
+def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
+    hdr_seq = guide_design.hdr_seq
+    hdr_tag = guide_design.hdr_tag
+
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
@@ -480,15 +460,52 @@ def _set_hdr_cols(sheet: DataFrame, hdr_seq: str, hdr_tag: str) -> DataFrame:
 
     # TODO (gdingle): override hdr_template when good enough
     def mutate(row):
+        """
+        Most of the logic here checks for mutation or cutting on the exon/intron
+        boundary, as required by https://czi.quip.com/YbAhAbOV4aXi/.
+
+        The best response is not clear, so we return a warning. In future,
+        we may filter guides further upstream, and-or mutate around junction.
+        """
+
         if not row['hdr_rebind']:
             return ''
-        mutated = hdr.HDR(
+
+        row_hdr = hdr.HDR(
             row['target_seq'],
             hdr_seq,
             hdr_tag,
             row['hdr_dist'],
-            row['_guide_strand']).template_mutated
-        return mutated
+            row['_guide_strand'])
+        # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
+        # It's another instance of IO, but should be cached always.
+        # TODO (gdingle): return more info from protospacex, and store throughout
+        cds_seq = get_cds_seq(row['target_input'], guide_design.cds_index, -1)
+
+        # Assumes junction is towards middle of gene
+        if hdr_tag == 'start_codon':
+            index = row['target_seq'].find(cds_seq)
+        else:
+            index = row['target_seq'].find(cds_seq)
+
+        if index == -1:
+            # target region entirely within CDS
+            return row_hdr.template_mutated
+
+        assert len(cds_seq) <= len(row['target_seq'])
+
+        if hdr_tag == 'start_codon':
+            index = index + len(cds_seq)
+
+        if abs(row_hdr.cut_at - index) < 3:
+            return 'cut intron/exon junction: ' + row_hdr.template_mutated
+
+        junction = row_hdr.mutated[index - 3:index + 3]
+        # Lowercase means mutated
+        if any(c.lower() == c for c in junction):
+            return 'mutated intron/exon junction: ' + row_hdr.template_mutated
+
+        return row_hdr.template_mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
 
