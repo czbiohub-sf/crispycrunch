@@ -6,7 +6,7 @@ import re
 from httmock import HTTMock  # type: ignore
 from httmock import all_requests  # type: ignore
 
-from protospacex import fetch_ensembl_transcript
+from ..protospacex import fetch_ensembl_transcript
 
 
 def _load_testing_data(ensembl_transcript_id: str):
