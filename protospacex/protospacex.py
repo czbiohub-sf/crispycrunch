@@ -209,6 +209,11 @@ def get_cds_seq(
     Length 30.
     >>> len(get_cds_seq('ENST00000221801', -1, length=30))
     30
+
+    No length change.
+
+    >>> get_cds_seq('ENST00000221801', -1, length=-1)
+    'GCCACCCCCCAAGGTGAAGAACTGA'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -224,8 +229,9 @@ def get_cds_seq(
 
     cds_seq = record.seq[start:end]
 
-    assert len(cds_seq) == length, len(cds_seq)
-    assert len(cds_seq) % 3 == 0, 'must be codon aligned'
+    if length != -1:
+        assert len(cds_seq) == length, len(cds_seq)
+        assert len(cds_seq) % 3 == 0, 'must be codon aligned'
 
     if cds_index == 0:
         assert cds_seq[codon_at:codon_at + 3] == 'ATG'
@@ -252,12 +258,10 @@ def get_cds_chr_loc(
 
     length must be divisible by 2 and 3 to maintain codon frame and symmetry.
 
+    length -1 will return the cds location unchanged.
+
     See https://uswest.ensembl.org/Homo_sapiens/Transcript/Summary?g=ENSG00000113615;r=5:134648789-134727823;t=ENST00000398844
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
-
-
-    # TODO (gdingle): IMPORTANT: FIX ALL CHR LOC ON NEG STRAND
-
 
     >>> get_cds_chr_loc('ENST00000398844', length=990)
     'chr5:134649077-134650066:+'
@@ -297,14 +301,18 @@ def get_cds_chr_loc(
 
     >>> get_cds_chr_loc('ENST00000398844', -1)
     'chr5:134725077-134725112:+'
+
+    No length change.
+
+    >>> get_cds_chr_loc('ENST00000221801', -1, length=-1)
+    'chr19:39834538-39834562:-'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
     cds_location = cds[cds_index].location
     cds_seq = cds[cds_index].location.extract(record).seq
-    # TODO (gdingle): why isn't cds_seq always divisible by 3?
-    # assert len(cds_seq) % 3 == 0, len(cds_seq)
+
     if cds_index == 0:
         # start codon
         assert cds_seq[0:3] == 'ATG', cds_seq
@@ -352,6 +360,13 @@ def _get_start_end(
         location: FeatureLocation,
         length: int,
         cds_index: int) -> tuple:
+    start = location.start
+    end = location.end
+
+    # No-op
+    if length == -1:
+        return start, end, 0 if cds_index == 0 else end - start - 3
+
     assert length > 0
 
     def divisible(i: int) -> bool:
@@ -361,8 +376,6 @@ def _get_start_end(
         raise ValueError(
             f'length {length} must be divisible by 3 and 2 to ensure codon frame and symmetry')
 
-    start = location.start
-    end = location.end
     if cds_index == -1:  # stop codon
         start = end - length // 2
         codon_at = end - 3
@@ -380,3 +393,6 @@ if __name__ == '__main__':
 
     import doctest
     doctest.testmod()
+
+    # TODO (gdingle): exon junctions
+    # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
