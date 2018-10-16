@@ -312,6 +312,8 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): if negative guide, do reverse complement
         'start_codon': 'ACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATGGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
         'stop_codon': 'GGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGTACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATG',
+        # TODO (gdingle): also offer GFP?
+        # CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt
     }
 
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
