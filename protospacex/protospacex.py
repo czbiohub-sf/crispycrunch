@@ -16,7 +16,7 @@ from Bio.SeqFeature import SeqFeature  # type: ignore
 from Bio.SeqRecord import SeqRecord  # type: ignore
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARN)
 
 
 def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
@@ -259,39 +259,43 @@ def get_cds_chr_loc(
     # TODO (gdingle): IMPORTANT: FIX ALL CHR LOC ON NEG STRAND
 
 
-    >> get_cds_chr_loc('ENST00000398844', length=990)
+    >>> get_cds_chr_loc('ENST00000398844', length=990)
     'chr5:134649077-134650066:+'
 
-    >> get_cds_chr_loc('ENST00000411809', length=990)
-    'chr5:157786494-157787483:-'
+    >>> get_cds_chr_loc('ENST00000411809', length=990)
+    'chr5:157857981-157858970:-'
 
     Length.
 
-    >> get_cds_chr_loc('ENST00000221801', length=990)
-    'chr19:39834572-39835561:-'
+    >>> get_cds_chr_loc('ENST00000221801', length=990)
+    'chr19:39845311-39846300:-'
 
-    >> get_cds_chr_loc('ENST00000398844', -1, 90)
+    >>> get_cds_chr_loc('ENST00000398844', -1, 90)
     'chr5:134725050-134725139:+'
 
     Get last codon.
 
-    >> get_cds_chr_loc('ENST00000398844', -1, 990)
+    >>> get_cds_chr_loc('ENST00000398844', -1, 990)
     'chr5:134724600-134725589:+'
 
-    >> get_cds_chr_loc('ENST00000411809', -1, 990)
-    'chr5:157857324-157858313:-'
+    >>> get_cds_chr_loc('ENST00000411809', -1, 990)
+    'chr5:157787151-157788140:-'
 
     Length, last codon.
 
-    >> get_cds_chr_loc('ENST00000221801', -1, length=30)
-    'chr19:39846320-39846349:-'
+    >>> get_cds_chr_loc('ENST00000221801', -1, length=30)
+    'chr19:39834523-39834552:-'
+
+    Gggenome says:
+    http://gggenome.dbcls.jp/hg38/AAGGTGAAGAACTGAAGTTCAGCGCTGTCA
+    chr19:39834523-39834552
 
     Length.
 
-    >> get_cds_chr_loc('ENST00000398844')
+    >>> get_cds_chr_loc('ENST00000398844')
     'chr5:134649077-134649112:+'
 
-    >> get_cds_chr_loc('ENST00000398844', -1)
+    >>> get_cds_chr_loc('ENST00000398844', -1)
     'chr5:134725077-134725112:+'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
@@ -321,25 +325,20 @@ def get_cds_chr_loc(
     assert cds_location.strand == 1
     assert species == 'GRCh38'
 
-    # TODO (gdingle): exon junctions
-    # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
-
-    if transcript_strand == '+':
-        start = sequence_left + cds_location.start
-        end = sequence_left + cds_location.end
-    else:
-        # TODO (gdingle): why isn't this exactly correct? it is off by 25
-        start = sequence_right - cds_location.end
-        end = sequence_right - cds_location.start
-
-    assert end - start == len(cds_seq)
-
     # enforce length
     start, end, codon_at = _get_start_end(
-        FeatureLocation(start, end),
+        cds_location,
         length,
         cds_index
     )
+
+    if transcript_strand == 1:
+        start = sequence_left + start
+        end = sequence_left + end
+    else:
+        start, end = sequence_right - end, sequence_right - start
+        # Not sure why, but this makes locations agree with gggenome and crispor
+        start, end = start + 1, end + 1
 
     return 'chr{}:{}-{}:{}'.format(
         chromosome_number,
