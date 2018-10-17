@@ -21,6 +21,9 @@ class HDR:
 
     The target sequence must be codon aligned so the target codon can be found!
 
+    The CDS sequence is needed to avoid the intron/exon junctions. It must also
+    contain the target codon like the target sequence.
+
     target_mutation_score is the minimum MIT score needed to stop silent mutation.
     """
 
@@ -31,12 +34,15 @@ class HDR:
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
             guide_direction: str = '',
+            cds_seq: str = '',
             target_mutation_score: float = 50.0) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
         _validate_seq(hdr_seq)
         self.hdr_seq = hdr_seq
+        _validate_seq(cds_seq)
+        self.cds_seq = cds_seq
 
         assert hdr_tag in ('start_codon', 'stop_codon')
         self.hdr_tag = hdr_tag
@@ -47,14 +53,6 @@ class HDR:
         assert target_mutation_score < 100 and target_mutation_score > 0
         self.target_mutation_score = target_mutation_score
 
-        if guide_direction:
-            assert guide_direction in ('+', '-')
-            self.guide_direction = guide_direction
-            # TODO (gdingle): Run inference to double check
-            # self._guide_direction()
-        else:
-            self.guide_direction = self._guide_direction()
-
         if hdr_tag == 'start_codon':
             self.boundary_codons = set(['ATG'])
             # just after start codon
@@ -63,16 +61,23 @@ class HDR:
             self.boundary_codons = set(['TAG', 'TGA', 'TAA'])
             # just before stop codon
             self.insert_at = self._target_codon_at()
-        assert any(c in target_seq for c in self.boundary_codons)
-        # TODO (yjl): not stringent enough; check boundary_codons in set of just codons
+
+        if guide_direction:
+            assert guide_direction in ('+', '-')
+            self.guide_direction = guide_direction
+            # TODO (gdingle): Run inference to double check
+            # self._guide_direction()
+        else:
+            self.guide_direction = self._guide_direction()
 
     def __repr__(self):
-        return "HDR('{}', '{}', '{}', {}, '{}', {})".format(
+        return "HDR('{}', '{}', '{}', {}, '{}', '{}' {})".format(
             self.target_seq,
             self.hdr_seq,
             self.hdr_tag,
             self.hdr_dist,
             self.guide_direction,
+            self.cds_seq,
             self.target_mutation_score,
         )
 
@@ -110,9 +115,51 @@ class HDR:
         assert False
 
     @property
+    def junction(self) -> tuple:
+        """
+        Returns the intron/exon junction range on the intron side relative
+        to the target sequence. Exclusive range: (start, end].
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
+        ... cds_seq='ATGGCTGAGCTGGATCC')
+        >>> hdr.junction
+        (20, 23)
+
+        >>> hdr = HDR('NNNNNNTAANNNNNN', 'NNN', hdr_dist=0, hdr_tag='stop_codon',
+        ... cds_seq='TAA', guide_direction='+')
+        >>> hdr.junction
+        (3, 6)
+        """
+        index = self.target_seq.find(self.cds_seq)
+        if index == -1:
+            # target region entirely within CDS
+            return tuple([])
+        if self.hdr_tag == 'start_codon':
+            # Assumes junction is towards middle of gene
+            index = index + len(self.cds_seq)
+            return (index, index + 3)
+        else:
+            return (index - 3, index)
+
+    @property
+    def cut_in_junction(self) -> bool:
+        """
+        Determines whether the cut location is inside an intron/exon junction.
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
+        ... cds_seq='ATGGCTGAGCTGGATCC')
+        >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
+        (20, (20, 23), True)
+        """
+        junction = self.junction
+        if not junction:
+            return False
+        return self.cut_at >= junction[0] and self.cut_at < junction[1]
+
+    @property
     def cut_at(self):
         cut_at = self.insert_at + self.hdr_dist
-        assert cut_at > 0
+        assert cut_at >= 0
         return cut_at
 
     @property
@@ -212,6 +259,27 @@ class HDR:
             mutated,
             self.target_seq[start + len(mutated):],
         ))
+
+    @property
+    def mutation_in_junction(self) -> bool:
+        """
+        Determines whether there is a mutation inside an intron/exon junction.
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
+        ... cds_seq='ATGGCTGAGCTGGATCC')
+        >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
+        ('GCCATGGCTGAGCTGGATCCGtttGGC', (20, 23), True)
+        """
+        junction = self.junction
+        if not junction:
+            return False
+        junction_seq = self.mutated[junction[0]:junction[1]]
+        assert len(junction_seq) <= 3
+        # Lowercase means mutated
+        if any(c.lower() == c for c in junction_seq):
+            return True
+        else:
+            return False
 
     @property
     def guide_mutated(self) -> str:
@@ -369,7 +437,8 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
 
 def _validate_seq(seq: str):
     assert all(b.upper() in 'AGCTN' for b in seq), seq
-    assert len(seq) >= 3, seq
+    if seq != '':
+        assert len(seq) >= 3, seq
 
 
 def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
@@ -493,6 +562,5 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
 
 
 if __name__ == '__main__':
-    # import doctest
-    # doctest.testmod()
-    primer = 'CTTAGTCTCACCCACGCCAGGGAGCTGGTGGGGTGGTGTCTGAATAGCAAAGATGTGCGAACAAACCAAATCAGGAAAACTGCAAAGAGTACCTTAGTCTTTCTAGACGCTACAAGAGCCTTCTCTCCTCTCTGTCCAAATATTAACCCTGCCAAGAGTAAGGCCTGGAAGGAGGCCACGGGGAAGAGGTCTGGGTCAAGGAGAGTTCCATCTGCGAAGACTCCAAGATCAGAGAGCTACTCACCTGTCTCCATAGCGACAGCAGCGGCCATAACAAACGAAGACACCAAAACGCCACC'
+    import doctest
+    doctest.testmod()

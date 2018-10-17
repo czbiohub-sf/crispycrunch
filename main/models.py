@@ -404,6 +404,10 @@ class GuideDesign(BaseModel):
         else:
             raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
 
+    @property
+    def hdr_tag_verbose(self):
+        return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
+
 
 class GuideSelection(BaseModel):
     guide_design = models.ForeignKey(GuideDesign, on_delete=models.CASCADE)

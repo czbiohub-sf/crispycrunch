@@ -471,28 +471,28 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
         if not row['hdr_rebind']:
             return ''
 
-        row_hdr = hdr.HDR(
-            row['target_seq'],
-            hdr_seq,
-            hdr_tag,
-            row['hdr_dist'],
-            row['_guide_strand'])
         # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
         cds_seq = get_cds_seq(row['target_input'], guide_design.cds_index, -1)
 
-        # Assumes junction is towards middle of gene
-        if hdr_tag == 'start_codon':
-            index = row['target_seq'].find(cds_seq)
-        else:
-            index = row['target_seq'].find(cds_seq)
+        row_hdr = hdr.HDR(
+            row['target_seq'],
+            hdr_seq,
+            hdr_tag,
+            row['hdr_dist'],
+            row['_guide_strand'],
+            cds_seq)
 
+        # Assumes junction is towards middle of gene
+        index = row['target_seq'].find(cds_seq)
         if index == -1:
             # target region entirely within CDS
             return row_hdr.template_mutated
 
         assert len(cds_seq) <= len(row['target_seq'])
+
+        # TODO (gdingle): refactor to use row_hdr.mutation_in_junction, etc
 
         #  Jason Li: The exon-proximal side of the junction is relatively
         #  unimportant to the intron-proximal (exon-distal) side of each
