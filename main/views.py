@@ -106,7 +106,6 @@ class GuideDesignView(CreatePlusView):
             return targets
 
         # TODO (gdingle): this is getting ugly... generalize to be like per_target
-        cds_indexes, cds_lengths = [], []  # type: ignore
         if guide_design.hdr_tag:
             assert all(is_ensemble_transcript(t) for t in targets), 'must be ENST for HDR'
             assert genome == 'hg38', 'only implemented for hg38'
@@ -114,22 +113,27 @@ class GuideDesignView(CreatePlusView):
                 func = get_cds_chr_loc
                 cds_indexes = guide_design.cds_index
                 cds_lengths = guide_design.cds_length
+                with ThreadPoolExecutor() as pool:
+                    normalized = list(pool.map(func, targets, cds_indexes,
+                                               cds_lengths))  # type: ignore
             else:
                 func = functools.partial(
                     get_cds_chr_loc,
                     cds_index=guide_design.cds_index,
                     length=guide_design.cds_length)
+                with ThreadPoolExecutor() as pool:
+                    normalized = list(pool.map(func, targets))  # type: ignore
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
                 conversions.gene_to_chr_loc,
                 genome=genome)
+            with ThreadPoolExecutor() as pool:
+                normalized = list(pool.map(func, targets))  # type: ignore
         else:
             return targets
 
-        with ThreadPoolExecutor() as pool:
-            normalized = list(pool.map(func, targets, cds_indexes, cds_lengths))  # type: ignore
-
+        assert len(normalized)
         return normalized
 
     def _get_target_seqs(self, targets, genome, guide_design):
@@ -138,27 +142,29 @@ class GuideDesignView(CreatePlusView):
             return targets
 
         # TODO (gdingle): this is getting ugly... generalize to be like per_target
-        cds_indexes, cds_lengths = [], []  # type: ignore
         if guide_design.hdr_tag:
             assert genome == 'hg38', 'only implemented for hg38'
             if guide_design.hdr_tag == 'per_target':
                 func = get_cds_seq
                 cds_indexes = guide_design.cds_index
                 cds_lengths = guide_design.cds_length
+                with ThreadPoolExecutor() as pool:
+                    seqs = list(pool.map(func, targets, cds_indexes, cds_lengths))  # type: ignore
             else:
                 func = functools.partial(
                     get_cds_seq,
                     cds_index=guide_design.cds_index,
                     length=guide_design.cds_length)
+                with ThreadPoolExecutor() as pool:
+                    seqs = list(pool.map(func, targets))  # type: ignore
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             assert False, 'not implemented'
         else:
             func = functools.partial(
                 conversions.chr_loc_to_seq,
                 genome=genome)
-
-        with ThreadPoolExecutor() as pool:
-            seqs = list(pool.map(func, targets, cds_indexes, cds_lengths))  # type: ignore
+            with ThreadPoolExecutor() as pool:
+                seqs = list(pool.map(func, targets))  # type: ignore
 
         assert all(is_seq(t) for t in seqs)
         return seqs
