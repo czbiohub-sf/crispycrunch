@@ -183,7 +183,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         arms = primer_product.upper().split(guide_design.hdr_seq)
         larm, rarm = len(arms[0]), len(arms[1])
-        if min(larm, rarm) < 55:
+        if min(larm, rarm) < 105:
             return 'homology arm too short, {}bp: {}'.format(min(larm, rarm), primer_product)
 
         return primer_product
@@ -452,6 +452,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
             row['_guide_strand']).template,
         axis=1,
     )
+    # TODO (gdingle): move this to hdr.py
     sheet['hdr_rebind'] = sheet.apply(
         # less than 14 nucleotides* of the original protospacer remaining to be safe
         lambda row: abs(row['hdr_dist']) >= 14,
@@ -484,36 +485,14 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
             row['_guide_strand'],
             cds_seq)
 
-        # Assumes junction is towards middle of gene
-        index = row['target_seq'].find(cds_seq)
-        if index == -1:
-            # target region entirely within CDS
+        if not row_hdr.junction:
             return row_hdr.template_mutated
 
-        assert len(cds_seq) <= len(row['target_seq'])
-
-        # TODO (gdingle): refactor to use row_hdr.mutation_in_junction, etc
-
-        #  Jason Li: The exon-proximal side of the junction is relatively
-        #  unimportant to the intron-proximal (exon-distal) side of each
-        #  junction, meaning we only want to avoid the 3 nts on the intron side
-        #  of things
-        jmax = 3
-        if hdr_tag == 'start_codon':
-            index = index + len(cds_seq)
-            cut_in_junction = row_hdr.cut_at > index and row_hdr.cut_at - index <= jmax
-            junction = row_hdr.mutated[index:index + jmax]
-        else:
-            cut_in_junction = index > row_hdr.cut_at and index - row_hdr.cut_at <= jmax
-            junction = row_hdr.mutated[index - jmax:index]
-            if index > row_hdr.cut_at:
-                assert False, (index, row_hdr.cut_at)
-
-        if cut_in_junction:
+        if row_hdr.cut_in_junction:
             return 'cut in intron/exon junction: ' + row_hdr.template_mutated
 
         # Lowercase means mutated
-        if any(c.lower() == c for c in junction):
+        if row_hdr.mutation_in_junction:
             return 'mutation in intron/exon junction: ' + row_hdr.template_mutated
 
         return row_hdr.template_mutated

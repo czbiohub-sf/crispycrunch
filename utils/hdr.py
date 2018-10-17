@@ -115,10 +115,21 @@ class HDR:
         assert False
 
     @property
+    def cut_at(self):
+        cut_at = self.insert_at + self.hdr_dist
+        assert cut_at >= 0
+        return cut_at
+
+    @property
     def junction(self) -> tuple:
         """
         Returns the intron/exon junction range on the intron side relative
         to the target sequence. Exclusive range: (start, end].
+
+        Jason Li says: The exon-proximal side of the junction is relatively
+        unimportant to the intron-proximal (exon-distal) side of each
+        junction, meaning we only want to avoid the 3 nts on the intron side
+        of things.
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
         ... cds_seq='ATGGCTGAGCTGGATCC')
@@ -129,10 +140,14 @@ class HDR:
         ... cds_seq='TAA', guide_direction='+')
         >>> hdr.junction
         (3, 6)
+
+        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr.junction
+        ()
         """
         index = self.target_seq.find(self.cds_seq)
         if index == -1:
-            # target region entirely within CDS
+            # assume target region does not go outside CDS
             return tuple([])
         if self.hdr_tag == 'start_codon':
             # Assumes junction is towards middle of gene
@@ -146,21 +161,27 @@ class HDR:
         """
         Determines whether the cut location is inside an intron/exon junction.
 
+        Cut in junction.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
         ... cds_seq='ATGGCTGAGCTGGATCC')
         >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
         (20, (20, 23), True)
+
+        Cut just after junction.
+        >>> hdr = HDR('CCNNNNTAANNNNNN', 'NNN', hdr_dist=0, hdr_tag='stop_codon',
+        ... cds_seq='TAA', guide_direction='+')
+        >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
+        (6, (3, 6), False)
+
+        No junction to cut.
+        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr.cut_in_junction
+        False
         """
         junction = self.junction
         if not junction:
             return False
         return self.cut_at >= junction[0] and self.cut_at < junction[1]
-
-    @property
-    def cut_at(self):
-        cut_at = self.insert_at + self.hdr_dist
-        assert cut_at >= 0
-        return cut_at
 
     @property
     def guide_seq(self):
@@ -269,6 +290,10 @@ class HDR:
         ... cds_seq='ATGGCTGAGCTGGATCC')
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
         ('GCCATGGCTGAGCTGGATCCGtttGGC', (20, 23), True)
+
+        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr.mutation_in_junction
+        False
         """
         junction = self.junction
         if not junction:
