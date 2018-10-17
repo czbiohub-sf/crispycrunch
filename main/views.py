@@ -105,7 +105,6 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): gggenome all seqs
             return targets
 
-        # TODO (gdingle): this is getting ugly... generalize to be like per_target
         if guide_design.hdr_tag:
             assert all(is_ensemble_transcript(t) for t in targets), 'must be ENST for HDR'
             assert genome == 'hg38', 'only implemented for hg38'
@@ -114,34 +113,29 @@ class GuideDesignView(CreatePlusView):
                 cds_indexes = guide_design.cds_index
                 cds_lengths = guide_design.cds_length
                 with ThreadPoolExecutor() as pool:
-                    normalized = list(pool.map(func, targets, cds_indexes,
-                                               cds_lengths))  # type: ignore
+                    return list(pool.map(func, targets, cds_indexes, cds_lengths))
             else:
                 func = functools.partial(
                     get_cds_chr_loc,
                     cds_index=guide_design.cds_index,
                     length=guide_design.cds_length)
                 with ThreadPoolExecutor() as pool:
-                    normalized = list(pool.map(func, targets))  # type: ignore
+                    return list(pool.map(func, targets))
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
                 conversions.gene_to_chr_loc,
                 genome=genome)
             with ThreadPoolExecutor() as pool:
-                normalized = list(pool.map(func, targets))  # type: ignore
-        else:
-            return targets
+                return list(pool.map(func, targets))
 
-        assert len(normalized)
-        return normalized
+        assert False
 
     def _get_target_seqs(self, targets, genome, guide_design):
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
-        # TODO (gdingle): this is getting ugly... generalize to be like per_target
         if guide_design.hdr_tag:
             assert genome == 'hg38', 'only implemented for hg38'
             if guide_design.hdr_tag == 'per_target':
@@ -149,14 +143,14 @@ class GuideDesignView(CreatePlusView):
                 cds_indexes = guide_design.cds_index
                 cds_lengths = guide_design.cds_length
                 with ThreadPoolExecutor() as pool:
-                    seqs = list(pool.map(func, targets, cds_indexes, cds_lengths))  # type: ignore
+                    return list(pool.map(func, targets, cds_indexes, cds_lengths))
             else:
                 func = functools.partial(
                     get_cds_seq,
                     cds_index=guide_design.cds_index,
                     length=guide_design.cds_length)
                 with ThreadPoolExecutor() as pool:
-                    seqs = list(pool.map(func, targets))  # type: ignore
+                    return list(pool.map(func, targets))
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             assert False, 'not implemented'
         else:
@@ -164,10 +158,9 @@ class GuideDesignView(CreatePlusView):
                 conversions.chr_loc_to_seq,
                 genome=genome)
             with ThreadPoolExecutor() as pool:
-                seqs = list(pool.map(func, targets))  # type: ignore
+                return list(pool.map(func, targets))
 
-        assert all(is_seq(t) for t in seqs)
-        return seqs
+        assert False
 
     def plus(self, obj):
         """
