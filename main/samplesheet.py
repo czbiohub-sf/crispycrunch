@@ -8,7 +8,7 @@ import logging
 import os
 
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 import pandas
 
@@ -49,7 +49,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_seq'] = [g[4] for g in guides]
 
     # Add original target string if different
-    sheet['target_input'] = [(g[5] if g[5] != g[0] else None) for g in guides]
+    sheet['target_input'] = [(g[5] if g[5] != g[0] else None)
+                             for g in guides]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g[2] for g in guides), 'Expecting trailing PAM'
@@ -76,8 +77,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet = _set_scores(sheet, guide_design, guides)
 
     # TODO (gdingle): put into unit test
-    if guide_design.hdr_seq:
-        sheet = _set_hdr_cols(sheet, guide_design)
+    if guide_design.hdr_tag:
+        sheet = _set_hdr_cols(sheet, guide_design, guides)
 
     sheet['_crispor_batch_id'] = [g[3] for g in guides]
     sheet['_crispor_pam_id'] = [g[1] for g in guides]
@@ -112,7 +113,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
-    if guide_selection.guide_design.hdr_seq:
+    if guide_selection.guide_design.hdr_tag:
         sheet = _set_hdr_primer(
             sheet,
             guide_selection.guide_design,
@@ -136,8 +137,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         guide_seq_aligned = hdr.HDR(
             row['target_seq'],
-            guide_design.hdr_seq,
-            guide_design.hdr_tag,
+            row['_hdr_seq'],
+            row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand']).guide_seq_aligned
 
@@ -159,12 +160,12 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         hdr_primer_product = hdr.HDR(
             primer_product_aligned,
-            guide_design.hdr_seq,
-            guide_design.hdr_tag,
+            row['_hdr_seq'],
+            row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand']).template
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
-            len(guide_design.hdr_seq)
+            len(row['_hdr_seq'])
 
         # TODO: Normalize back to direction of Crispor return?
         return before + hdr_primer_product
@@ -181,7 +182,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         if plen > max_amplicon_length:
             return f'too long, {plen}bp: {primer_product}'
 
-        arms = primer_product.upper().split(guide_design.hdr_seq)
+        arms = primer_product.upper().split(row['_hdr_seq'])
         larm, rarm = len(arms[0]), len(arms[1])
         if min(larm, rarm) < 105:
             return 'homology arm too short, {}bp: {}'.format(min(larm, rarm), primer_product)
@@ -193,9 +194,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
     return sheet
 
 
-def _flatten_guide_data(
-    guide_selection: GuideSelection
-) -> List[Tuple[str, str, str, str, str, str]]:
+def _flatten_guide_data(guide_selection: GuideSelection) -> list:
 
     # TODO (gdingle): try using bolton itertools remap?
 
@@ -207,13 +206,15 @@ def _flatten_guide_data(
                                   if g.get('batch_id'))  # filter out errors
     target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
     target_loc_to_target_raw = dict(zip(guide_design.targets, guide_design.targets_raw))
+    target_loc_to_target_tag = dict(zip(guide_design.targets, guide_design.target_tags))
     selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
                                for g in guide_design.guide_data
                                if g['target'] in guide_selection.selected_guides]
     guides = [(target_loc, offset, seq,
                target_loc_to_batch_id[target_loc],
                target_loc_to_target_seq[target_loc],
-               target_loc_to_target_raw[target_loc])
+               target_loc_to_target_raw[target_loc],
+               target_loc_to_target_tag.get(target_loc))
               for target_loc, selected in selected_guides_ordered
               for offset, seq in selected.items()]
     return guides
@@ -366,6 +367,8 @@ def _new_samplesheet() -> DataFrame:
             '_crispor_batch_id',
             '_crispor_pam_id',
             '_crispor_guide_id',
+            '_hdr_tag',
+            '_hdr_seq',
             'hdr_dist',
             'hdr_template',
             'hdr_rebind',
@@ -429,15 +432,21 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     return temp_sheet.to_dict(orient='records')
 
 
-def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
-    hdr_seq = guide_design.hdr_seq
+def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> DataFrame:
     hdr_tag = guide_design.hdr_tag
+    if hdr_tag == 'per_target':
+        sheet['_hdr_tag'] = [g[6] for g in guides]
+        sheet['_hdr_seq'] = [
+            GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[g[6]] for g in guides]
+    else:
+        sheet['_hdr_tag'] = hdr_tag
+        sheet['_hdr_seq'] = guide_design.hdr_seq
 
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
             row['target_loc'],
             row['guide_loc'],
-            hdr_tag,
+            row['_hdr_tag'],
         ),
         axis=1,
     )
@@ -446,8 +455,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
         # TODO (gdingle): what's the max length of the template? is it the full cds?
         lambda row: hdr.HDR(
             row['target_seq'],
-            hdr_seq,
-            hdr_tag,
+            row['_hdr_seq'],
+            row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand']).template,
         axis=1,
@@ -475,12 +484,17 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign) -> DataFrame:
         # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
-        cds_seq = get_cds_seq(row['target_input'], guide_design.cds_index, -1)
+        if guide_design.hdr_tag == 'per_target':
+            cds_index = GuideDesign.HDR_TAG_TO_CDS_INDEX[row['_hdr_tag']]
+        else:
+            cds_index = guide_design.cds_index
+        assert isinstance(cds_index, int)
+        cds_seq = get_cds_seq(row['target_input'].split(',')[0], cds_index, -1)
 
         row_hdr = hdr.HDR(
             row['target_seq'],
-            hdr_seq,
-            hdr_tag,
+            row['_hdr_seq'],
+            row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand'],
             cds_seq)
@@ -507,7 +521,7 @@ def _set_scores(
         sheet: DataFrame,
         guide_design: GuideDesign,
         # TODO (gdingle): figure out shorter type sig for guides
-        guides: List[Tuple[str, str, str, str, str, str]]) -> DataFrame:
+        guides: list) -> DataFrame:
     # Get first score by target and offset, MIT score
     scores = dict((row['target'], row['scores'])
                   for row in guide_design.guide_data

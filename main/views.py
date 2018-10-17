@@ -105,14 +105,20 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): gggenome all seqs
             return targets
 
-        # This is needed to get strand of transcript
-        if guide_design.cds_index is not None:
+        # TODO (gdingle): this is getting ugly... generalize to be like per_target
+        cds_indexes, cds_lengths = [], []  # type: ignore
+        if guide_design.hdr_tag:
             assert all(is_ensemble_transcript(t) for t in targets), 'must be ENST for HDR'
             assert genome == 'hg38', 'only implemented for hg38'
-            func = functools.partial(
-                get_cds_chr_loc,
-                cds_index=guide_design.cds_index,
-                length=guide_design.cds_length)
+            if guide_design.hdr_tag == 'per_target':
+                func = get_cds_chr_loc
+                cds_indexes = guide_design.cds_index
+                cds_lengths = guide_design.cds_length
+            else:
+                func = functools.partial(
+                    get_cds_chr_loc,
+                    cds_index=guide_design.cds_index,
+                    length=guide_design.cds_length)
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
@@ -122,7 +128,7 @@ class GuideDesignView(CreatePlusView):
             return targets
 
         with ThreadPoolExecutor() as pool:
-            normalized = list(pool.map(func, targets))
+            normalized = list(pool.map(func, targets, cds_indexes, cds_lengths))  # type: ignore
 
         return normalized
 
@@ -131,22 +137,28 @@ class GuideDesignView(CreatePlusView):
             # TODO (gdingle): return chr locations for sequences?
             return targets
 
-        # TODO (gdingle): investigate why get_cds_seq returns diff than chr_loc_to_seq
-        # and fix in case of ENST and no hdr_tag
-        if guide_design.cds_index is not None:  # hdr
+        # TODO (gdingle): this is getting ugly... generalize to be like per_target
+        cds_indexes, cds_lengths = [], []  # type: ignore
+        if guide_design.hdr_tag:
             assert genome == 'hg38', 'only implemented for hg38'
-            func = functools.partial(
-                get_cds_seq,
-                cds_index=guide_design.cds_index,
-                length=guide_design.cds_length)
+            if guide_design.hdr_tag == 'per_target':
+                func = get_cds_seq
+                cds_indexes = guide_design.cds_index
+                cds_lengths = guide_design.cds_length
+            else:
+                func = functools.partial(
+                    get_cds_seq,
+                    cds_index=guide_design.cds_index,
+                    length=guide_design.cds_length)
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             assert False, 'not implemented'
         else:
             func = functools.partial(
                 conversions.chr_loc_to_seq,
                 genome=genome)
+
         with ThreadPoolExecutor() as pool:
-            seqs = list(pool.map(func, targets))
+            seqs = list(pool.map(func, targets, cds_indexes, cds_lengths))  # type: ignore
 
         assert all(is_seq(t) for t in seqs)
         return seqs
@@ -158,17 +170,16 @@ class GuideDesignView(CreatePlusView):
         """
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
 
-        if obj.hdr_tag:
-            # Although deterministic, store seq for history
-            obj.hdr_seq = GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[obj.hdr_tag]
+        targets_raw, target_tags = obj.parse_targets_raw()
+        obj.target_tags = target_tags
 
         obj.targets = self._normalize_targets(
-            obj.targets_raw,
+            targets_raw,
             obj.genome,
             obj
         )
         obj.target_seqs = self._get_target_seqs(
-            obj.targets_raw,
+            targets_raw,
             obj.genome,
             obj
         )
@@ -209,7 +220,7 @@ class GuideSelectionView(CreatePlusView):
         Select the top guides for further manual selection depending on a few
         vars, such as HDR and wells_per_target.
         """
-        by = 'distance' if guide_design.hdr_seq else 'score'
+        by = 'distance' if guide_design.hdr_tag else 'score'
         top = guide_design.wells_per_target
 
         guide_seqs = guide_data['guide_seqs']

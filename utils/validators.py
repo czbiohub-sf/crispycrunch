@@ -129,6 +129,8 @@ def is_ensemble_transcript(value: str) -> bool:
 
 
 def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
+    # skip optional "N" or "C" trailing
+    value = value.split(',')[0].strip()
     if not any((
             is_chr(value),
             is_seq(value),

@@ -282,31 +282,6 @@ class HDR:
         ))
 
     @property
-    def mutation_in_junction(self) -> bool:
-        """
-        Determines whether there is a mutation inside an intron/exon junction.
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCC')
-        >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
-        ('GCCATGGCTGAGCTGGATCCGtttGGC', (20, 23), True)
-
-        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
-        >>> hdr.mutation_in_junction
-        False
-        """
-        junction = self.junction
-        if not junction:
-            return False
-        junction_seq = self.mutated[junction[0]:junction[1]]
-        assert len(junction_seq) <= 3
-        # Lowercase means mutated
-        if any(c.lower() == c for c in junction_seq):
-            return True
-        else:
-            return False
-
-    @property
     def guide_mutated(self) -> str:
         """
         Silently mutates codons in the guide sequence, going from the PAM side inwards.
@@ -353,6 +328,45 @@ class HDR:
             self.guide_mutated,
             self.guide_seq_aligned,
             self.guide_direction)
+
+    @property
+    def mutation_in_junction(self) -> bool:
+        """
+        Determines whether there is a mutation inside an intron/exon junction.
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
+        ... cds_seq='ATGGCTGAGCTGGATCC')
+        >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
+        ('GCCATGGCTGAGCTGGATCCGtttGGC', (20, 23), True)
+
+        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr.mutation_in_junction
+        False
+        """
+        junction = self.junction
+        if not junction:
+            return False
+        junction_seq = self.mutated[junction[0]:junction[1]]
+        assert len(junction_seq) <= 3
+        # Lowercase means mutated
+        if any(c.lower() == c for c in junction_seq):
+            return True
+        else:
+            return False
+
+    # TODO (gdingle): wait for jason li
+    # @property
+    # def should_mutate(self) -> bool:
+    #     """
+    #     Determines whether a guide should be mutated depending on the
+    #     cut to insert distance.
+
+    #     >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+    #     >>> hdr.should_mutate
+    #     'GCCATGGCTGAGCTGGATCCGtttGGC'
+    #     True
+    #     """
+    #     return abs(self.hdr_dist) >= 14
 
 
 def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]:

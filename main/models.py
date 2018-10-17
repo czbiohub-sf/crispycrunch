@@ -16,7 +16,6 @@ from utils.chrloc import ChrLoc
 from utils.validators import *
 
 
-
 # TODO (gdingle): temp
 
 N_TERMINUS_EXAMPLES = [
@@ -305,8 +304,9 @@ class GuideDesign(BaseModel):
     }
     HDR_TAG_TERMINUSES = [
         # See cds_length below
-        ('start_codon', 'Within 36bp after start codon'),
-        ('stop_codon', 'Within 36bp before or after stop codon')
+        ('start_codon', 'Within 36bp after start codon (N-terminus)'),
+        ('stop_codon', 'Within 36bp before or after stop codon (C-terminus)'),
+        ('per_target', 'As indicated per target ("N" or "C")'),
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
         # TODO (gdingle): if negative guide, do reverse complement
@@ -334,7 +334,9 @@ class GuideDesign(BaseModel):
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
         # TODO (gdingle): support FASTA with description line
         verbose_name='Target regions',
-        help_text='Chromosome location, fasta sequence, ENST transcript ID, or gene name. One per line. No extra whitespace.',
+        help_text="""Chromosome location, fasta sequence, ENST transcript ID, or
+          gene name. One per line. No extra whitespace. Append ",N" or ",C" to a
+          line to tag at N or C terminus.""",
         # TODO (gdingle): temp default for testing
         # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
@@ -348,15 +350,22 @@ class GuideDesign(BaseModel):
 
     targets = fields.ArrayField(
         ChrLocField(max_length=80, validators=[validate_chr], blank=True),
-        # encoder
     )
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),
         blank=True,
         default=[],
     )
-
-    hdr_tag = models.CharField(
+    target_tags = fields.ArrayField(
+        models.CharField(
+            choices=HDR_TAG_TERMINUSES,
+            blank=True,
+            max_length=40),
+        blank=True,
+        default=[],
+    )
+    # TODO (gdingle): remove me, or leave as default?
+    hdr_tag=models.CharField(
         choices=HDR_TAG_TERMINUSES,
         blank=True,
         max_length=40,
@@ -364,60 +373,88 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): no longer GFP... switch to other name Neon something?
         help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
 
-    hdr_seq = models.CharField(
-        max_length=160,
-        validators=[validate_seq],
-        blank=True,
-        help_text='Sequence for Homology Directed Repair',
-    )
-
-    guide_data = JSONField(default=list, blank=True,
+    guide_data=JSONField(default=list, blank=True,
                            help_text='Data returned by external service')
+
+    def parse_targets_raw(self):
+        """
+        Parse out optional terminuses from input such as "ENST00000621663,N"
+        """
+        terminus_to_tag={
+            'N': 'start_codon',
+            'C': 'stop_codon',
+        }
+        parsed=[t.split(',') for t in self.targets_raw]
+        targets_raw=[p[0].strip() for p in parsed]
+        target_tags=[terminus_to_tag[p[1].strip()]
+            for p in parsed if len(p) > 1]
+        assert not target_tags or len(target_tags) == len(targets_raw)
+        return targets_raw, target_tags
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
             self.genome, self.pam, self.targets)
 
     @property
+    def hdr_seq(self):
+        """
+        This funky property will either return a scalar or a tuple.
+        """
+        if not self.hdr_tag:
+            return None
+        elif self.hdr_tag == 'per_target':
+            return tuple(self.HDR_TAG_TERMINUS_TO_HDR_SEQ[hdr_tag]
+                for hdr_tag in self.target_tags)
+        else:
+            return self.HDR_TAG_TERMINUS_TO_HDR_SEQ[self.hdr_tag]
+
+    @property
     def wells_per_target(self):
         return max(1, 96 // len(self.targets))
 
+    HDR_TAG_TO_CDS_INDEX = {
+        'per_target': None,
+        'start_codon': 0,
+        'stop_codon': -1,
+    }
     @property
     def cds_index(self):
-        if not self.hdr_seq:
+        if not self.hdr_tag:
             return None
-        if self.hdr_tag == 'start_codon':
-            return 0
-        elif self.hdr_tag == 'stop_codon':
-            return -1
+        elif self.hdr_tag == 'per_target':
+            return tuple(self.HDR_TAG_TO_CDS_INDEX[tag] for tag in self.target_tags)
         else:
-            raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
+            return self.HDR_TAG_TO_CDS_INDEX[self.hdr_tag]
 
+    HDR_TAG_TO_CDS_LENGTH = {
+        'per_target': None,
+        'start_codon': 36,
+        'stop_codon': 72,
+    }
     @property
     def cds_length(self):
-        if not self.hdr_seq:
-            return -1
-        if self.hdr_tag == 'start_codon':
-            return 36
-        elif self.hdr_tag == 'stop_codon':
-            return 72
-        else:
-            raise ValueError('Unknown hdr_tag: {}'.format(self.hdr_tag))
+        if not self.hdr_tag:
+            return None
+        elif self.hdr_tag == 'per_target':
+            return tuple(self.HDR_TAG_TO_CDS_LENGTH[tag] for tag in self.target_tags)
+        return self.HDR_TAG_TO_CDS_LENGTH[self.hdr_tag]
 
     @property
     def hdr_tag_verbose(self):
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
 
 
+
+
 class GuideSelection(BaseModel):
-    guide_design = models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
+    guide_design=models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
 
     def _validate_selected_guides(val):
         return [validate_seq(seq)  # type: ignore
                 for seqs in val.values()
                 for seq in seqs.values()]
 
-    selected_guides = JSONField(
+    selected_guides=JSONField(
         default=dict,
         blank=True,
         validators=[
@@ -440,9 +477,9 @@ class GuideSelection(BaseModel):
 
 
 class PrimerDesign(BaseModel):
-    guide_selection = models.ForeignKey(
+    guide_selection=models.ForeignKey(
         GuideSelection, on_delete=models.CASCADE)
-    primer_temp = models.IntegerField(
+    primer_temp=models.IntegerField(
         verbose_name='Primer melting temperature',
         default=60,
         validators=[
@@ -453,7 +490,7 @@ class PrimerDesign(BaseModel):
     # default of 250 is from
     # https://docs.google.com/document/d/1h_QOtsH6_uH5VeOCr0dBcUBFnQyamgpdQmupYWyvxo8/edit
     # TODO (gdingle): crispor has a preset list of values... mirror?
-    max_amplicon_length = models.IntegerField(
+    max_amplicon_length=models.IntegerField(
         verbose_name='Maximum amplicon length',
         help_text='amplicon = primer product',
         default=400,
@@ -462,7 +499,7 @@ class PrimerDesign(BaseModel):
             MinValueValidator(200),
             MaxValueValidator(400),
         ])
-    primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
+    primer_data=JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
@@ -472,7 +509,7 @@ class PrimerDesign(BaseModel):
         """
         Knocks down size a notch to make space for hdr_seq in primer
         """
-        hdr_seq = self.guide_selection.guide_design.hdr_seq
+        hdr_seq=self.guide_selection.guide_design.hdr_seq
         if hdr_seq:
             # TODO (gdingle): generalize up to len(hdr_seq) 200
             assert len(hdr_seq) < 100
@@ -483,14 +520,14 @@ class PrimerDesign(BaseModel):
 
 class PrimerSelection(BaseModel):
 
-    primer_design = models.ForeignKey(PrimerDesign, on_delete=models.CASCADE)
+    primer_design=models.ForeignKey(PrimerDesign, on_delete=models.CASCADE)
 
     def _validate_selected_primers(val):
         return [validate_seq(seq[0])  # type: ignore
                 for seqs in val.values()
                 for seq in seqs]
 
-    selected_primers = JSONField(
+    selected_primers=JSONField(
         default=dict,
         blank=True,
         validators=[
@@ -519,30 +556,30 @@ class PrimerSelection(BaseModel):
 
 
 class Analysis(BaseModel):
-    experiment = models.ForeignKey(
+    experiment=models.ForeignKey(
         Experiment, on_delete=models.CASCADE,
         help_text='The Crispycrunch experiment to be analyzed')
     # TODO (gdingle): default this to experiment researcher
-    researcher = models.ForeignKey(
+    researcher=models.ForeignKey(
         Researcher, on_delete=models.CASCADE,
         help_text='The researcher doing the analysis')
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
-    s3_bucket = models.CharField(max_length=80,
+    s3_bucket=models.CharField(max_length=80,
                                  # default='jasonli-bucket',
                                  default='ryan.leenay-bucket',
                                  help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed'
                                  )
-    s3_prefix = models.CharField(max_length=160,
+    s3_prefix=models.CharField(max_length=160,
                                  # default='JasonHDR/96wp1sorted-fastq/'
                                  default='Greg_CXCR4_iPSC',
                                  help_text='The S3 directory that contains the FastQ files to be analyzed'
                                  )
 
-    results_data = JSONField(default=list, blank=True,
+    results_data=JSONField(default=list, blank=True,
                              help_text='Data returned by external service')
-    fastq_data = JSONField(default=list, blank=True)
+    fastq_data=JSONField(default=list, blank=True)
 
     def __str__(self):
         # return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
