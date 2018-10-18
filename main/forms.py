@@ -5,9 +5,6 @@ from django.forms import FileField, Form, ModelForm, widgets
 from main.models import *
 
 
-# TODO (gdingle): set placeholders or helptext
-
-
 # TODO (gdingle): consider YAML instead for easier editing
 # See https://pyyaml.org/wiki/PyYAMLDocumentation
 class PrettyJsonWidget(widgets.Textarea):
@@ -15,13 +12,19 @@ class PrettyJsonWidget(widgets.Textarea):
     def format_value(self, value):
         # Incredibly, there is no easier way to pretty format JSON in Django.
         return json.dumps(json.loads(value), indent=2)
-    # TODO (gdingle): can we strip trailing commas here as well?
-    # see https://stackoverflow.com/questions/23705304/can-json-loads-ignore-trailing-commas
 
 
-# TODO (gdingle): ArrayField is not showing full error messages, only first part
-# "Item 1 in the array did not validate:". See:
-# https://docs.djangoproject.com/en/2.1/_modules/django/contrib/postgres/forms/array/
+# TODO (gdingle): get this working
+# class FriendlyJSONField(JSONField):
+
+#     def clean(self, value):
+#         """Strip trailing commas. WARNING: This may mangle valid JSON."""
+#         value = re.sub(",\s+}", "}", value)
+#         value = re.sub(",\s+\]", "]", value)
+#         assert False, value
+#         return self.clean(value)
+
+
 class NewlineArrayField(SimpleArrayField):
 
     def __init__(self, *args, **kwargs):
@@ -31,10 +34,9 @@ class NewlineArrayField(SimpleArrayField):
         kwargs['min_length'] = 1
         super().__init__(*args, **kwargs)
 
-    # TODO (gdingle): how to strip empty lines?
-    # see https://docs.djangoproject.com/en/2.0/_modules/django/contrib/postgres/forms/array/#SimpleArrayField
-    # def clean(self, value):
-    #     super().__init__(value.strip())
+    def clean(self, value):
+        """Strip empty lines"""
+        return super().clean(value.strip())
 
 
 class ResearcherForm(ModelForm):
@@ -74,10 +76,6 @@ class GuideSelectionForm(ModelForm):
         exclude = ['guide_design']
         widgets = {
             'selected_guides': PrettyJsonWidget(attrs={'rows': 40}),
-            'selected_guides_tagin': PrettyJsonWidget(attrs={'rows': 40}),
-        }
-        labels = {
-            "selected_guides_tagin": 'Selected guides',
         }
 
 

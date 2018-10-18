@@ -77,7 +77,11 @@ class CreatePlusView(CreateView):
     # see form_invalid, non_field_errors, https://docs.djangoproject.com/en/2.1/topics/class-based-views/generic-editing/
     def form_valid(self, form: ModelForm) -> HttpResponse:
         obj = form.save(commit=False)
-        obj = self.plus(obj)
+        try:
+            obj = self.plus(obj)
+        except (ValidationError, ValueError) as e:
+            form.add_error('__all__', e)
+            return self.form_invalid(form)
         obj.save()
         self.object = obj
         return HttpResponseRedirect(self.get_success_url())

@@ -16,6 +16,11 @@ from utils.chrloc import ChrLoc
 from utils.validators import *
 
 
+# TODO (gdingle): ArrayField is not showing full error messages, only first part
+# "Item 1 in the array did not validate:". See:
+# https://docs.djangoproject.com/en/2.1/_modules/django/contrib/postgres/forms/array/
+
+
 # TODO (gdingle): temp
 
 N_TERMINUS_EXAMPLES = [
@@ -309,7 +314,6 @@ class GuideDesign(BaseModel):
         ('per_target', 'As indicated per target ("N" or "C")'),
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
-        # TODO (gdingle): if negative guide, do reverse complement
         'start_codon': 'ACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATGGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
         'stop_codon': 'GGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGTACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATG',
         # TODO (gdingle): also offer GFP?
@@ -350,9 +354,11 @@ class GuideDesign(BaseModel):
 
     targets = fields.ArrayField(
         ChrLocField(max_length=80, validators=[validate_chr], blank=True),
+        verbose_name='Target chromosome locations',
     )
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),
+        verbose_name='Target sequences',
         blank=True,
         default=[],
     )
@@ -361,6 +367,7 @@ class GuideDesign(BaseModel):
             choices=HDR_TAG_TERMINUSES,
             blank=True,
             max_length=40),
+        verbose_name='Target HDR tags',
         blank=True,
         default=[],
     )
