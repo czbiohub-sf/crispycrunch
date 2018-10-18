@@ -570,6 +570,18 @@ class PrimerOrderFormView(OrderFormView):
     seq_keys = ('primer_seq_fwd', 'primer_seq_rev')
 
 
+
+class UltramerOrderFormView(OrderFormView):
+    """
+    For HDR donor template DNA.
+    """
+    model = PrimerSelection
+    # TODO (gdingle): change this to mutated, also may need
+    # exactly 55bp homology arms
+    seq_keys = ('hdr_template',)
+
+
+
 class IlluminaSheetView(View):
 
     def _make_sample(self, experiment: Experiment, row: Any) -> illumina.Sample:

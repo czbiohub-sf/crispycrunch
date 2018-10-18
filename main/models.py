@@ -557,6 +557,10 @@ class PrimerSelection(BaseModel):
     def illumina_sheet_url(self):
         return '/main/primer-selection/{}/illumina-sheet'.format(self.id)
 
+    @property
+    def hdr_order_form_url(self):
+        return '/main/primer-selection/{}/hdr-order-form'.format(self.id)
+
 
 class Analysis(BaseModel):
     experiment=models.ForeignKey(

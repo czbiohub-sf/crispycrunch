@@ -59,8 +59,24 @@
     </a>
   </dd>
 
+  {% if guide_design.hdr_tag %}
+  <dt class="col-sm-3">
+    IDT Ultramer Order Form (for HDR)
+  </dt>
+  <dd class="col-sm-9">
+    <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.hdr_order_form_url }}">
+      Download
+    </a>
+    &rarr;
+    <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/ultra/2683">
+      Upload
+    </a>
+  </dd>
+  {% endif %}
+
   <dt class="col-sm-3">
     Illumina Sample Sheet
+    <br />(for sequencing)
   </dt>
   <dd class="col-sm-9">
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.illumina_sheet_url }}">

@@ -11,11 +11,16 @@ urlpatterns = [
     # Urls here are structured as:
     # The parent object followed by the type of the object to-be-created.
     path('experiment/<int:id>/guide-design/', views.GuideDesignView.as_view(), name='Guide Design'),
-    path('guide-design/<int:id>/progress/', views.GuideDesignProgressView.as_view(), name='Guide Design Progress'),
-    path('guide-design/<int:id>/guide-selection/', views.GuideSelectionView.as_view(), name='Guide Selection'),
-    path('guide-selection/<int:id>/primer-design/', views.PrimerDesignView.as_view(), name='Primer Design'),
-    path('primer-design/<int:id>/progress/', views.PrimerDesignProgressView.as_view(), name='Primer Design Progress'),
-    path('primer-design/<int:id>/primer-selection/', views.PrimerSelectionView.as_view(), name='Primer Selection'),
+    path('guide-design/<int:id>/progress/',
+         views.GuideDesignProgressView.as_view(), name='Guide Design Progress'),
+    path('guide-design/<int:id>/guide-selection/',
+         views.GuideSelectionView.as_view(), name='Guide Selection'),
+    path('guide-selection/<int:id>/primer-design/',
+         views.PrimerDesignView.as_view(), name='Primer Design'),
+    path('primer-design/<int:id>/progress/',
+         views.PrimerDesignProgressView.as_view(), name='Primer Design Progress'),
+    path('primer-design/<int:id>/primer-selection/',
+         views.PrimerSelectionView.as_view(), name='Primer Selection'),
 
     path('primer-selection/<int:id>/experiment-summary/',
          views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
@@ -35,4 +40,6 @@ urlpatterns = [
          views.PrimerOrderFormView.as_view()),
     path('primer-selection/<int:id>/illumina-sheet',
          views.IlluminaSheetView.as_view()),
+    path('primer-selection/<int:id>/hdr-order-form',
+         views.UltramerOrderFormView.as_view()),
 ]
