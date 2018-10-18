@@ -97,10 +97,8 @@ class GuideDesignView(CreatePlusView):
     form_class = GuideDesignForm
     success_url = '/main/guide-design/{id}/progress/'
 
-    # TODO (gdingle): we really need to store this in a new model field
-    # and preserve the original input
-    def _normalize_targets(self, targets, genome, guide_design):
-        # TODO (gdingle): handle mix of target types
+    def _normalize_targets(self, targets, guide_design):
+        genome = guide_design.genome
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): gggenome all seqs
             return targets
@@ -131,9 +129,9 @@ class GuideDesignView(CreatePlusView):
 
         assert False
 
-    def _get_target_seqs(self, targets, genome, guide_design):
+    def _get_target_seqs(self, targets, guide_design):
+        genome = guide_design.genome
         if all(is_seq(t) for t in targets):
-            # TODO (gdingle): return chr locations for sequences?
             return targets
 
         if guide_design.hdr_tag:
@@ -152,6 +150,7 @@ class GuideDesignView(CreatePlusView):
                 with ThreadPoolExecutor() as pool:
                     return list(pool.map(func, targets))
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
+            # TODO (gdingle): get gene seq or disable in UI
             assert False, 'not implemented'
         else:
             func = functools.partial(
@@ -163,23 +162,17 @@ class GuideDesignView(CreatePlusView):
         assert False
 
     def plus(self, obj):
-        """
-        If an HDR tag-in experiment, get donor DNA then get guides. If not, just
-        get guides.
-        """
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
 
-        targets_raw, target_tags = obj.parse_targets_raw()
+        targets_cleaned, target_tags = obj.parse_targets_raw()
         obj.target_tags = target_tags
 
         obj.targets = self._normalize_targets(
-            targets_raw,
-            obj.genome,
+            targets_cleaned,
             obj
         )
         obj.target_seqs = self._get_target_seqs(
-            targets_raw,
-            obj.genome,
+            targets_cleaned,
             obj
         )
 
