@@ -63,7 +63,6 @@ def is_seq(value: str) -> bool:
         return True
 
 
-# TODO (gdingle): refactor with ChrLoc
 def validate_chr(value: str) -> None:
     """
     >>> validate_chr('chr1:11,130,540-11,130,751')

@@ -371,7 +371,6 @@ class GuideDesign(BaseModel):
         blank=True,
         default=[],
     )
-    # TODO (gdingle): remove me, or leave as default?
     hdr_tag=models.CharField(
         choices=HDR_TAG_TERMINUSES,
         blank=True,
@@ -493,9 +492,7 @@ class PrimerDesign(BaseModel):
             MinValueValidator(58),
             MaxValueValidator(62),
         ])
-    # TODO (gdingle): this needs to change based on HDR
-    # default of 250 is from
-    # https://docs.google.com/document/d/1h_QOtsH6_uH5VeOCr0dBcUBFnQyamgpdQmupYWyvxo8/edit
+
     # TODO (gdingle): crispor has a preset list of values... mirror?
     max_amplicon_length=models.IntegerField(
         verbose_name='Maximum amplicon length',
@@ -516,10 +513,9 @@ class PrimerDesign(BaseModel):
         """
         Knocks down size a notch to make space for hdr_seq in primer
         """
-        hdr_seq=self.guide_selection.guide_design.hdr_seq
-        if hdr_seq:
+        hdr_tag = self.guide_selection.guide_design.hdr_tag
+        if hdr_tag:
             # TODO (gdingle): generalize up to len(hdr_seq) 200
-            assert len(hdr_seq) < 100
             return self.max_amplicon_length - 100
         else:
             return self.max_amplicon_length

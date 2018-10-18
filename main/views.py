@@ -103,13 +103,19 @@ class GuideDesignView(CreatePlusView):
 
     def _normalize_targets(self, targets, guide_design):
         genome = guide_design.genome
+
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): gggenome all seqs
-            return targets
+            raise ValidationError(
+                'Targeting fasta sequences is not currently implemented')
 
         if guide_design.hdr_tag:
-            assert all(is_ensemble_transcript(t) for t in targets), 'must be ENST for HDR'
-            assert genome == 'hg38', 'only implemented for hg38'
+            if not all(is_ensemble_transcript(t) for t in targets):
+                raise ValidationError(
+                    'Targets must all be ENST transcripts for HDR')
+            if genome != 'hg38':
+                raise ValidationError(
+                    'ENST transcripts are only currently implemented for the hg38 genome')
             if guide_design.hdr_tag == 'per_target':
                 func = get_cds_chr_loc
                 cds_indexes = guide_design.cds_index
@@ -123,6 +129,7 @@ class GuideDesignView(CreatePlusView):
                     length=guide_design.cds_length)
                 with ThreadPoolExecutor() as pool:
                     return list(pool.map(func, targets))
+
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
             func = functools.partial(
@@ -134,12 +141,15 @@ class GuideDesignView(CreatePlusView):
         assert False
 
     def _get_target_seqs(self, targets, guide_design):
-        genome = guide_design.genome
         if all(is_seq(t) for t in targets):
             return targets
 
+        genome = guide_design.genome
+
         if guide_design.hdr_tag:
-            assert genome == 'hg38', 'only implemented for hg38'
+            if genome != 'hg38':
+                raise ValidationError(
+                    'ENST transcripts are only currently implemented for the hg38 genome')
             if guide_design.hdr_tag == 'per_target':
                 func = get_cds_seq
                 cds_indexes = guide_design.cds_index
@@ -153,9 +163,15 @@ class GuideDesignView(CreatePlusView):
                     length=guide_design.cds_length)
                 with ThreadPoolExecutor() as pool:
                     return list(pool.map(func, targets))
-        elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
-            # TODO (gdingle): get gene seq or disable in UI
-            assert False, 'not implemented'
+
+        elif all(is_ensemble_transcript(t) for t in targets):
+            raise ValidationError(
+                'ENST transcripts are only currently implemented for HDR')
+
+        elif all(is_gene(t) for t in targets):
+            raise ValidationError(
+                'Targeting genes by name is not currently implemented')
+
         else:
             func = functools.partial(
                 conversions.chr_loc_to_seq,
@@ -407,7 +423,8 @@ class AnalysisView(CreatePlusView):
     def plus(self, obj):
         # TODO (gdingle): use predetermined s3 location of fastq
         fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
-        assert len(fastqs) <= 384, 'Fastqs should be from max one plate'
+        if len(fastqs) <= 384:
+            raise ValueError('Fastqs should be from max one plate')
 
         # Redirect to intermediate page if custom analysis
         if obj.is_custom:
