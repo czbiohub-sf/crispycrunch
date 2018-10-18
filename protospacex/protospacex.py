@@ -403,8 +403,5 @@ if __name__ == '__main__':
     import requests_cache  # type: ignore
     requests_cache.install_cache()
 
-    # import doctest
-    # doctest.testmod()
-
-    # TODO (gdingle): exon junctions
-    # * Have a filter/flag for intron/exon junctions: do not cut or mutate less than 3 nt away
+    import doctest
+    doctest.testmod()

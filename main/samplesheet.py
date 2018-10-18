@@ -64,7 +64,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
     sheet['_guide_strand'] = [g[1][-1] for g in guides]
 
-    # TODO (gdingle): is this correct? off by one? reverse strand?
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
             row['target_loc'],
@@ -76,13 +75,11 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     sheet = _set_scores(sheet, guide_design, guides)
 
-    # TODO (gdingle): put into unit test
     if guide_design.hdr_tag:
         sheet = _set_hdr_cols(sheet, guide_design, guides)
 
     sheet['_crispor_batch_id'] = [g[3] for g in guides]
     sheet['_crispor_pam_id'] = [g[1] for g in guides]
-    # TODO (gdingle): is this the best way of identifying guides?
     sheet['_crispor_guide_id'] = [g[0] + ' ' + g[1] for g in guides]
 
     return sheet
@@ -93,7 +90,6 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet = from_guide_selection(guide_selection)
     selected_primers = primer_selection.selected_primers
     for guide_id, primer_pair in selected_primers.items():
-        # TODO (gdingle): this is awkward... should we use well_name?
         target_loc, _crispor_pam_id = guide_id.split(' ')
         mask1 = sheet['target_loc'] == target_loc
         mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
@@ -123,10 +119,6 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
 
 def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
-    # TODO (gdingle): ryan leenay says primer needs to be codon-aware
-    # TODO (gdingle): figure out primers and HDR... align to guide then to hdr_dist?
-    # sheet['primer_product'] = 'need to align to codon'
-    # return sheet
 
     def get_primer_product(row):
         primer_product = row['primer_product']
@@ -170,7 +162,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         # TODO: Normalize back to direction of Crispor return?
         return before + hdr_primer_product
 
-    # TODO (gdingle): fix root cause of issues
+    # TODO (gdingle): fix root cause of issues... need more control over primer3
     def warn_hdr_primer(row) -> str:
         primer_product = row['primer_product']
 
@@ -251,11 +243,11 @@ def _transform_primer_product(row) -> str:
         row['target_loc'], row['guide_seq']))
 
     # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
-    # TODO (gdingle): this appears to be broken because of below
     primer_loc = get_primer_loc(
         row['primer_product'],
         guide_seq,
         row['guide_loc'])
+    # TODO (gdingle): this does not take into account strand! VERY BAD!
     converted = conversions.chr_loc_to_seq(
         str(primer_loc),
         row['target_genome'])
@@ -323,6 +315,7 @@ def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
     # is it another instance of postgres json type ordered alphabetical?
     # TODO (gdingle): reapply original ordering:
     # ['Total', 'Unmodified', 'Modified', 'Discarded', 'Insertions', 'Deletions', 'Substitutions', 'Only Insertions', 'Only Deletions', 'Only Substitutions', 'Insertions and Deletions', 'Insertions and Substitutions', 'Deletions and Substitutions', 'Insertions Deletions and Substitutions']
+    # TODO (gdingle): use json pandas see https://stackoverflow.com/questions/43572359/keep-column-and-row-order-when-storing-pandas-dataframe-in-json
 
     return sheet
 
@@ -375,10 +368,7 @@ def _new_samplesheet() -> DataFrame:
             'hdr_mutated',
             'primer_seq_fwd',
             'primer_seq_rev',
-            # TODO (gdingle): rename to reference amplicon?
             'primer_product',
-            # TODO (gdingle): ever useful?
-            # 'well_name',
             's3_bucket',
             's3_prefix',
             'fastq_fwd',
@@ -451,8 +441,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
         axis=1,
     )
     sheet['hdr_template'] = sheet.apply(
-        # TODO (gdingle): do reverse complement of hdr_seq if guide is negative strand after construction
-        # TODO (gdingle): what's the max length of the template? is it the full cds?
         lambda row: hdr.HDR(
             row['target_seq'],
             row['_hdr_seq'],

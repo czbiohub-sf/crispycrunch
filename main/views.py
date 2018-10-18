@@ -40,10 +40,6 @@ from main.models import *
 from utils import conversions
 from utils.validators import is_ensemble_transcript
 
-# TODO (gdingle): move somewhere better
-CRISPRESSO_ROOT_URL = 'http://crispresso:5000/'
-CRISPRESSO_PUBLIC_ROOT_URL = 'http://0.0.0.0:5000/'
-
 logger = logging.getLogger(__name__)
 
 
@@ -51,20 +47,13 @@ class IndexView(ListView):
     model = Experiment
     template_name = 'index.html'
 
-    # TODO (gdingle): fill in
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['analyses'] = (a for a in Analysis.objects.all() if a.is_complete)
         return context
 
 
-def index(request):
-    # TODO (gdingle): create useful index
-    return HttpResponse("Hello, world. You're at the main index.")
-
-
-# TODO (gdingle): make CreateUpdateView
-# see https://stackoverflow.com/a/48116803
+# TODO (gdingle): make CreateUpdateView? see https://stackoverflow.com/a/48116803
 class CreatePlusView(CreateView):
     """
     Simplifies adding foreign keys and other pre-determined data to a ModelForm

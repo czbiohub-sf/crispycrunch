@@ -1,10 +1,5 @@
 """
 Transformations of genome sequences for HDR.
-
-# TODO (gdingle):
-• what default MIT score threshold should we set for mutating a sequence from the original?
-• what synonymous codon to use when there are multiple alternatives?
-• is it okay to use MIT score on a sequence that does not end precisely in 3bp PAM as it was designed for?
 """
 from typing import Iterator
 
@@ -65,7 +60,7 @@ class HDR:
         if guide_direction:
             assert guide_direction in ('+', '-')
             self.guide_direction = guide_direction
-            # TODO (gdingle): Run inference to double check
+            # TODO (gdingle): Run inference to double check? or remove _guide_direction?
             # self._guide_direction()
         else:
             self.guide_direction = self._guide_direction()

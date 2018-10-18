@@ -98,7 +98,6 @@ class CrispressoRequest(AbstractScrapeRequest):
                  hdr_seq: str='',
                  optional_name: str='') -> None:
         self.endpoint = self.base_url + '/submit'
-        # TODO (gdingle): compare crispresso2 values to chosen crispresso1 values
         self.data = {
             # NOTE: all post vars are required, even if empty
             'amplicon': amplicon,
@@ -109,7 +108,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             'email': 'gdingle@chanzuckerberg.com',
             'exons': '',
             'fastq_se': '',
-            # TODO (gdingle): why is this not working?
+            # TODO (gdingle): - [ ] Hook up crispresso2 to HDR
             # 'hdr_seq': 'cgaggagatacaggcggagggcgaggagatacaggcggagggcgaggagatacaggcggagagcgGCGCTAGGACCCGCCGGCCACCCCGCCGGCTCCCGGGAGGTTGATAAAGCGGCGGCGGCGTTTGACGTCAGTGGGGAGTTAATTTTAAATCGGTACAAGATGCGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggtGCGGAGGGGGACGAGGCAGCGCGAGGGCAGCAACCGCACCAGGGGCTGTGGCGCCGGCGACGGACCAGCGACCCAAGCGCCGCGGTTAACCACGTCTCGTCCAC',
             'hdr_seq': '',
             'optional_name': '',
@@ -170,7 +169,6 @@ class CrispressoRequest(AbstractScrapeRequest):
 
         Crispresso2 appears to support running only 1 report in parallel, so in
         the worst case, 96 reports will take approx 3 hours.
-        # TODO (gdingle): upgrade crispresso somehow
         """
         total = 0
         while not self._check_report_status(report_id) and retries >= 0:
@@ -219,8 +217,8 @@ class CrispressoRequest(AbstractScrapeRequest):
         elif report_status['state'] == 'SUCCESS':
             return True
         elif report_status['state'] == 'PENDING':
-            # TODO (gdingle): report bug to Luca Pinello
             # Sometimes pending status is never set to success though the report exists.
+            # The bug was reported to Luca Pinello.
             report_url = self.base_url + '/view_report/' + report_id
             response = requests.get(report_url)
             if response.status_code == 200:
@@ -426,12 +424,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         url = self.endpoint + '?batchId=' + batch_id
         primers_url = self.endpoint.split('?')[0] + '?batchId={}&pamId={}&pam=NGG'
 
-        # TODO (gdingle): prefilter scores, guides, primer_urls
-        # by existence of primer:
-        # 'Warning: No primers were found'
-        # Use new threadpool? limit to first 5?
-        # TODO (gdingle): check for iteration strat of yunfang
-
         rows = [
             [t['id']] +
             [cell for cell in t.find_all('td')[1:8]] +
@@ -447,7 +439,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
         # Filter for rows that have actual primers (by http request),
         # but only first `pre_filter` to save time.
-        # TODO (gdingle): pool.map parallelize
+        # TODO (gdingle): pool.map parallelize? Or are we already parallel enough at this point?
         if self.pre_filter:
             rows = [r for i, r in enumerate(rows)
                     if i > self.pre_filter or
@@ -474,8 +466,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             batch_id=batch_id,
             guide_seqs=guide_seqs,
             scores=scores,
-            # TODO (gdingle): are these links ever needed?
             primer_urls=primer_urls,
+            # TODO (gdingle): are these links ever needed?
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
@@ -606,120 +598,6 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
                 (row[1].get_text(), tt.get_text())
              )
             for row, tt in zip(rows, tts))
-
-# TODO (gdingle): remove me when protospacex is ready
-
-
-class TagInRequest(AbstractScrapeRequest):
-    """
-    Given an an Ensembl Transcript or a custom sequence, gets candidate sgRNAs
-    and ssDNAs from tagin.stembio.org service for HDR experiments.
-
-    To bypass CSRF protection, we make a initial request to extract the CSRF
-    token out of the form, so we can submit it with the main request.
-
-    The sessionid is also needed, for unknown reasons.
-
-    TODO: re-enable doctest
-    data = TagInRequest('ENST00000330949').run()
-    > len(data['guide_seqs']) >= 1
-    True
-    > len(data['donor_seqs']) >= 1
-    True
-    > all(s in data['guide_seqs'].values() for s in data['donor_seqs'].keys())
-    True
-    """
-
-    # TODO (gdingle): convert __init__ from acc_number to seq and compute stop codon position
-    # https://www.genscript.com/tools/codon-frequency-table
-    # TAG
-    # TAA
-    # TGA
-
-    def __init__(self, acc_number: str, tag: str='FLAG', species: str='GRCh38') -> None:
-        self.data = {
-            'acc_number': acc_number,
-            'tag': tag,
-            'species': species,
-        }
-        self.endpoint = 'http://tagin.stembio.org/submit/'
-
-    def run(self) -> Any:
-        self._init_session()
-        url = self.endpoint + self._get_design_id()
-
-        cookies = {
-            # Both of these are necessary!
-            'csrftoken': self.csrftoken,
-            'sessionid': self.sessionid,
-        }
-        logger.info('GET request to: {}'.format(url))
-        response = requests.get(url, cookies=cookies)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
-        return self._extract_data(soup, url)
-
-    def _init_session(self) -> None:
-        logger.info('GET request to: {}'.format(self.endpoint))
-        initial = requests.get(self.endpoint)
-        initial.raise_for_status()
-        self.csrftoken = initial.cookies['csrftoken']
-
-    def _get_design_id(self) -> str:
-        self.data['csrfmiddlewaretoken'] = self.csrftoken
-        headers = {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Cookie': 'csrftoken={}'.format(self.csrftoken),
-        }
-
-        logger.info('POST request to: {}'.format(self.endpoint))
-        json_response = requests.post(self.endpoint, data=self.data, headers=headers)
-        self.sessionid = json_response.cookies['sessionid']
-
-        json_response.raise_for_status()
-        assert json_response.json()['Success']
-
-        return json_response.json()['Id']
-
-    def _extract_data(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
-        # TODO (gdingle): are these useful?
-        # sgRNA = soup.find(id='table_id1').get_text()
-        # off_targets = soup.find(id='table_id2').get_text()
-
-        data_user = [json.loads(s.attrs['data-user'])
-                     for s in soup.findAll('div')
-                     if s.has_attr('data-user')]
-        top_guides = sorted(data_user[1], key=lambda d: d['sgRNA_score'], reverse=True)
-        # TODO (gdingle): remap to offset position key used by Crispor
-        guide_seqs = OrderedDict((round(d['sgRNA_score'], 2), d['sgRNA']) for d in top_guides)
-
-        rows = [row.findAll('td') for row in soup.find(id='table_id3').findAll('tr')]
-
-        def valid_row(row) -> bool:
-            return bool(len(row) and row[0] and row[1] and
-                        row[1].get_text().strip() != 'sgRNA too far from stop codon')
-
-        donor_seqs = OrderedDict(
-            (row[0].get_text(), row[1].get_text())
-            for row in rows
-            if valid_row(row) and row[0].get_text() in guide_seqs.values()
-        )
-
-        metadata = data_user[0][0]
-        metadata['chr_loc'] = 'chr{}:{}-{}'.format(metadata['chrm'],
-                                                   metadata['tx_start'], metadata['tx_stop'])
-        # This is the narrower range that contains all sgRNA guides.
-        metadata['guide_chr_range'] = 'chr{}:{}-{}'.format(
-            metadata['chrm'],
-            min(g['sgRNA_start'] for g in data_user[1]),
-            max(g['sgRNA_stop'] for g in data_user[1]))
-
-        return {
-            'guide_seqs': guide_seqs,
-            'donor_seqs': donor_seqs,
-            'metadata': metadata,
-            'url': url,
-        }
 
 
 if __name__ == '__main__':

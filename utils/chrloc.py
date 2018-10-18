@@ -1,7 +1,5 @@
 import re
 
-# TODO (gdingle): consider custom ordering... see @functools.total_ordering
-
 
 class ChrLoc:
     """
@@ -52,7 +50,6 @@ class ChrLoc:
     CHR_REGEX = r'^chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])(:[+\-1])?$'
 
     max_length = 2000
-    # TODO (gdingle): set to min of Crispor? 23?
     min_length = 20
 
     def __init__(self, value: str) -> None:
@@ -308,7 +305,6 @@ def get_primer_loc(
     primer_end = primer_start + len(primer_product) - 1
     assert primer_end - primer_start == len(primer_product) - 1
 
-    # TODO (gdingle): should primer product include guide strand?
     return ChrLoc(
         'chr{}:{}-{}'.format(guide_loc.chr, primer_start, primer_end)
     )
