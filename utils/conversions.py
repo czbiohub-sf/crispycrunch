@@ -5,10 +5,17 @@ defaults.
 import doctest
 import re
 
-import requests
+import requests_cache  # type: ignore
 
 # See also CHR_REGEX in validators.py
 CHR_REGEX = r'chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])'
+
+_cached_session = requests_cache.CachedSession(
+    cache_name=__name__ + '_cache',
+    # TODO (gdingle): what's the best timeout?
+    expire_after=3600 * 24 * 14,
+    allowable_methods=('GET', 'POST'),
+)
 
 
 def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
@@ -29,7 +36,7 @@ def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
     """
     url = 'http://togows.org/api/ucsc/{}/{}.fasta'.format(
         genome, chr_loc)
-    response = requests.get(url)
+    response = _cached_session.get(url)
     response.raise_for_status()
     return _reformat_fasta(response.text)
 
@@ -69,7 +76,7 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     'chr5:134648789-134727823'
     """
     url = 'https://genome.ucsc.edu/cgi-bin/hgTracks'
-    response = requests.get(url, params={
+    response = _cached_session.get(url, params={
         'db': genome,
         'position': gene,  # "position" is bad name
     })
@@ -81,7 +88,7 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
 
 
 if __name__ == '__main__':
-    # doctest.testmod()
+    doctest.testmod()
 
-    print(chr_loc_to_seq('chr7:2251813-2251848'))
-    print(chr_loc_to_seq('chr7:2251848-2251813'))
+    # print(chr_loc_to_seq('chr7:2251813-2251848'))
+    # print(chr_loc_to_seq('chr7:2251848-2251813'))

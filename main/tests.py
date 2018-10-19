@@ -49,57 +49,6 @@ class SampleSheetTestCase(TestCase):
                     "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
                     "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
                 }}],
-            hdr_seq='N' * 20,
-        )
-
-    # TODO (gdingle): use as tests
-    # >>> start_codon_chr_loc('ENST00000398844')
-    # 'chr5:134649077-134649174'
-
-    # TODO (gdingle): these are too short
-    # >>> start_codon_chr_loc('ENST00000411809')
-    # 'chr5:157786494-157786535'
-
-    # >>> start_codon_chr_loc('ENST00000221801')
-    # 'chr19:39834572-39834582'
-
-    # TODO (gdingle): move me back
-    def test_set_hdr_cols(self):
-        sheet = from_guide_selection(self._guide_selection)
-        self.assertEqual(len(sheet), 3)
-
-        self.assertEqual(
-            sheet['hdr_template'][0],
-            'ATGNNNNNNNNNNNNNNNNNNNNACGTGGTTAACCGCGGCGCTTGGG')
-
-        self.assertEqual(sheet['hdr_dist'][0], 17)
-        self.assertEqual(sheet['hdr_rebind'][0], True)
-
-        self.assertEqual(sheet['hdr_dist'][1], 18)
-        self.assertEqual(sheet['hdr_rebind'][0], True)
-
-    # TODO (gdingle): merge with above?
-    @property
-    def _guide_design_OLD(self):
-        return GuideDesign(
-            experiment=self._experiment,
-            targets=["chr2:38377154-38377424"],
-            # TODO (gdingle): change to actual seq
-            target_seqs=["chr2:38377154-38377424"],
-            guide_data=[{
-                "seq": "chr2:38377154-38377424",
-                "target": "chr2:38377154-38377424",
-                "batch_id": "R1k4GVEcYvRcHOPSDpJk",
-                "scores": {
-                        "s28+": ['50', '50', '50'],
-                        "s29+": ['50', '50', '50'],
-                        "s47+": ['50', '50', '50'],
-                        },
-                "guide_seqs": {
-                    "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
-                    "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
-                    "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
-                }}],
         )
 
     @property
@@ -125,8 +74,10 @@ class SampleSheetTestCase(TestCase):
             selected_primers={
                 "chr2:38377154-38377424 s28+": [
                     # TODO (gdingle): these primers are not realistic
-                    ("GGTTCTCCCAGCAGCTACTG", "GGTTCTCCCAGCAGCTACTGACGTGGTTAACCGCGGCGCTCGTGGTTAACCGCGGCGCTTTTGGGTCGCTGGTCCGTCGC"),
-                    ("GTTTGACGTCAGTGGGGAGT", "GTTTGACGTCAGTGGGGAGTACGTGGTTAACCGCGGCGCTCGTGGTTAACCGCGGCGCTTTTGGGTCGCTGGTCCGTCGC"),
+                    ("GGTTCTCCCAGCAGCTACTG",
+                     "GGTTCTCCCAGCAGCTACTGACGTGGTTAACCGCGGCGCTCGTGGTTAACCGCGGCGCTTTTGGGTCGCTGGTCCGTCGC"),
+                    ("GTTTGACGTCAGTGGGGAGT",
+                     "GTTTGACGTCAGTGGGGAGTACGTGGTTAACCGCGGCGCTCGTGGTTAACCGCGGCGCTTTTGGGTCGCTGGTCCGTCGC"),
                 ]})
 
     @property
@@ -174,7 +125,10 @@ class SampleSheetTestCase(TestCase):
             'A1-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz',
         ]
         sheet = _insert_fastqs(sheet, fastqs)
-        self.assertEqual(sheet.loc['A1', 'fastq_fwd'], 'A1-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz')
-        self.assertEqual(sheet.loc['A1', 'fastq_rev'], 'A1-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz')
-        self.assertEqual(sheet.loc['A3', 'fastq_fwd'], 'A3-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz')
+        self.assertEqual(sheet.loc['A1', 'fastq_fwd'],
+                         'A1-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz')
+        self.assertEqual(sheet.loc['A1', 'fastq_rev'],
+                         'A1-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz')
+        self.assertEqual(sheet.loc['A3', 'fastq_fwd'],
+                         'A3-BCAP31-C-sorted-180212_S3_L001_R1_001.fastq.gz')
         self.assertEqual(len(sheet), 2)
