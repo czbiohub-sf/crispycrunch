@@ -2,7 +2,7 @@ import doctest
 
 from django.test import TestCase
 
-from utils import conversions, validators
+from utils import *
 
 from main.models import *
 from main.samplesheet import *
@@ -14,8 +14,14 @@ def load_tests(loader, tests, ignore):
     Need to add doctests manually.
     See https://stackoverflow.com/questions/2380527/django-doctests-in-views-py
     """
-    tests.addTests(doctest.DocTestSuite(conversions))
-    tests.addTests(doctest.DocTestSuite(validators))
+    modules = [
+        conversions,
+        validators,
+        chrloc,
+        hdr,
+    ]
+    for module in modules:
+        tests.addTests(doctest.DocTestSuite(module))
     return tests
 
 
