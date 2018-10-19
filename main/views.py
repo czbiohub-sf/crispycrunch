@@ -412,7 +412,7 @@ class AnalysisView(CreatePlusView):
     def plus(self, obj):
         # TODO (gdingle): use predetermined s3 location of fastq
         fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)
-        if len(fastqs) <= 384:
+        if len(fastqs) >= 384:
             raise ValueError('Fastqs should be from max one plate')
 
         # Redirect to intermediate page if custom analysis
@@ -570,7 +570,6 @@ class PrimerOrderFormView(OrderFormView):
     seq_keys = ('primer_seq_fwd', 'primer_seq_rev')
 
 
-
 class UltramerOrderFormView(OrderFormView):
     """
     For HDR donor template DNA.
@@ -579,7 +578,6 @@ class UltramerOrderFormView(OrderFormView):
     # TODO (gdingle): change this to mutated, also may need
     # exactly 55bp homology arms
     seq_keys = ('hdr_template',)
-
 
 
 class IlluminaSheetView(View):

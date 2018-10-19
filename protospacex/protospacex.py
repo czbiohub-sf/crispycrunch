@@ -8,6 +8,7 @@ Given an Ensembl transcript id, return target regions for Crispr guides.
 """
 import logging
 import requests
+import requests_cache  # type: ignore
 
 from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA  # type: ignore
 from Bio.Seq import Seq  # type: ignore
@@ -17,6 +18,14 @@ from Bio.SeqRecord import SeqRecord  # type: ignore
 
 log = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARN)
+
+
+_cached_session = requests_cache.CachedSession(
+    cache_name=__name__ + '_cache',
+    # TODO (gdingle): what's the best timeout?
+    expire_after=3600 * 24 * 14,
+    allowable_methods=('GET', 'POST'),
+)
 
 
 def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
@@ -50,9 +59,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     url = base_url + f"/sequence/id/{ensembl_transcript_id}"
 
     log.info(f"Querying Ensembl for sequence of {ensembl_transcript_id}")
-    response = requests.get(url, {"type": "genomic",
-                                  "content-type": "application/json"})
-
+    response = _cached_session.get(url, params={"type": "genomic",
+                                                "content-type": "application/json"})
+    log.info('Request cached: {}'.format(getattr(response, 'from_cache', False)))
     try:
         response.raise_for_status()
     except requests.HTTPError:
@@ -107,11 +116,11 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     url = base_url + f"/overlap/id/{ensembl_transcript_id}"
 
     log.info(f"Querying Ensembl for overlaps of {ensembl_transcript_id}")
-    response = requests.get(url, {"feature": ["cds", "exon"],
-                                  "content-type": "application/json"})
+    response = _cached_session.get(url, params={"feature": ["cds", "exon"],
+                                                "content-type": "application/json"})
     try:
         response.raise_for_status()
-    except requests.HTTPError:
+    except _cached_session.HTTPError:
         log.error("Ensembl sequence REST query returned error "
                   "{}".format(response.text))
         raise ValueError(response.text)
@@ -400,8 +409,5 @@ def get_exon_junctions(ensembl_transcript_id: str) -> list:
 
 
 if __name__ == '__main__':
-    import requests_cache  # type: ignore
-    requests_cache.install_cache()
-
     import doctest
     doctest.testmod()

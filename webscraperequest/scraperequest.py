@@ -10,7 +10,7 @@ Doctests will run slow on the first run before the cahce is warm.
 
 See also SampleSheetTestCase for sample return data.
 """
-import json
+
 import logging
 import time
 import urllib.parse
@@ -27,19 +27,14 @@ import urllib3
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
-
-CACHE_ARGS = dict(
+_cached_session = requests_cache.CachedSession(
     cache_name=__name__ + '_cache',
     # TODO (gdingle): what's the best timeout?
     expire_after=3600 * 24 * 14,
     allowable_methods=('GET', 'POST'),
 )
-# TODO (gdingle): IMPORTANT! Things seem to break if we install the cache simulatenously
-# in other modules.
-# TODO (gdingle): use one cache session per module
-requests_cache.install_cache(**CACHE_ARGS)
-CACHE = requests_cache.core.get_cache()
-# CACHE.clear()
+_cache = _cached_session.cache
+# _cache.clear()
 
 # NOTE: This monkey-patch is needed for a stable cache key for file uploads.
 urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boundary'
@@ -55,11 +50,11 @@ class AbstractScrapeRequest:
         return self.__repr__()
 
     def in_cache(self) -> bool:
-        return CACHE.has_key(self.cache_key)
+        return _cache.has_key(self.cache_key)
 
     @property
     def cache_key(self):
-        return CACHE.create_key(self.request)
+        return _cache.create_key(self.request)
 
     @abstractmethod
     def run(self) -> Dict[str, Any]:
@@ -88,7 +83,9 @@ class CrispressoRequest(AbstractScrapeRequest):
     True
     """
 
-    base_url = 'http://crispresso.pinellolab.partners.org'
+    # TODO (gdingle): parameterize
+    base_url = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
+    # base_url = 'http://crispresso.pinellolab.partners.org'
 
     def __init__(self,
                  amplicon: str,
@@ -137,11 +134,8 @@ class CrispressoRequest(AbstractScrapeRequest):
 
     def run(self) -> Dict[str, Any]:
         logger.info('POST request to: {}'.format(self.endpoint))
-        # This is necessary because of multiple threads and .disabled() call below
-        # TODO (gdingle): is this thread-safe enough?
-        with requests_cache.enabled(**CACHE_ARGS):
-            response = requests.Session().send(self.request)  # type: ignore
-            response.raise_for_status()
+        response = _cached_session.send(self.request)  # type: ignore
+        response.raise_for_status()
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
@@ -184,7 +178,7 @@ class CrispressoRequest(AbstractScrapeRequest):
 
     def _get_stats(self, stats_url: str) -> dict:
         logger.info('GET request to: {}'.format(stats_url))
-        stats_response = requests.get(stats_url)
+        stats_response = _cached_session.get(stats_url)
         return self._parse_tsv(stats_response.text)
 
     @staticmethod
@@ -202,16 +196,16 @@ class CrispressoRequest(AbstractScrapeRequest):
 
     def _get_log_params(self, report_url: str) -> str:
         logger.info('GET request to: {}'.format(report_url))
-        report_response = requests.get(report_url)
+        report_response = _cached_session.get(report_url)
         soup = BeautifulSoup(report_response.text, 'html.parser')
         return soup.find(id='log_params').get_text()
 
     def _check_report_status(self, report_id: str) -> bool:
         status_endpoint = self.base_url + '/status/'
         status_url = status_endpoint + report_id
-        with requests_cache.disabled():
-            logger.info('GET request to: {}'.format(status_url))
-            report_status = requests.get(status_url).json()
+        logger.info('GET request to: {}'.format(status_url))
+        # no cache here
+        report_status = requests.get(status_url).json()
         if report_status['state'] == 'FAILURE':
             raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
         elif report_status['state'] == 'SUCCESS':
@@ -220,7 +214,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             # Sometimes pending status is never set to success though the report exists.
             # The bug was reported to Luca Pinello.
             report_url = self.base_url + '/view_report/' + report_id
-            response = requests.get(report_url)
+            response = _cached_session.get(report_url)
             if response.status_code == 200:
                 return True
             else:
@@ -316,7 +310,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             org: str = 'hg38',
             pam: str = 'NGG',
             target: str = '',
-            pre_filter: int = 20) -> None:
+            pre_filter: int = 2) -> None:
 
         self.data = {
             'name': name,
@@ -337,14 +331,14 @@ class CrisporGuideRequest(AbstractScrapeRequest):
     def run(self, retries: int=3) -> Dict[str, Any]:
         try:
             logger.info('POST request to: {}'.format(self.endpoint))
-            response = requests.Session().send(self.request)  # type: ignore
+            response = _cached_session.send(self.request)  # type: ignore
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup, response.url)
         except TimeoutError as e:
             logger.warning(str(e))
             # IMPORTANT: Delete cache of "waiting" page
-            CACHE.delete(self.cache_key)
+            _cache.delete(self.cache_key)
             if retries:
                 time.sleep(60 // (retries + 1))  # backoff
                 return self.run(retries - 1)
@@ -353,7 +347,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         except RuntimeError as e:
             logger.warning(str(e))
             # IMPORTANT: Delete cache of unexpected output
-            CACHE.delete(self.cache_key)
+            _cache.delete(self.cache_key)
             raise
         raise RuntimeError('unknown error')
 
@@ -444,7 +438,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             rows = [r for i, r in enumerate(rows)
                     if i > self.pre_filter or
                     'Warning: No primers were found'
-                    not in requests.get(r[-1]).text]
+                    not in _cached_session.get(r[-1]).text]
             if not rows:
                 return dict(
                     target=self.target,
@@ -527,7 +521,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             retries: int=1) -> dict:
         try:
             logger.info('GET request to: {}'.format(self.endpoint))
-            response = requests.Session().send(self.request)  # type: ignore
+            response = _cached_session.send(self.request)  # type: ignore
             response.raise_for_status()
             soup = BeautifulSoup(response.text, 'html.parser')
             return self._extract_data(soup)
