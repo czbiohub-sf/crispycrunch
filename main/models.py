@@ -6,6 +6,8 @@ See SampleSheetTestCase for example data.
 
 import functools
 
+from pandas import DataFrame
+
 from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -379,10 +381,11 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): no longer GFP... switch to other name Neon something?
         help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
 
+    # TODO (gdingle): custom encoder/decoder for custom dict wrapper object
     guide_data=JSONField(default=list, blank=True,
                            help_text='Data returned by external service')
 
-    def parse_targets_raw(self):
+    def parse_targets_raw(self) -> tuple:
         """
         Parse out optional terminuses from input such as "ENST00000621663,N"
         """
@@ -396,6 +399,34 @@ class GuideDesign(BaseModel):
             for p in parsed if len(p) > 1]
         assert not target_tags or len(target_tags) == len(targets_raw)
         return targets_raw, target_tags
+
+    # TODO (gdingle): use in _flatten_guide_data
+    def to_df(self) -> DataFrame:
+        target_inputs, target_tags = self.parse_targets_raw()
+        df_targets = DataFrame(data={
+            'target_input': target_inputs,
+            'target_loc': self.targets,
+            'target_seq': self.target_seqs,
+            'target_tag': target_tags or None,
+            'hdr_seq': self.hdr_seq or None,
+            'cds_index': self.cds_index or None,
+            'cds_length': self.cds_length or None,
+        })
+        df_guides = DataFrame()
+        for gd in self.guide_data:
+            # TODO (gdingle): should this be in scraperequest?
+            df_guides = df_guides.append(DataFrame(data={
+                # scalars
+                'target_loc': gd['target'],
+                'url': gd['url'],
+                'batch_id': gd['batch_id'],
+                # collections
+                'score': gd['scores'],
+                'guide_seq': gd['guide_seqs'],
+                'primer_url': gd['primer_urls'],
+            }))
+        return df_targets.set_index('target_loc').join(
+            df_guides.set_index('target_loc'))
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
@@ -447,6 +478,10 @@ class GuideDesign(BaseModel):
 
     @property
     def hdr_tag_verbose(self):
+        if not self.hdr_tag:
+            return None
+        elif self.hdr_tag == 'per_target':
+            return set(self.HDR_TAG_TERMINUSES[tag] for tag in self.target_tags)
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
 
 
@@ -481,6 +516,16 @@ class GuideSelection(BaseModel):
     def order_form_url(self):
         return '/main/guide-selection/{}/order-form'.format(self.id)
 
+    # TODO (gdingle): use in _flatten_guide_data
+    def to_df(self) -> DataFrame:
+        df = DataFrame()
+        for target_loc, sgs in self.selected_guides.items():
+            df = df.append(DataFrame({
+                'target_loc': target_loc,
+                'offset': sgs.keys(),
+                'seq': sgs.values(),
+            }))
+        return df
 
 class PrimerDesign(BaseModel):
     guide_selection=models.ForeignKey(
@@ -560,6 +605,21 @@ class PrimerSelection(BaseModel):
     @property
     def hdr_order_form_url(self):
         return '/main/primer-selection/{}/hdr-order-form'.format(self.id)
+
+    # TODO (gdingle): use in _flatten_guide_data
+    def to_df(self) -> DataFrame:
+        df = DataFrame()
+        for guide_id, primer_pair in self.selected_primers.items():
+            target_loc, _crispor_pam_id = guide_id.split(' ')
+            df = df.append(DataFrame({
+                'target_loc': target_loc,
+                '_crispor_pam_id': _crispor_pam_id,
+                'primer_seq_fwd': primer_pair[0][0],
+                'primer_seq_rev': primer_pair[1][0],
+                'primer_product': primer_pair[0][1],
+                # TODO (gdingle): use index of two cols?
+            }, index=[guide_id]))
+        return df
 
 
 class Analysis(BaseModel):

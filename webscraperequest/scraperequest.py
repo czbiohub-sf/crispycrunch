@@ -1,7 +1,7 @@
 
 """
 A collection of web clients that make requests to various websites. The clients
-return data extracted from the websidote HTML. The clients may make multiple
+return data extracted from HTML. The clients may make multiple
 dependent requests to get results. They may also retry in case of failure.
 
 Server responses are cached by default using requests_cache.
@@ -84,8 +84,8 @@ class CrispressoRequest(AbstractScrapeRequest):
     """
 
     # TODO (gdingle): parameterize
-    base_url = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
-    # base_url = 'http://crispresso.pinellolab.partners.org'
+    # base_url = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
+    base_url = 'http://crispresso.pinellolab.partners.org'
 
     def __init__(self,
                  amplicon: str,
@@ -322,7 +322,9 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # sort by number of off-targets
             'submit': 'SUBMIT',
         }
-        self.endpoint = 'http://crispor.tefor.net/crispor.py'
+        # TODO (gdingle): parameterizea
+        # self.endpoint = 'http://crispor.tefor.net/crispor.py'
+        self.endpoint = 'http://ec2-34-213-90-43.us-west-2.compute.amazonaws.com/crispor.py'
         self.request = requests.Request(  # type: ignore
             'POST', self.endpoint, data=self.data).prepare()
         self.target = target or seq
@@ -412,7 +414,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 raise RuntimeError('Crispor: An error occured during processing.')
 
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
-                self.target, soup.find('body').get_text().strip()))
+                self.target, soup.find('body')))
 
         batch_id = soup.find('input', {'name': 'batchId'})['value']
         url = self.endpoint + '?batchId=' + batch_id

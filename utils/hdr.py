@@ -515,6 +515,12 @@ def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
     41.7
     >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAG', '-')
     100.0
+
+    Real case.
+    >>> seq1 = list(reversed('CTAAGAGCATTTACACAATACA'))
+    >>> seq2 = list(reversed('ctgAGAGCATTTACACAATACA'))
+    >>> mit_hit_score(seq1, seq2)
+    0.05972723076923077
     """
     # aka Matrix "M"
     hit_score_m = [0, 0, 0.014, 0, 0, 0.395, 0.317, 0, 0.389, 0.079, 0.445, 0.508,

@@ -39,6 +39,7 @@ class SampleSheetTestCase(TestCase):
     def _guide_design(self):
         return GuideDesign(
             experiment=self._experiment,
+            targets_raw=["chr2:38377154-38377424"],
             targets=["chr2:38377154-38377424"],
             target_seqs=['ATGACGTGGTTAACCGCGGCGCTTGGG'],
             guide_data=[{
@@ -54,7 +55,14 @@ class SampleSheetTestCase(TestCase):
                     "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
                     "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
                     "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
-                }}],
+                },
+                'url': 'http://crispor.tefor.net/crispor.py?batchId=gNw3bkdHkk9DEjitEjGd',
+                'primer_urls': {
+                    's28+': 'http://crispor.tefor.net/crispor.py?batchId=gNw3bkdHkk9DEjitEjGd&pamId=s16+&pam=NGG',
+                    's29+': 'http://crispor.tefor.net/crispor.py?batchId=gNw3bkdHkk9DEjitEjGd&pamId=s17+&pam=NGG',
+                    's47+': 'http://crispor.tefor.net/crispor.py?batchId=gNw3bkdHkk9DEjitEjGd&pamId=s18-&pam=NGG',
+                },
+            }],
         )
 
     @property
@@ -102,6 +110,20 @@ class SampleSheetTestCase(TestCase):
                 "report_zip": "http://crispresso.pinellolab.partners.org/reports_data/CRISPRessoRun8VYlbE/CRISPResso_Report_8VYlbE.zip",
                 "report_files": [],
                 "report_stats": {"Total": 14470}}])
+
+    def test_guide_design_to_df(self):
+        df = self._guide_design.to_df()
+        num_guides = sum(len(g['guide_seqs']) for g in self._guide_design.guide_data)
+        self.assertEqual(len(df), num_guides)
+
+    def test_guide_selection_to_df(self):
+        df = self._guide_selection.to_df()
+        num_guides = sum(len(list(g)) for g in self._guide_selection.selected_guides.values())
+        self.assertEqual(len(df), num_guides)
+
+    def test_primer_selection_to_df(self):
+        df = self._primer_selection.to_df()
+        self.assertEqual(len(df), len(self._primer_selection.selected_primers))
 
     def test_from_experiment(self):
         sheet = from_experiment(self._experiment)

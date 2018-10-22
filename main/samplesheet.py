@@ -86,6 +86,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
 
 def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
+    # TODO (gdingle): primer_selection.to_df().join(guide_selection.to_df(), on=('target_loc', '_crispor_pam_id'))
+    # or from_guide_selection(...).join(...)
     guide_selection = primer_selection.primer_design.guide_selection
     sheet = from_guide_selection(guide_selection)
     selected_primers = primer_selection.selected_primers
@@ -209,6 +211,10 @@ def _flatten_guide_data(guide_selection: GuideSelection) -> list:
                target_loc_to_target_tag.get(target_loc))
               for target_loc, selected in selected_guides_ordered
               for offset, seq in selected.items()]
+
+    # TODO (gdingle):
+    # guide_design.to_df().join(guide_selection.to_df(), on='target_loc')
+
     return guides
 
 
