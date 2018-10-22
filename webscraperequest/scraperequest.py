@@ -324,7 +324,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         }
         # TODO (gdingle): parameterizea
         # self.endpoint = 'http://crispor.tefor.net/crispor.py'
-        self.endpoint = 'http://ec2-34-213-90-43.us-west-2.compute.amazonaws.com/crispor.py'
+        self.endpoint = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
         self.request = requests.Request(  # type: ignore
             'POST', self.endpoint, data=self.data).prepare()
         self.target = target or seq

@@ -349,19 +349,49 @@ class HDR:
         else:
             return False
 
-    # TODO (gdingle): wait for jason li
-    # @property
-    # def should_mutate(self) -> bool:
-    #     """
-    #     Determines whether a guide should be mutated depending on the
-    #     cut to insert distance.
+    # TODO (gdingle): needs review by jason li or manu
+    @property
+    def should_mutate(self) -> bool:
+        """
+        Determines whether a guide should be mutated depending on the
+        cut to insert distance and the guide orientation. The rule is:
+        mutate if more than 14 bp of the guide will be intact after insertion.
 
-    #     >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-    #     >>> hdr.should_mutate
-    #     'GCCATGGCTGAGCTGGATCCGtttGGC'
-    #     True
-    #     """
-    #     return abs(self.hdr_dist) >= 14
+        In other words, don't mutate if the guide is cut into pieces smaller
+        than 14 bp, which is only true for the set of lengths:
+            (13, 7)
+            (12, 8)
+            (11, 9)
+            (10, 10).
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.should_mutate
+        True
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1, guide_direction='-')
+        >>> hdr.should_mutate
+        True
+
+        >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', 'NNN', hdr_dist=-6, guide_direction='-')
+        >>> hdr.should_mutate
+        False
+        """
+        if abs(self.hdr_dist) >= 14:
+            # shortcut: guide direction doesn't matter
+            return True
+
+        cut_at = self.cut_at
+        if self.guide_direction == '+':
+            left, right = cut_at - 17, cut_at + 6
+        else:
+            left, right = cut_at - 6, cut_at + 17
+
+        intact = max(
+            abs(self.insert_at - left),
+            abs(self.insert_at - right),
+        )
+
+        return intact >= 14
 
 
 def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]:
