@@ -225,13 +225,14 @@ class GuideSelectionView(CreatePlusView):
         top = guide_design.wells_per_target
 
         guide_seqs = guide_data['guide_seqs']
-        if not guide_seqs or guide_seqs.get('not found'):
+        guide_scores = guide_data.get('scores')
+        if not guide_seqs or not guide_scores:
             return guide_seqs
 
         # First score should be the MIT specificity score
         # Filter out 'Not found'
         scores = dict((k, int(s[0]))
-                      for k, s in guide_data['scores'].items()
+                      for k, s in guide_scores.items()
                       if s[0].isdigit())
 
         if by == 'distance':

@@ -323,8 +323,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             'submit': 'SUBMIT',
         }
         # TODO (gdingle): parameterizea
-        # self.endpoint = 'http://crispor.tefor.net/crispor.py'
-        self.endpoint = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
+        self.endpoint = 'http://crispor.tefor.net/crispor.py'
+        # self.endpoint = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
         self.request = requests.Request(  # type: ignore
             'POST', self.endpoint, data=self.data).prepare()
         self.target = target or seq
@@ -393,6 +393,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     },
                 )
             if 'Server error: could not run command' in soup.get_text():
+                # Delete because intermittent
+                _cache.delete(self.cache_key)
                 return dict(
                     target=self.target,
                     guide_seqs={
