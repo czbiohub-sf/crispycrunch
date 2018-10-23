@@ -20,6 +20,9 @@ class HDR:
     contain the target codon like the target sequence.
 
     target_mutation_score is the minimum MIT score needed to stop silent mutation.
+
+    Currently, guide_strand is relative to target strand, because that's how
+    Crispor defines it. So guide_strand == '+' means "same strand as target".
     """
 
     def __init__(
@@ -28,7 +31,7 @@ class HDR:
             hdr_seq: str,
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
-            guide_direction: str = '',
+            guide_strand: str = '',
             cds_seq: str = '',
             target_mutation_score: float = 50.0) -> None:
 
@@ -57,13 +60,13 @@ class HDR:
             # just before stop codon
             self.insert_at = self._target_codon_at()
 
-        if guide_direction:
-            assert guide_direction in ('+', '-')
-            self.guide_direction = guide_direction
-            # TODO (gdingle): Run inference to double check? or remove _guide_direction?
-            # self._guide_direction()
+        if guide_strand:
+            assert guide_strand in ('+', '-')
+            self.guide_strand = guide_strand
+            # TODO (gdingle): Run inference to double check? or remove _guide_strand?
+            # self._guide_strand()
         else:
-            self.guide_direction = self._guide_direction()
+            self.guide_strand = self._guide_strand()
 
     def __repr__(self):
         return "HDR('{}', '{}', '{}', {}, '{}', '{}' {})".format(
@@ -71,12 +74,12 @@ class HDR:
             self.hdr_seq,
             self.hdr_tag,
             self.hdr_dist,
-            self.guide_direction,
+            self.guide_strand,
             self.cds_seq,
             self.target_mutation_score,
         )
 
-    def _guide_direction(self) -> str:
+    def _guide_strand(self) -> str:
         """
         Infer guide direction by expected PAM locations.
 
@@ -87,10 +90,10 @@ class HDR:
         See get_guide_cut_to_insert.
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr._guide_direction()
+        >>> hdr._guide_strand()
         '+'
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
-        >>> hdr._guide_direction()
+        >>> hdr._guide_strand()
         '-'
         """
 
@@ -132,7 +135,7 @@ class HDR:
         (20, 23)
 
         >>> hdr = HDR('NNNNNNTAANNNNNN', 'NNN', hdr_dist=0, hdr_tag='stop_codon',
-        ... cds_seq='TAA', guide_direction='+')
+        ... cds_seq='TAA', guide_strand='+')
         >>> hdr.junction
         (3, 6)
 
@@ -164,7 +167,7 @@ class HDR:
 
         Cut just after junction.
         >>> hdr = HDR('CCNNNNTAANNNNNN', 'NNN', hdr_dist=0, hdr_tag='stop_codon',
-        ... cds_seq='TAA', guide_direction='+')
+        ... cds_seq='TAA', guide_strand='+')
         >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
         (6, (3, 6), False)
 
@@ -192,7 +195,7 @@ class HDR:
         'CCATGGCTGAGCTGGATCCGTTC'
         """
         cut_at = self.cut_at
-        if self.guide_direction == '+':
+        if self.guide_strand == '+':
             guide_seq = self.target_seq[cut_at - 17:cut_at + 6]
         else:
             guide_seq = self.target_seq[cut_at - 6:cut_at + 17]
@@ -229,7 +232,7 @@ class HDR:
         # TODO (gdingle): do we want to extend to always include entire PAM?
 
         codon_offset = abs(self.hdr_dist % 3)
-        if self.guide_direction == '+':
+        if self.guide_strand == '+':
             aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
             return aligned[-21:]
         else:
@@ -301,11 +304,11 @@ class HDR:
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
         # in 3bp PAM? should we try to align to the hit_score_m? lols
 
-        for mutated in mutate_silently(self.guide_seq_aligned, self.guide_direction):
+        for mutated in mutate_silently(self.guide_seq_aligned, self.guide_strand):
             score = mit_hit_score(
                 mutated.upper(),
                 self.guide_seq_aligned.upper(),
-                self.guide_direction,
+                self.guide_strand,
             )
             if score <= self.target_mutation_score:
                 break
@@ -322,7 +325,7 @@ class HDR:
         return mit_hit_score(
             self.guide_mutated,
             self.guide_seq_aligned,
-            self.guide_direction)
+            self.guide_strand)
 
     @property
     def mutation_in_junction(self) -> bool:
@@ -368,11 +371,11 @@ class HDR:
         >>> hdr.should_mutate
         True
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1, guide_direction='-')
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1, guide_strand='-')
         >>> hdr.should_mutate
         True
 
-        >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', 'NNN', hdr_dist=-6, guide_direction='-')
+        >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', 'NNN', hdr_dist=-6, guide_strand='-')
         >>> hdr.should_mutate
         False
         """
@@ -381,7 +384,7 @@ class HDR:
             return True
 
         cut_at = self.cut_at
-        if self.guide_direction == '+':
+        if self.guide_strand == '+':
             left, right = cut_at - 17, cut_at + 6
         else:
             left, right = cut_at - 6, cut_at + 17
@@ -394,7 +397,7 @@ class HDR:
         return intact >= 14
 
 
-def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]:
+def mutate_silently(guide_seq: str, guide_strand: str = '-') -> Iterator[str]:
     """
     Generator that silently mutates input sequence by substituing a different
     codon that encodes the same amino acid. Changes one codon per iteration.
@@ -468,7 +471,7 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
     )
     _validate_seq(guide_seq)
 
-    if guide_direction == '+':
+    if guide_strand == '+':
         codons = _right_to_left_codons(guide_seq)
     else:
         codons = _left_to_right_codons(guide_seq)
@@ -488,7 +491,7 @@ def mutate_silently(guide_seq: str, guide_direction: str = '-') -> Iterator[str]
         else:
             new_guide.append(codon.lower())
 
-        if guide_direction == '+':
+        if guide_strand == '+':
             new_guide_str = ''.join(new_guide[::-1])
             combined = guide_seq[:-len(new_guide_str)] + new_guide_str
         else:
@@ -505,7 +508,7 @@ def _validate_seq(seq: str):
         assert len(seq) >= 3, seq
 
 
-def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
+def mit_hit_score(seq1: str, seq2: str, guide_strand='+') -> float:
     """Compute MIT mismatch score between two 20-mers
 
     See 'Scores of single hits' on http://crispr.mit.edu/about
@@ -517,7 +520,7 @@ def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
     seq1, seq2 : sequence
         two 20-mers to compare
 
-    guide_direction : optional direction for starting with PAM
+    guide_strand : optional direction for starting with PAM
 
     Returns
     -------
@@ -557,7 +560,7 @@ def mit_hit_score(seq1: str, seq2: str, guide_direction='+') -> float:
                    0.613, 0.851, 0.732, 0.828, 0.615, 0.804, 0.685, 0.583]
 
     # Go towards PAM
-    if guide_direction == '-':
+    if guide_strand == '-':
         seq1 = seq1[::-1]
         seq2 = seq2[::-1]
 

@@ -373,10 +373,7 @@ def _new_samplesheet() -> DataFrame:
             '_hdr_seq',
             'hdr_dist',
             'hdr_template',
-            'hdr_rebind',
             'hdr_mutated',
-            # TODO (gdingle): temp for debugging
-            'hdr_guide_match',
             'primer_seq_fwd',
             'primer_seq_rev',
             'primer_product',
@@ -460,12 +457,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
             row['_guide_strand']).template,
         axis=1,
     )
-    # TODO (gdingle): move this to hdr.py
-    sheet['hdr_rebind'] = sheet.apply(
-        # less than 14 nucleotides* of the original protospacer remaining to be safe
-        lambda row: abs(row['hdr_dist']) >= 14,
-        axis=1,
-    )
 
     # TODO (gdingle): override hdr_template when good enough
     def mutate(row):
@@ -476,9 +467,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
         The best response is not clear, so we return a warning. In future,
         we may filter guides further upstream, and-or mutate around junction.
         """
-
-        if not row['hdr_rebind']:
-            return ''
 
         # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
         # It's another instance of IO, but should be cached always.
@@ -497,6 +485,9 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
             row['hdr_dist'],
             row['_guide_strand'],
             cds_seq)
+
+        if not row_hdr.should_mutate:
+            return 'not needed'
 
         if not row_hdr.junction:
             return row_hdr.template_mutated
@@ -522,7 +513,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
         if row['_guide_strand'] == '+':
             guide_seq = ghdr.guide_seq
         else:
-            guide_seq = reverse_complement(guide_seq)
+            guide_seq = reverse_complement(ghdr.guide_seq)
         assert guide_seq == row['guide_seq'] + row['guide_pam']
 
     sheet.apply(check_hdr_guide_match, axis=1)
