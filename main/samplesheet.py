@@ -62,6 +62,9 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     # See http://crispor.tefor.net/manual/.
     # DEFINITION: number of chars before the first char of NGG PAM
     sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
+
+    # Currently, this is relative to target strand, because that's how
+    # Crispor defines it. So _guide_strand == '+' means "same strand as target".
     sheet['_guide_strand'] = [g[1][-1] for g in guides]
 
     sheet['guide_loc'] = sheet.apply(
@@ -372,6 +375,8 @@ def _new_samplesheet() -> DataFrame:
             'hdr_template',
             'hdr_rebind',
             'hdr_mutated',
+            # TODO (gdingle): temp for debugging
+            'hdr_guide_match',
             'primer_seq_fwd',
             'primer_seq_rev',
             'primer_product',
@@ -506,6 +511,21 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
         return row_hdr.template_mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
+
+    def check_hdr_guide_match(row):
+        ghdr = hdr.HDR(
+            row['target_seq'],
+            row['_hdr_seq'],
+            row['_hdr_tag'],
+            row['hdr_dist'],
+            row['_guide_strand'])
+        if row['_guide_strand'] == '+':
+            guide_seq = ghdr.guide_seq
+        else:
+            guide_seq = reverse_complement(guide_seq)
+        assert guide_seq == row['guide_seq'] + row['guide_pam']
+
+    sheet.apply(check_hdr_guide_match, axis=1)
 
     return sheet
 
