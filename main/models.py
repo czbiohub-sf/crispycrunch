@@ -26,105 +26,105 @@ from utils.validators import *
 # TODO (gdingle): temp
 
 N_TERMINUS_EXAMPLES = [
-  # TODO (gdingle): understand why all commented out are "not found"
-  # 'ENST00000066544',
-  'ENST00000222990',
-  'ENST00000225728',
-  'ENST00000250498',
-  'ENST00000252992',
-  'ENST00000256474',
-  'ENST00000258648',
-  'ENST00000264935',
-  'ENST00000264982',
-  'ENST00000268711',
-  'ENST00000269392',
-  'ENST00000275603',
-  'ENST00000278935',
-  'ENST00000283122',
-  'ENST00000286788',
-  'ENST00000292035',
-  'ENST00000293777',
-  'ENST00000295688',
-  'ENST00000295770',
-  'ENST00000309439',
-  'ENST00000313525',
-  'ENST00000321685',
-  'ENST00000323927',
-  'ENST00000324817',
-  'ENST00000331821',
-  'ENST00000339839',
-  'ENST00000342382',
-  'ENST00000345519',
-  # 'ENST00000361564',
-  'ENST00000367607',
-  'ENST00000370277',
-  'ENST00000394903',
-  'ENST00000431606',
-  'ENST00000455511',
-  # 'ENST00000529196',
-  'ENST00000579978',
-  'ENST00000610888',
-  # 'ENST00000615911',
-  'ENST00000621663',
+    # TODO (gdingle): understand why all commented out are "not found"
+    # 'ENST00000066544',
+    'ENST00000222990',
+    'ENST00000225728',
+    'ENST00000250498',
+    'ENST00000252992',
+    'ENST00000256474',
+    'ENST00000258648',
+    'ENST00000264935',
+    'ENST00000264982',
+    'ENST00000268711',
+    'ENST00000269392',
+    'ENST00000275603',
+    'ENST00000278935',
+    'ENST00000283122',
+    'ENST00000286788',
+    'ENST00000292035',
+    'ENST00000293777',
+    'ENST00000295688',
+    'ENST00000295770',
+    'ENST00000309439',
+    'ENST00000313525',
+    'ENST00000321685',
+    'ENST00000323927',
+    'ENST00000324817',
+    'ENST00000331821',
+    'ENST00000339839',
+    'ENST00000342382',
+    'ENST00000345519',
+    # 'ENST00000361564',
+    'ENST00000367607',
+    'ENST00000370277',
+    'ENST00000394903',
+    'ENST00000431606',
+    'ENST00000455511',
+    # 'ENST00000529196',
+    'ENST00000579978',
+    'ENST00000610888',
+    # 'ENST00000615911',
+    'ENST00000621663',
 ]
 C_TERMINUS_EXAMPLES = [
-  'ENST00000221138',
-  'ENST00000227618',
-  'ENST00000237380',
-  'ENST00000237530',
-  'ENST00000251871',
-  'ENST00000254950',
-  'ENST00000255764',
-  'ENST00000257287',
-  'ENST00000258091',
-  'ENST00000261819',
-  'ENST00000263205',
-  'ENST00000265350',
-  'ENST00000267935',
-  'ENST00000282892',
-  'ENST00000283195',
-  'ENST00000287598',
-  # TODO (gdingle): bad length... only 68
-  # 'ENST00000295682',
-  'ENST00000296255',
-  'ENST00000299300',
-  'ENST00000306467',
-  'ENST00000310955',
-  'ENST00000311832',
-  # TODO (gdingle): bad length... only 71
-  # 'ENST00000312865',
-  'ENST00000315368',
-  'ENST00000325542',
-  'ENST00000341068',
-  'ENST00000345046',
-  'ENST00000352035',
-  'ENST00000354910',
-  'ENST00000355801',
-  'ENST00000356221',
-  'ENST00000366542',
-  'ENST00000366999',
-  'ENST00000371485',
-  'ENST00000372457',
-  'ENST00000373842',
-  'ENST00000374080',
-  'ENST00000374206',
-  'ENST00000376227',
-  'ENST00000376300',
-  'ENST00000378230',
-  'ENST00000394128',
-  'ENST00000394440',
-  'ENST00000394886',
-  'ENST00000397527',
-  'ENST00000397786',
-  'ENST00000424347',
-  'ENST00000430055',
-  'ENST00000456793',
-  # 'ENST00000473414',
-  'ENST00000481195',
-  'ENST00000503026',
-  'ENST00000506447',
-  'ENST00000556440',
-  'ENST00000602624',
+    'ENST00000221138',
+    'ENST00000227618',
+    'ENST00000237380',
+    'ENST00000237530',
+    'ENST00000251871',
+    'ENST00000254950',
+    'ENST00000255764',
+    'ENST00000257287',
+    'ENST00000258091',
+    'ENST00000261819',
+    'ENST00000263205',
+    'ENST00000265350',
+    'ENST00000267935',
+    'ENST00000282892',
+    'ENST00000283195',
+    'ENST00000287598',
+    # TODO (gdingle): bad length... only 68
+    # 'ENST00000295682',
+    'ENST00000296255',
+    'ENST00000299300',
+    'ENST00000306467',
+    'ENST00000310955',
+    'ENST00000311832',
+    # TODO (gdingle): bad length... only 71
+    # 'ENST00000312865',
+    'ENST00000315368',
+    'ENST00000325542',
+    'ENST00000341068',
+    'ENST00000345046',
+    'ENST00000352035',
+    'ENST00000354910',
+    'ENST00000355801',
+    'ENST00000356221',
+    'ENST00000366542',
+    'ENST00000366999',
+    'ENST00000371485',
+    'ENST00000372457',
+    'ENST00000373842',
+    'ENST00000374080',
+    'ENST00000374206',
+    'ENST00000376227',
+    'ENST00000376300',
+    'ENST00000378230',
+    'ENST00000394128',
+    'ENST00000394440',
+    'ENST00000394886',
+    'ENST00000397527',
+    'ENST00000397786',
+    'ENST00000424347',
+    'ENST00000430055',
+    'ENST00000456793',
+    # 'ENST00000473414',
+    'ENST00000481195',
+    'ENST00000503026',
+    'ENST00000506447',
+    'ENST00000556440',
+    'ENST00000602624',
 ]
 
 ENST_EXAMPLE = [
@@ -341,8 +341,8 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): support FASTA with description line
         verbose_name='Target regions',
         help_text="""Chromosome location, fasta sequence, ENST transcript ID, or
-          gene name. One per line. No extra whitespace. Append ",N" or ",C" to a
-          line to tag at N or C terminus.""",
+            gene name. One per line. Append ",N" or ",C" to a line to tag at N or
+            C terminus.""",
         # TODO (gdingle): temp default for testing
         # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
         # default=['ENST00000330949'],
@@ -373,7 +373,7 @@ class GuideDesign(BaseModel):
         blank=True,
         default=[],
     )
-    hdr_tag=models.CharField(
+    hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
         blank=True,
         max_length=40,
@@ -382,21 +382,25 @@ class GuideDesign(BaseModel):
         help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
 
     # TODO (gdingle): custom encoder/decoder for custom dict wrapper object
-    guide_data=JSONField(default=list, blank=True,
+    guide_data = JSONField(default=list, blank=True,
                            help_text='Data returned by external service')
 
     def parse_targets_raw(self) -> tuple:
         """
         Parse out optional terminuses from input such as "ENST00000621663,N"
         """
-        terminus_to_tag={
+        terminus_to_tag = {
             'N': 'start_codon',
             'C': 'stop_codon',
         }
-        parsed=[t.split(',') for t in self.targets_raw]
-        targets_raw=[p[0].strip() for p in parsed]
-        target_tags=[terminus_to_tag[p[1].strip()]
-            for p in parsed if len(p) > 1]
+        parsed = [t.split(',') for t in self.targets_raw]
+        targets_raw = [p[0].strip() for p in parsed]
+        target_tags = [terminus_to_tag[p[1].strip()]
+                       for p in parsed if len(p) > 1]
+        if self.hdr_tag != 'per_target' and target_tags:
+            raise ValueError(
+                'HDR tags entered per target but also "{}". Did you mean to select "per target" HDR?'.format(
+                    self.hdr_tag_verbose))
         assert not target_tags or len(target_tags) == len(targets_raw)
         return targets_raw, target_tags
 
@@ -441,7 +445,7 @@ class GuideDesign(BaseModel):
             return None
         elif self.hdr_tag == 'per_target':
             return tuple(self.HDR_TAG_TERMINUS_TO_HDR_SEQ[hdr_tag]
-                for hdr_tag in self.target_tags)
+                         for hdr_tag in self.target_tags)
         else:
             return self.HDR_TAG_TERMINUS_TO_HDR_SEQ[self.hdr_tag]
 
@@ -454,6 +458,7 @@ class GuideDesign(BaseModel):
         'start_codon': 0,
         'stop_codon': -1,
     }
+
     @property
     def cds_index(self):
         if not self.hdr_tag:
@@ -468,6 +473,7 @@ class GuideDesign(BaseModel):
         'start_codon': 36,
         'stop_codon': 72,
     }
+
     @property
     def cds_length(self):
         if not self.hdr_tag:
@@ -485,17 +491,15 @@ class GuideDesign(BaseModel):
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
 
 
-
-
 class GuideSelection(BaseModel):
-    guide_design=models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
+    guide_design = models.ForeignKey(GuideDesign, on_delete=models.CASCADE)
 
     def _validate_selected_guides(val):
         return [validate_seq(seq)  # type: ignore
                 for seqs in val.values()
                 for seq in seqs.values()]
 
-    selected_guides=JSONField(
+    selected_guides = JSONField(
         default=dict,
         blank=True,
         validators=[
@@ -527,10 +531,11 @@ class GuideSelection(BaseModel):
             }))
         return df
 
+
 class PrimerDesign(BaseModel):
-    guide_selection=models.ForeignKey(
+    guide_selection = models.ForeignKey(
         GuideSelection, on_delete=models.CASCADE)
-    primer_temp=models.IntegerField(
+    primer_temp = models.IntegerField(
         verbose_name='Primer melting temperature',
         default=60,
         validators=[
@@ -539,7 +544,7 @@ class PrimerDesign(BaseModel):
         ])
 
     # TODO (gdingle): crispor has a preset list of values... mirror?
-    max_amplicon_length=models.IntegerField(
+    max_amplicon_length = models.IntegerField(
         verbose_name='Maximum amplicon length',
         help_text='amplicon = primer product',
         default=400,
@@ -548,7 +553,7 @@ class PrimerDesign(BaseModel):
             MinValueValidator(200),
             MaxValueValidator(400),
         ])
-    primer_data=JSONField(default=list, blank=True, help_text='Data returned by external service')
+    primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
@@ -568,14 +573,14 @@ class PrimerDesign(BaseModel):
 
 class PrimerSelection(BaseModel):
 
-    primer_design=models.ForeignKey(PrimerDesign, on_delete=models.CASCADE)
+    primer_design = models.ForeignKey(PrimerDesign, on_delete=models.CASCADE)
 
     def _validate_selected_primers(val):
         return [validate_seq(seq[0])  # type: ignore
                 for seqs in val.values()
                 for seq in seqs]
 
-    selected_primers=JSONField(
+    selected_primers = JSONField(
         default=dict,
         blank=True,
         validators=[
@@ -623,30 +628,30 @@ class PrimerSelection(BaseModel):
 
 
 class Analysis(BaseModel):
-    experiment=models.ForeignKey(
+    experiment = models.ForeignKey(
         Experiment, on_delete=models.CASCADE,
         help_text='The Crispycrunch experiment to be analyzed')
     # TODO (gdingle): default this to experiment researcher
-    researcher=models.ForeignKey(
+    researcher = models.ForeignKey(
         Researcher, on_delete=models.CASCADE,
         help_text='The researcher doing the analysis')
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
-    s3_bucket=models.CharField(max_length=80,
+    s3_bucket = models.CharField(max_length=80,
                                  # default='jasonli-bucket',
                                  default='ryan.leenay-bucket',
                                  help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed'
                                  )
-    s3_prefix=models.CharField(max_length=160,
+    s3_prefix = models.CharField(max_length=160,
                                  # default='JasonHDR/96wp1sorted-fastq/'
                                  default='Greg_CXCR4_iPSC',
                                  help_text='The S3 directory that contains the FastQ files to be analyzed'
                                  )
 
-    results_data=JSONField(default=list, blank=True,
+    results_data = JSONField(default=list, blank=True,
                              help_text='Data returned by external service')
-    fastq_data=JSONField(default=list, blank=True)
+    fastq_data = JSONField(default=list, blank=True)
 
     def __str__(self):
         # return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
