@@ -444,8 +444,7 @@ class GuideDesign(BaseModel):
         if not self.hdr_tag:
             return None
         elif self.hdr_tag == 'per_target':
-            return tuple(self.HDR_TAG_TERMINUS_TO_HDR_SEQ[hdr_tag]
-                         for hdr_tag in self.target_tags)
+            return tuple(self.HDR_TAG_TERMINUS_TO_HDR_SEQ.values())
         else:
             return self.HDR_TAG_TERMINUS_TO_HDR_SEQ[self.hdr_tag]
 
@@ -486,8 +485,6 @@ class GuideDesign(BaseModel):
     def hdr_tag_verbose(self):
         if not self.hdr_tag:
             return None
-        elif self.hdr_tag == 'per_target':
-            return set(self.HDR_TAG_TERMINUSES[tag] for tag in self.target_tags)
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
 
 
