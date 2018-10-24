@@ -363,24 +363,18 @@ class HDR:
     @property
     def should_mutate(self) -> bool:
         """
-        Determines whether a guide should be mutated depending on the
-        cut to insert distance and the guide orientation. The rule is:
-        mutate if more than 14 bp of the guide will be intact after insertion.
-
-        In other words, don't mutate if the guide is cut into pieces smaller
-        than 14 bp, which is only true for the set of lengths:
-            (13, 7)
-            (12, 8)
-            (11, 9)
-            (10, 10).
+        Determines whether a guide should be mutated depending on the cut to
+        insert distance and the guide orientation. The rule is: mutate if more
+        than 14 bp of the PAM-side of protospacer will be intact after insertion.
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.should_mutate
         True
 
+        Don't mutate because cut is near PAM.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, guide_strand='-')
         >>> hdr.should_mutate
-        True
+        False
 
         >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', hdr_dist=-6, guide_strand='-')
         >>> hdr.should_mutate
@@ -392,14 +386,11 @@ class HDR:
 
         cut_at = self.cut_at
         if self.guide_strand == '+':
-            left, right = cut_at - 17, cut_at + 6
+            guide_right = cut_at + 3
+            intact = guide_right - self.insert_at
         else:
-            left, right = cut_at - 6, cut_at + 17
-
-        intact = max(
-            abs(self.insert_at - left),
-            abs(self.insert_at - right),
-        )
+            guide_left = cut_at - 3
+            intact = self.insert_at - guide_left
 
         return intact >= 14
 
