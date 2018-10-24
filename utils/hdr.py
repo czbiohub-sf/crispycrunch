@@ -352,7 +352,7 @@ class HDR:
         else:
             return False
 
-    # TODO (gdingle): needs review by jason li or manu
+    # TODO (gdingle): needs review by jason li or nathan cho
     @property
     def should_mutate(self) -> bool:
         """
@@ -397,16 +397,22 @@ class HDR:
         return intact >= 14
 
 
-def mutate_silently(guide_seq: str, guide_strand: str = '-') -> Iterator[str]:
+def mutate_silently(
+        guide_seq: str,
+        guide_strand: str = '-',
+        skip_stop_codon: bool = True) -> Iterator[str]:
     """
     Generator that silently mutates input sequence by substituing a different
     codon that encodes the same amino acid. Changes one codon per iteration.
     Direction is from PAM inwards. The new codon is the selected by frequency
     in the human genome.
 
+    Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
+
     The input is assumed to a multiple of 3bp codons.
 
-    Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
+    By default, does not mutate stop codons, because such mutations are not
+    always silent.
 
     >>> it = mutate_silently('TGTTGCGATGAC')
     >>> next(it)
@@ -424,6 +430,14 @@ def mutate_silently(guide_seq: str, guide_strand: str = '-') -> Iterator[str]:
     'TGTTGCGATgat'
     >>> next(it)
     'TGTTGCgacgat'
+
+    Skip stop codon.
+    >>> it = mutate_silently('TAG')
+    >>> next(it)
+    'tag'
+    >>> it = mutate_silently('TAG', skip_stop_codon=False)
+    >>> next(it)
+    'tga'
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],
@@ -482,7 +496,9 @@ def mutate_silently(guide_seq: str, guide_strand: str = '-') -> Iterator[str]:
         syns = list(synonymous[synonymous_index[codon]])
         syns.remove(codon)
 
-        if len(syns):
+        if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
+            new_guide.append(codon.lower())
+        elif len(syns):
             fractions = tuple((syn_fractions[syn], syn) for syn in syns)
             # TODO (gdingle): better to choose random syn?
             # TODO (yjl): best to choose furthest syn, then top fraction syn
