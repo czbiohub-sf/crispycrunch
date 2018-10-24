@@ -356,7 +356,7 @@ class GuideDesign(BaseModel):
         default=C_TERMINUS_EXAMPLES,
     )
 
-    # TODO (gdingle): rename to target_locs
+    # TODO (gdingle): rename to target_locs when wiping whole database
     targets = fields.ArrayField(
         ChrLocField(max_length=80, validators=[validate_chr], blank=True),
         verbose_name='Target chromosome locations',
@@ -434,7 +434,6 @@ class GuideDesign(BaseModel):
                 'url': gd['url'],
                 '_crispor_batch_id': gd['batch_id'],
                 # collections
-                # TODO (gdingle): convert CrisporGuideRequest return to lists when ready
                 '_crispor_pam_id': list(gd['guide_seqs'].keys()),
                 'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
                              _crispor_pam_id in gd['guide_seqs']],

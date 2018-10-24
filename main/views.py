@@ -290,6 +290,7 @@ class GuideSelectionView(CreatePlusView):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         return {
             'selected_guides': dict(
+                # TODO (gdingle): refactor _top_guides to use to_df
                 (g['target'], self._top_guides(g, guide_design))
                 for g in guide_design.guide_data),
         }

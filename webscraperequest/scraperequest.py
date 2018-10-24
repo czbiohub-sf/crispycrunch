@@ -449,6 +449,10 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     guide_seqs={'not found': 'not found'},
                 )
 
+        # TODO (gdingle): refactor to simple lists... see GuideDesign.to_df
+        scores = OrderedDict((t[0],
+                              [c.get_text().strip() for c in t[2:5]])
+                             for t in rows)
         scores = OrderedDict((t[0],
                               [c.get_text().strip() for c in t[2:5]])
                              for t in rows)
