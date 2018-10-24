@@ -414,6 +414,11 @@ class GuideDesign(BaseModel):
         return targets_raw, target_tags
 
     def to_df(self) -> DataFrame:
+        """
+        Returns a flattened representation of the instance data. In particular,
+        the JSON-stored data in guide_data is joined row-by-row with the array-
+        stored targets data.
+        """
         target_inputs, target_tags = self.parse_targets_raw()
         tag_to_terminus = dict((v, k) for k, v in self.TERMINUS_TO_TAG.items())
         df_targets = DataFrame(data={
@@ -530,6 +535,10 @@ class GuideSelection(BaseModel):
         return '/main/guide-selection/{}/order-form'.format(self.id)
 
     def to_df(self) -> DataFrame:
+        """
+        Returns a dataframe representation of selected_guides that can be joined
+        easily with to_df of GuideDesign.
+        """
         df = DataFrame()
         for target_loc, sgs in self.selected_guides.items():
             df = df.append(DataFrame({
@@ -622,6 +631,10 @@ class PrimerSelection(BaseModel):
         return '/main/primer-selection/{}/hdr-order-form'.format(self.id)
 
     def to_df(self) -> DataFrame:
+        """
+        Returns a dataframe representation of selected_primers that can be joined
+        easily with to_df of GuideDesign.
+        """
         df = DataFrame()
         for guide_id, primer_pair in self.selected_primers.items():
             df = df.append(DataFrame({

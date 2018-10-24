@@ -47,6 +47,8 @@ Create a superuser for admin.
 
 ```python manage.py createsuperuser```
 
+NOTE: a superuser is automatically created by `eb deploy`.
+
 # Usage
 <!-- TODO: better homepage -->
 
