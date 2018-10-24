@@ -68,7 +68,8 @@ N_TERMINUS_EXAMPLES = [
     'ENST00000621663',
 ]
 C_TERMINUS_EXAMPLES = [
-    'ENST00000221138',
+    # TODO (gdingle): primer error: too many perfect matches
+    # 'ENST00000221138',
     'ENST00000227618',
     'ENST00000237380',
     'ENST00000237530',
@@ -116,7 +117,8 @@ C_TERMINUS_EXAMPLES = [
     'ENST00000394886',
     'ENST00000397527',
     'ENST00000397786',
-    'ENST00000424347',
+    # TODO (gdingle): this is causing error in hdr guide_seq... bad codon?
+    # 'ENST00000424347',
     'ENST00000430055',
     'ENST00000456793',
     # 'ENST00000473414',
@@ -411,7 +413,6 @@ class GuideDesign(BaseModel):
         assert not target_tags or len(target_tags) == len(targets_raw)
         return targets_raw, target_tags
 
-    # TODO (gdingle): use in _flatten_guide_data
     def to_df(self) -> DataFrame:
         target_inputs, target_tags = self.parse_targets_raw()
         df_targets = DataFrame(data={
@@ -431,13 +432,17 @@ class GuideDesign(BaseModel):
                 # scalars
                 'target_loc': gd['target'],
                 'url': gd['url'],
-                'batch_id': gd['batch_id'],
+                '_crispor_batch_id': gd['batch_id'],
                 # collections
-                'score': gd['scores'],
-                'guide_seq': gd['guide_seqs'],
-                'primer_url': gd['primer_urls'],
+                # TODO (gdingle): convert CrisporGuideRequest return to lists when ready
+                '_crispor_pam_id': list(gd['guide_seqs'].keys()),
+                'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
+                             _crispor_pam_id in gd['guide_seqs']],
+                'guide_seq': list(gd['guide_seqs'].values()),
+                'scores': list(gd['scores'].values()),  # list of lists
+                'primer_url': list(gd['primer_urls'].values()),
             }))
-        return df_targets.set_index('target_loc').join(
+        return df_targets.set_index('target_loc', drop=False).join(
             df_guides.set_index('target_loc'))
 
     def __str__(self):
@@ -525,14 +530,15 @@ class GuideSelection(BaseModel):
     def order_form_url(self):
         return '/main/guide-selection/{}/order-form'.format(self.id)
 
-    # TODO (gdingle): use in _flatten_guide_data
     def to_df(self) -> DataFrame:
         df = DataFrame()
         for target_loc, sgs in self.selected_guides.items():
             df = df.append(DataFrame({
-                'target_loc': target_loc,
-                'offset': sgs.keys(),
-                'seq': sgs.values(),
+                # All we need here is an ID for filtering GuideDesign to_df
+                'guide_id': [target_loc + ' ' + _crispor_pam_id for
+                             _crispor_pam_id in sgs],
+                # TODO (gdingle): do we want to allow manual override of guide seq?
+                # 'guide_seq_selected': list(sgs.values()),
             }))
         return df
 
@@ -616,18 +622,13 @@ class PrimerSelection(BaseModel):
     def hdr_order_form_url(self):
         return '/main/primer-selection/{}/hdr-order-form'.format(self.id)
 
-    # TODO (gdingle): use in _flatten_guide_data
     def to_df(self) -> DataFrame:
         df = DataFrame()
         for guide_id, primer_pair in self.selected_primers.items():
-            target_loc, _crispor_pam_id = guide_id.split(' ')
             df = df.append(DataFrame({
-                'target_loc': target_loc,
-                '_crispor_pam_id': _crispor_pam_id,
                 'primer_seq_fwd': primer_pair[0][0],
                 'primer_seq_rev': primer_pair[1][0],
                 'primer_product': primer_pair[0][1],
-                # TODO (gdingle): use index of two cols?
             }, index=[guide_id]))
         return df
 

@@ -60,6 +60,7 @@ class GuideDesignForm(ModelForm):
             'experiment',
             'guide_data',
             'target_seqs',
+            'target_genes',
             'target_tags',
             'targets'
         ]

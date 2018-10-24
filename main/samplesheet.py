@@ -37,7 +37,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     guide_design = guide_selection.guide_design
     sheet = from_experiment(guide_design.experiment)
 
-    guides = _flatten_guide_data(guide_selection)
+    guides = _join_guide_data(guide_selection)
 
     # Trim sheet to available guides
     sheet = sheet[0:len(guides)]
@@ -45,27 +45,30 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [ChrLoc(g[0]) for g in guides]
-    sheet['target_seq'] = [g[4] for g in guides]
+    sheet['target_loc'] = [
+        g['target_loc'] if isinstance(g['target_loc'], ChrLoc) else ChrLoc(g['target_loc'])
+        for g in guides.to_records()]
+    sheet['target_seq'] = list(guides['target_seq'])
+    sheet['target_gene'] = list(guides['target_gene'])
 
-    # Add original target string if different
-    sheet['target_input'] = [(g[5] if g[5] != g[0] else None)
-                             for g in guides]
+    # Add original target string only if different
+    sheet['target_input'] = [(g['target_input'] if g['target_input'] != str(g['target_loc']) else None)
+                             for g in guides.to_records()]
 
     # TTCCGGCGCGCCGAGTCCTT AGG
-    assert all(' ' in g[2] for g in guides), 'Expecting trailing PAM'
-    assert all(len(g[2]) == 24 for g in guides), 'Expecting 20bp guide'
-    sheet['guide_seq'] = [g[2].split(' ')[0] for g in guides]
-    sheet['guide_pam'] = [g[2].split(' ')[1] for g in guides]
+    assert all(' ' in g['guide_seq'] for g in guides.to_records()), 'Expecting trailing PAM'
+    assert all(len(g['guide_seq']) == 24 for g in guides.to_records()), 'Expecting 20bp guide'
+    sheet['guide_seq'] = [g['guide_seq'].split(' ')[0] for g in guides.to_records()]
+    sheet['guide_pam'] = [g['guide_seq'].split(' ')[1] for g in guides.to_records()]
 
     # Taken direct from Crispor. Example: "s207-" and "s76+".
     # See http://crispor.tefor.net/manual/.
     # DEFINITION: number of chars before the first char of NGG PAM
-    sheet['guide_offset'] = [int(g[1][1:-1]) for g in guides]
+    sheet['guide_offset'] = [int(g['_crispor_pam_id'][1:-1]) for g in guides.to_records()]
 
     # Currently, this is relative to target strand, because that's how
     # Crispor defines it. So _guide_strand == '+' means "same strand as target".
-    sheet['_guide_strand'] = [g[1][-1] for g in guides]
+    sheet['_guide_strand'] = [g['_crispor_pam_id'][-1] for g in guides.to_records()]
 
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
@@ -76,37 +79,29 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
         axis=1,
     )
 
-    sheet = _set_scores(sheet, guide_design, guides)
+    # Take the MIT score
+    sheet['guide_score'] = [g['scores'][0] for g in guides.to_records()]
 
     if guide_design.hdr_tag:
         sheet = _set_hdr_cols(sheet, guide_design, guides)
 
-    sheet['_crispor_batch_id'] = [g[3] for g in guides]
-    sheet['_crispor_pam_id'] = [g[1] for g in guides]
-    sheet['_crispor_guide_id'] = [g[0] + ' ' + g[1] for g in guides]
+    sheet['_crispor_batch_id'] = list(guides['_crispor_batch_id'])
+    sheet['_crispor_pam_id'] = list(guides['_crispor_pam_id'])
+    # TODO (gdingle): why cannot use guide_id? see _join_guide_data
+    sheet['_crispor_guide_id'] = [
+        str(g['target_loc']) + ' ' + g['_crispor_pam_id']
+        for g in guides.to_records()]
 
     return sheet
 
 
 def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
-    # TODO (gdingle): primer_selection.to_df().join(guide_selection.to_df(), on=('target_loc', '_crispor_pam_id'))
-    # or from_guide_selection(...).join(...)
     guide_selection = primer_selection.primer_design.guide_selection
     sheet = from_guide_selection(guide_selection)
-    selected_primers = primer_selection.selected_primers
-    for guide_id, primer_pair in selected_primers.items():
-        target_loc, _crispor_pam_id = guide_id.split(' ')
-        mask1 = sheet['target_loc'] == target_loc
-        mask2 = sheet['_crispor_pam_id'] == _crispor_pam_id
-        assert any(mask1) and any(mask2)
 
-        # TODO (gdingle): A value is trying to be set on a copy of a slice from a DataFrame
-        # See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy
-        sheet['primer_seq_fwd'][mask1 & mask2] = primer_pair[0][0]
-        sheet['primer_seq_rev'][mask1 & mask2] = primer_pair[1][0]
-        assert primer_pair[0][1].startswith(
-            primer_pair[0][0]), 'Primer product should start with forward primer'
-        sheet['primer_product'][mask1 & mask2] = primer_pair[0][1]
+    ps_df = primer_selection.to_df()
+    sheet = sheet.set_index('_crispor_guide_id').join(ps_df, how='inner')
+    assert len(sheet) <= len(ps_df)
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
     assert len(sheet)
@@ -191,34 +186,16 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
     return sheet
 
 
-def _flatten_guide_data(guide_selection: GuideSelection) -> list:
+def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
+    gd_df = guide_selection.guide_design.to_df()
+    gs_df = guide_selection.to_df()
 
-    # TODO (gdingle): try using bolton itertools remap?
+    # TODO (gdingle): why can't keep guide_id? ValueError: name already used as a name or title
+    guides_df = gd_df.set_index('guide_id').join(
+        gs_df.set_index('guide_id'), how='inner')
+    assert len(guides_df) >= len(gs_df)
 
-    guide_design = guide_selection.guide_design
-    # Ungroup guide data into rows
-    # TODO (gdingle): this is a complicated beast that should at least have its own tests
-    target_loc_to_batch_id = dict((g['target'], g['batch_id'])
-                                  for g in guide_design.guide_data
-                                  if g.get('batch_id'))  # filter out errors
-    target_loc_to_target_seq = dict(zip(guide_design.targets, guide_design.target_seqs))
-    target_loc_to_target_raw = dict(zip(guide_design.targets, guide_design.targets_raw))
-    target_loc_to_target_tag = dict(zip(guide_design.targets, guide_design.target_tags))
-    selected_guides_ordered = [(g['target'], guide_selection.selected_guides[g['target']])
-                               for g in guide_design.guide_data
-                               if g['target'] in guide_selection.selected_guides]
-    guides = [(target_loc, offset, seq,
-               target_loc_to_batch_id[target_loc],
-               target_loc_to_target_seq[target_loc],
-               target_loc_to_target_raw[target_loc],
-               target_loc_to_target_tag.get(target_loc))
-              for target_loc, selected in selected_guides_ordered
-              for offset, seq in selected.items()]
-
-    # TODO (gdingle):
-    # guide_design.to_df().join(guide_selection.to_df(), on='target_loc')
-
-    return guides
+    return guides_df
 
 
 def _transform_primer_product(row) -> str:
@@ -358,6 +335,7 @@ def _new_samplesheet() -> DataFrame:
             'target_genome',
             'target_pam',
             'target_input',
+            'target_gene',
             'target_loc',
             'target_seq',
             'guide_offset',
@@ -374,9 +352,11 @@ def _new_samplesheet() -> DataFrame:
             'hdr_dist',
             'hdr_template',
             'hdr_mutated',
-            'primer_seq_fwd',
-            'primer_seq_rev',
-            'primer_product',
+            # TODO (gdingle): we can't have these and join with ps_df
+            # We only need this here for ordering... is it okay because those are last?
+            # 'primer_seq_fwd',
+            # 'primer_seq_rev',
+            # 'primer_product',
             's3_bucket',
             's3_prefix',
             'fastq_fwd',
@@ -433,9 +413,9 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> DataFrame:
     hdr_tag = guide_design.hdr_tag
     if hdr_tag == 'per_target':
-        sheet['_hdr_tag'] = [g[6] for g in guides]
+        sheet['_hdr_tag'] = [g['hdr_tag'] for g in guides]
         sheet['_hdr_seq'] = [
-            GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[g[6]] for g in guides]
+            GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[g['hdr_tag']] for g in guides]
     else:
         sheet['_hdr_tag'] = hdr_tag
         sheet['_hdr_seq'] = guide_design.hdr_seq
@@ -518,20 +498,4 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> 
 
     sheet.apply(check_hdr_guide_match, axis=1)
 
-    return sheet
-
-
-# TODO (gdingle): try using bolton itertools remap?
-def _set_scores(
-        sheet: DataFrame,
-        guide_design: GuideDesign,
-        # TODO (gdingle): figure out shorter type sig for guides
-        guides: list) -> DataFrame:
-    # Get first score by target and offset, MIT score
-    scores = dict((row['target'], row['scores'])
-                  for row in guide_design.guide_data
-                  if row.get('scores'))
-    # Scores are stored as chr_loc -> offset -> list of numbers
-    # TODO (gdingle): this is pretty ugly
-    sheet['guide_score'] = [int(scores[g[0]][g[1]][0]) for g in guides]
     return sheet

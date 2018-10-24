@@ -69,6 +69,7 @@ class CreatePlusView(CreateView):
         try:
             obj = self.plus(obj)
         except (ValidationError, ValueError) as e:
+            logging.exception(e)
             form.add_error('__all__', e)
             return self.form_invalid(form)
         obj.save()

@@ -39,9 +39,10 @@ class SampleSheetTestCase(TestCase):
     def _guide_design(self):
         return GuideDesign(
             experiment=self._experiment,
-            targets_raw=["chr2:38377154-38377424"],
+            targets_raw=["ENST00000621663"],
             targets=["chr2:38377154-38377424"],
             target_seqs=['ATGACGTGGTTAACCGCGGCGCTTGGG'],
+            target_genes=["ATL2"],
             guide_data=[{
                 "seq": "chr2:38377154-38377424",
                 "target": "chr2:38377154-38377424",
@@ -72,7 +73,8 @@ class SampleSheetTestCase(TestCase):
             selected_guides={
                 "chr2:38377154-38377424": {
                     "s28+": "ACGTGGTTAACCGCGGCGCT TGG",
-                    "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
+                    # Commented out to demonstrate selection of subset
+                    # "s29+": "CGTGGTTAACCGCGGCGCTT GGG",
                     "s47+": "TTGGGTCGCTGGTCCGTCGC CGG",
                 }
             })

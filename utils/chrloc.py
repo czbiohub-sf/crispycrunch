@@ -1,6 +1,8 @@
+import functools
 import re
 
 
+@functools.total_ordering
 class ChrLoc:
     """
     Represents a valid chromosome location for crispycrunch.
@@ -128,6 +130,23 @@ class ChrLoc:
                 and (self.strand == other.strand  # noqa
                      if self.strand and other.strand
                      else True))
+
+    def __lt__(self, other):
+        """
+        # TODO (gdingle): does this make sense?
+
+        >>> ChrLoc('chr5:1-20') < ChrLoc('chr5:1-20')
+        False
+        >>> ChrLoc('chr5:1-20') < ChrLoc('chr5:2-21')
+        True
+        >>> ChrLoc('chr4:1-20') < ChrLoc('chr5:1-20')
+        True
+        """
+        if isinstance(other, str):
+            # TODO (gdingle): wise idea to promote on comparison?
+            other = ChrLoc(other)
+        return (self.chr < other.chr or
+                self.start < other.start)
 
     def __contains__(self, other):
         """
