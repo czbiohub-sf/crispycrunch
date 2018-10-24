@@ -53,11 +53,13 @@ def _reformat_fasta(fasta: str) -> str:
     return ''.join(fasta.split('\n')[1:])
 
 
+# TODO (gdingle): switch to togows
 def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     """
     Takes the top result from USCS genome browser. See for example:
     https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=ATL2
 
+    # TODO (gdingle): need to filter better among all the chr results for a gene
     # TODO (gdingle): how does this deal with reverse strand?
 
     >>> gene_to_chr_loc('ATL2')
@@ -85,6 +87,66 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     if not match:
         raise ValueError('No chr location for {}'.format(gene))
     return match[0]
+
+
+def enst_to_gene(enst: str, genome: str = 'hg38') -> str:
+    """
+    Gets NCBI gene associated with with an ENST transcript ID.
+
+    >>> enst_to_gene('ENST00000398844')
+    'SEC24A'
+    """
+    url = 'http://togows.org/search/ncbi-gene/{}/1,50.json'.format(enst)
+    response = _cached_session.get(url)
+    response.raise_for_status()
+    res = response.json()
+    assert len(res) == 1
+    ncbi_id = res[0]
+
+    url = 'http://togows.org/entry/ncbi-gene/{}/official_symbol.json'.format(ncbi_id)
+    response = _cached_session.get(url)
+    response.raise_for_status()
+    res = response.json()
+    assert len(res) == 1
+    return res[0]
+
+
+def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -> str:
+    """
+    Gets the gene symbols associated with a chromosome range.
+
+    By default, any part of the range may overlap the gene.
+
+    Returns '' if no match found.
+
+    See for example:
+        http://togows.org/api/ucsc/hg38/refGene/exclusive/chr4:1,350,000-1,400,000.json
+        http://togows.org/api/ucsc/hg38/refGene/exclusive/chr2:38294880-38377262.json
+
+    >>> chr_loc_to_gene('chr2:136114349-136116243', straddle=True)
+    'CXCR4'
+
+    >>> chr_loc_to_gene('chr2:38294880-38377262', straddle=True)
+    'ATL2'
+
+    >>> chr_loc_to_gene('chr2:136114349-136116243', straddle=False)
+    'CXCR4'
+
+    >>> chr_loc_to_gene('chr2:38294880-38377262', straddle=False)
+    ''
+    """
+    url = 'http://togows.org/api/ucsc/{}/refGene/{}/{}.json'.format(
+        genome, 'inclusive' if straddle else 'exclusive', chr_loc)
+    response = _cached_session.get(url)
+    if response.status_code == 404:
+        return ''
+    else:
+        response.raise_for_status()
+    res = response.json()
+
+    matches = set(r['name2'] for r in res)
+    assert len(matches) == 1
+    return matches.pop()
 
 
 if __name__ == '__main__':
