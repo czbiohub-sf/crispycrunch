@@ -28,12 +28,12 @@ class HDR:
     def __init__(
             self,
             target_seq: str,
-            hdr_seq: str,
+            hdr_seq: str = '',
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
             guide_strand: str = '',
             cds_seq: str = '',
-            target_mutation_score: float = 50.0) -> None:
+            target_mutation_score: float = 1.0) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
@@ -89,10 +89,10 @@ class HDR:
 
         See get_guide_cut_to_insert.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr._guide_strand()
         '+'
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
         >>> hdr._guide_strand()
         '-'
         """
@@ -129,17 +129,17 @@ class HDR:
         junction, meaning we only want to avoid the 3 nts on the intron side
         of things.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
         ... cds_seq='ATGGCTGAGCTGGATCC')
         >>> hdr.junction
         (20, 23)
 
-        >>> hdr = HDR('NNNNNNTAANNNNNN', 'NNN', hdr_dist=0, hdr_tag='stop_codon',
+        >>> hdr = HDR('NNNNNNTAANNNNNN', hdr_dist=0, hdr_tag='stop_codon',
         ... cds_seq='TAA', guide_strand='+')
         >>> hdr.junction
         (3, 6)
 
-        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
         >>> hdr.junction
         ()
         """
@@ -160,19 +160,19 @@ class HDR:
         Determines whether the cut location is inside an intron/exon junction.
 
         Cut in junction.
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
         ... cds_seq='ATGGCTGAGCTGGATCC')
         >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
         (20, (20, 23), True)
 
         Cut just after junction.
-        >>> hdr = HDR('CCNNNNTAANNNNNN', 'NNN', hdr_dist=0, hdr_tag='stop_codon',
+        >>> hdr = HDR('CCNNNNTAANNNNNN', hdr_dist=0, hdr_tag='stop_codon',
         ... cds_seq='TAA', guide_strand='+')
         >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
         (6, (3, 6), False)
 
         No junction to cut.
-        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
         >>> hdr.cut_in_junction
         False
         """
@@ -186,11 +186,11 @@ class HDR:
         """
         Returns 23bp guide sequence that includes PAM.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.guide_seq
         'ATGGCTGAGCTGGATCCGTTCGG'
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
         >>> hdr.guide_seq
         'CCATGGCTGAGCTGGATCCGTTC'
         """
@@ -210,19 +210,19 @@ class HDR:
         Extra base pairs are removed from the PAM side, because that is
         where we want to mutate whole codons.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.guide_seq
         'ATGGCTGAGCTGGATCCGTTCGG'
         >>> hdr.guide_seq_aligned
         'ATGGCTGAGCTGGATCCGTTC'
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
         >>> hdr.guide_seq
         'CCATGGCTGAGCTGGATCCGTTC'
         >>> hdr.guide_seq_aligned
         'ATGGCTGAGCTGGATCCGTTC'
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGG', 'NNN', hdr_dist=15)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGG', hdr_dist=15)
         >>> hdr.guide_seq
         'TGGCTGAGCTGGATCCGTTCGGG'
         >>> hdr.guide_seq_aligned
@@ -251,7 +251,7 @@ class HDR:
     @property
     def template_mutated(self) -> str:
         """
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.template_mutated
         'GCCATGnnnGCTGAGCTGGATCCGtttGGC'
         """
@@ -267,7 +267,7 @@ class HDR:
     @property
     def mutated(self) -> str:
         """
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.mutated
         'GCCATGGCTGAGCTGGATCCGtttGGC'
         """
@@ -284,7 +284,7 @@ class HDR:
         """
         Silently mutates codons in the guide sequence, going from the PAM side inwards.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCGttt'
 
@@ -296,7 +296,7 @@ class HDR:
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGgaccccttt'
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, target_mutation_score=50.0)
         >>> hdr.guide_mutated
         'atggccGAGCTGGATCCGTTC'
         """
@@ -318,7 +318,7 @@ class HDR:
     @property
     def mutated_score(self) -> float:
         """
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', 'NNN', 'start_codon', 14)
+        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_tag='start_codon', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.mutated_score
         0.05972723076923077
         """
@@ -332,12 +332,12 @@ class HDR:
         """
         Determines whether there is a mutation inside an intron/exon junction.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCC')
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
+        ... cds_seq='ATGGCTGAGCTGGATCC', target_mutation_score=50.0)
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
         ('GCCATGGCTGAGCTGGATCCGtttGGC', (20, 23), True)
 
-        >>> hdr = HDR('ATGNGG', 'NNN', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
         >>> hdr.mutation_in_junction
         False
         """
@@ -367,15 +367,15 @@ class HDR:
             (11, 9)
             (10, 10).
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.should_mutate
         True
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=1, guide_strand='-')
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, guide_strand='-')
         >>> hdr.should_mutate
         True
 
-        >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', 'NNN', hdr_dist=-6, guide_strand='-')
+        >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', hdr_dist=-6, guide_strand='-')
         >>> hdr.should_mutate
         False
         """
