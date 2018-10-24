@@ -354,6 +354,7 @@ class GuideDesign(BaseModel):
         default=C_TERMINUS_EXAMPLES,
     )
 
+    # TODO (gdingle): rename to target_locs
     targets = fields.ArrayField(
         ChrLocField(max_length=80, validators=[validate_chr], blank=True),
         verbose_name='Target chromosome locations',
@@ -361,6 +362,12 @@ class GuideDesign(BaseModel):
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),
         verbose_name='Target sequences',
+        blank=True,
+        default=[],
+    )
+    target_genes = fields.ArrayField(
+        models.CharField(max_length=40, validators=[validate_gene], blank=True),
+        verbose_name='Target gene symbols',
         blank=True,
         default=[],
     )
@@ -411,6 +418,7 @@ class GuideDesign(BaseModel):
             'target_input': target_inputs,
             'target_loc': self.targets,
             'target_seq': self.target_seqs,
+            'target_gene': self.target_genes,
             'target_tag': target_tags or None,
             'hdr_seq': self.hdr_seq or None,
             'cds_index': self.cds_index or None,

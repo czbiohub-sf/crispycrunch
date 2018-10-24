@@ -170,6 +170,25 @@ class GuideDesignView(CreatePlusView):
 
         assert False
 
+    def _get_target_genes(self, targets, guide_design):
+        if all(is_ensemble_transcript(t) for t in targets):
+            func = functools.partial(
+                # enst_to_gene is more precise than chr_loc_to_gene
+                conversions.enst_to_gene,
+                genome=guide_design.genome)
+        elif all(is_gene(t) for t in targets):
+            return targets
+        elif all(is_seq(t) for t in targets):
+            raise ValidationError(
+                'Targeting fasta sequences is not currently implemented')
+        else:
+            func = functools.partial(
+                conversions.chr_loc_to_gene,
+                genome=guide_design.genome)
+
+        with ThreadPoolExecutor() as pool:
+            return list(pool.map(func, targets))
+
     def plus(self, obj):
         obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
 
@@ -181,6 +200,10 @@ class GuideDesignView(CreatePlusView):
             obj
         )
         obj.target_seqs = self._get_target_seqs(
+            targets_cleaned,
+            obj
+        )
+        obj.target_genes = self._get_target_genes(
             targets_cleaned,
             obj
         )
