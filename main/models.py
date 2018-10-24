@@ -323,6 +323,10 @@ class GuideDesign(BaseModel):
         # TODO (gdingle): also offer GFP?
         # CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt
     }
+    TERMINUS_TO_TAG = {
+        'N': 'start_codon',
+        'C': 'stop_codon',
+    }
 
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
 
@@ -398,13 +402,9 @@ class GuideDesign(BaseModel):
         """
         Parse out optional terminuses from input such as "ENST00000621663,N"
         """
-        terminus_to_tag = {
-            'N': 'start_codon',
-            'C': 'stop_codon',
-        }
         parsed = [t.split(',') for t in self.targets_raw]
         targets_raw = [p[0].strip() for p in parsed]
-        target_tags = [terminus_to_tag[p[1].strip()]
+        target_tags = [self.TERMINUS_TO_TAG[p[1].strip()]
                        for p in parsed if len(p) > 1]
         if self.hdr_tag != 'per_target' and target_tags:
             raise ValueError(
@@ -415,15 +415,15 @@ class GuideDesign(BaseModel):
 
     def to_df(self) -> DataFrame:
         target_inputs, target_tags = self.parse_targets_raw()
+        tag_to_terminus = dict((v, k) for k, v in self.TERMINUS_TO_TAG.items())
         df_targets = DataFrame(data={
             'target_input': target_inputs,
             'target_loc': self.targets,
             'target_seq': self.target_seqs,
             'target_gene': self.target_genes,
             'target_tag': target_tags or None,
-            'hdr_seq': self.hdr_seq or None,
-            'cds_index': self.cds_index or None,
-            'cds_length': self.cds_length or None,
+            'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags],
+            'target_terminus': [tag_to_terminus[t] for t in target_tags],
         })
         df_guides = DataFrame()
         for gd in self.guide_data:

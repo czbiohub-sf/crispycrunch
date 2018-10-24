@@ -335,6 +335,7 @@ def _new_samplesheet() -> DataFrame:
             'target_genome',
             'target_pam',
             'target_input',
+            'target_terminus',
             'target_gene',
             'target_loc',
             'target_seq',
@@ -410,12 +411,12 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
     return temp_sheet.to_dict(orient='records')
 
 
-def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: list) -> DataFrame:
+def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
     hdr_tag = guide_design.hdr_tag
     if hdr_tag == 'per_target':
-        sheet['_hdr_tag'] = [g['hdr_tag'] for g in guides]
-        sheet['_hdr_seq'] = [
-            GuideDesign.HDR_TAG_TERMINUS_TO_HDR_SEQ[g['hdr_tag']] for g in guides]
+        sheet['_hdr_tag'] = list(guides['target_tag'])
+        sheet['_hdr_seq'] = list(guides['hdr_seq'])
+        sheet['target_terminus'] = list(guides['target_terminus'])
     else:
         sheet['_hdr_tag'] = hdr_tag
         sheet['_hdr_seq'] = guide_design.hdr_seq
