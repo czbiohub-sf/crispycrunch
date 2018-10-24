@@ -253,7 +253,7 @@ class HDR:
         """
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.template_mutated
-        'GCCATGnnnGCTGAGCTGGATCCGtttGGC'
+        'GCCATGnnnGCTGAGCTGGATCCGTTtGGC'
         """
         return self._template(True)
 
@@ -269,7 +269,7 @@ class HDR:
         """
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.mutated
-        'GCCATGGCTGAGCTGGATCCGtttGGC'
+        'GCCATGGCTGAGCTGGATCCGTTtGGC'
         """
         start = self.target_seq.index(self.guide_seq_aligned)
         mutated = self.guide_mutated
@@ -286,19 +286,19 @@ class HDR:
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATCCGttt'
+        'ATGGCTGAGCTGGATCCGTTt'
 
         Varying target score.
         >>> hdr.target_mutation_score = 1
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATcccttt'
+        'ATGGCTGAGCTGGATCCcTTt'
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTGgaccccttt'
+        'ATGGCTGAGCTGGAcCCcTTt'
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, target_mutation_score=50.0)
         >>> hdr.guide_mutated
-        'atggccGAGCTGGATCCGTTC'
+        'ATGGCcGAGCTGGATCCGTTC'
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
@@ -320,7 +320,7 @@ class HDR:
         """
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_tag='start_codon', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.mutated_score
-        0.05972723076923077
+        41.7
         """
         return mit_hit_score(
             self.guide_mutated,
@@ -332,10 +332,17 @@ class HDR:
         """
         Determines whether there is a mutation inside an intron/exon junction.
 
+        Mutation just inside 3 bp window.
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
+        ... cds_seq='ATGGCTGAGCTGGATCCG', target_mutation_score=50.0)
+        >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
+        ('GCCATGGCTGAGCTGGATCCGTTtGGC', (21, 24), True)
+
+        Mutation just outside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
         ... cds_seq='ATGGCTGAGCTGGATCC', target_mutation_score=50.0)
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
-        ('GCCATGGCTGAGCTGGATCCGtttGGC', (20, 23), True)
+        ('GCCATGGCTGAGCTGGATCCGTTtGGC', (20, 23), False)
 
         >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
         >>> hdr.mutation_in_junction
@@ -416,28 +423,28 @@ def mutate_silently(
 
     >>> it = mutate_silently('TGTTGCGATGAC')
     >>> next(it)
-    'tgcTGCGATGAC'
+    'TGcTGCGATGAC'
     >>> next(it)
-    'tgctgtGATGAC'
+    'TGcTGtGATGAC'
 
     No possible synonyms.
     >>> next(mutate_silently('ATG'))
-    'atg'
+    'ATG'
 
     Right to left.
     >>> it = mutate_silently('TGTTGCGATGAC', '+')
     >>> next(it)
-    'TGTTGCGATgat'
+    'TGTTGCGATGAt'
     >>> next(it)
-    'TGTTGCgacgat'
+    'TGTTGCGAcGAt'
 
     Skip stop codon.
     >>> it = mutate_silently('TAG')
     >>> next(it)
-    'tag'
+    'TAG'
     >>> it = mutate_silently('TAG', skip_stop_codon=False)
     >>> next(it)
-    'tga'
+    'Tga'
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],
@@ -497,15 +504,19 @@ def mutate_silently(
         syns.remove(codon)
 
         if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
-            new_guide.append(codon.lower())
+            new_guide.append(codon)
         elif len(syns):
             fractions = tuple((syn_fractions[syn], syn) for syn in syns)
             # TODO (gdingle): better to choose random syn?
             # TODO (yjl): best to choose furthest syn, then top fraction syn
             top = max(fractions)[1]
-            new_guide.append(top.lower())
+            lowered = ''.join([
+                c if c == top[i] else top[i].lower()
+                for i, c in enumerate(codon)
+            ])
+            new_guide.append(lowered)
         else:
-            new_guide.append(codon.lower())
+            new_guide.append(codon)
 
         if guide_strand == '+':
             new_guide_str = ''.join(new_guide[::-1])
