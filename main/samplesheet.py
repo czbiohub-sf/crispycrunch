@@ -155,7 +155,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand']).template
+            row['_guide_strand']).inserted
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
 
@@ -351,8 +351,7 @@ def _new_samplesheet() -> DataFrame:
             '_hdr_tag',
             '_hdr_seq',
             'hdr_dist',
-            # TODO (gdingle): does template technically include 55bp arms? rename? hdr_inserted?
-            'hdr_template',
+            'hdr_inserted',
             'hdr_mutated',
             '_hdr_ultramer',
             # TODO (gdingle): we can't have these and join with ps_df
@@ -432,17 +431,17 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         ),
         axis=1,
     )
-    sheet['hdr_template'] = sheet.apply(
+    sheet['hdr_inserted'] = sheet.apply(
         lambda row: hdr.HDR(
             row['target_seq'],
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand']).template,
+            row['_guide_strand']).inserted,
         axis=1,
     )
 
-    # TODO (gdingle): override hdr_template when good enough
+    # TODO (gdingle): override hdr_inserted when good enough
     def mutate(row):
         """
         Most of the logic here checks for mutation or cutting on the exon/intron
@@ -475,16 +474,16 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             return 'not needed'
 
         if not row_hdr.junction:
-            return row_hdr.template_mutated
+            return row_hdr.inserted_mutated
 
         if row_hdr.cut_in_junction:
-            return 'cut in intron/exon junction: ' + row_hdr.template_mutated
+            return 'cut in intron/exon junction: ' + row_hdr.inserted_mutated
 
         # Lowercase means mutated
         if row_hdr.mutation_in_junction:
-            return 'mutation in intron/exon junction: ' + row_hdr.template_mutated
+            return 'mutation in intron/exon junction: ' + row_hdr.inserted_mutated
 
-        return row_hdr.template_mutated
+        return row_hdr.inserted_mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
 
@@ -529,7 +528,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand'])
-        recombined = left_bit + uhdr.template_mutated + right_bit
+        recombined = left_bit + uhdr.inserted_mutated + right_bit
         assert len(recombined) == 200, '200bp is standard of leonetti group'
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
         # stop codons outside of cds? see for example ENST00000299300

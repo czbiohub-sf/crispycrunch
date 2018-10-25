@@ -7,7 +7,7 @@ from typing import Iterator
 class HDR:
     """
     Encapsulates all the HDR transformations of sequences described in
-    https://czi.quip.com/YbAhAbOV4aXi/ . Get a mutated HDR template that varies
+    https://czi.quip.com/YbAhAbOV4aXi/ . Get a mutated HDR inserted that varies
     depending on start or stop codon, the cut-to-insert distance, the
     strandedness of the guide, and the amount of mutation desired.
 
@@ -243,24 +243,24 @@ class HDR:
             return aligned[:21]
 
     @property
-    def template(self) -> str:
+    def inserted(self) -> str:
         """
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.template
+        >>> hdr.inserted
         'GCCATGnnnGCTGAGCTGGATCCGTTCGGC'
         """
-        return self._template(False)
+        return self._inserted(False)
 
     @property
-    def template_mutated(self) -> str:
+    def inserted_mutated(self) -> str:
         """
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14, target_mutation_score=50.0)
-        >>> hdr.template_mutated
+        >>> hdr.inserted_mutated
         'GCCATGnnnGCTGAGCTGGATCCGTTtGGC'
         """
-        return self._template(True)
+        return self._inserted(True)
 
-    def _template(self, mutate: bool = False) -> str:
+    def _inserted(self, mutate: bool = False) -> str:
         target_seq = self.mutated if mutate else self.target_seq
         return (
             target_seq[:self.insert_at] +
