@@ -17,7 +17,7 @@ from pandas import DataFrame
 from django.core.files.uploadedfile import UploadedFile
 
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
-from protospacex import get_cds_seq
+from protospacex import get_cds_seq, get_ultramer_seq
 from utils import conversions
 from utils import hdr
 from utils.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
@@ -100,7 +100,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet = from_guide_selection(guide_selection)
 
     ps_df = primer_selection.to_df()
-    sheet = sheet.set_index('_crispor_guide_id').join(ps_df, how='inner')
+    sheet = sheet.set_index('_crispor_guide_id', drop=False).join(ps_df, how='inner')
     assert len(sheet) <= len(ps_df)
 
     sheet = sheet.dropna(subset=['primer_seq_fwd'])
@@ -354,6 +354,7 @@ def _new_samplesheet() -> DataFrame:
             # TODO (gdingle): does template technically include 55bp arms? rename? hdr_inserted?
             'hdr_template',
             'hdr_mutated',
+            '_hdr_ultramer',
             # TODO (gdingle): we can't have these and join with ps_df
             # We only need this here for ordering... is it okay because those are last?
             # 'primer_seq_fwd',
@@ -460,7 +461,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         else:
             cds_index = guide_design.cds_index
         assert isinstance(cds_index, int)
-        cds_seq = get_cds_seq(row['target_input'].split(',')[0], cds_index, -1)
+        cds_seq = get_cds_seq(row['target_input'], cds_index, -1)
 
         row_hdr = hdr.HDR(
             row['target_seq'],
@@ -501,5 +502,40 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         assert guide_seq == row['guide_seq'] + row['guide_pam']
 
     sheet.apply(check_hdr_guide_match, axis=1)
+
+    def set_ultramer(row):
+        # HACK ALERT! Get the CDS seq to check for ultramer.
+        # It's another instance of IO, but should be cached always.
+        # TODO (gdingle): return more info from protospacex, and store throughout
+        if guide_design.hdr_tag == 'per_target':
+            # TODO (gdingle): move this logic into to_df in model
+            cds_index = GuideDesign.HDR_TAG_TO_CDS_INDEX[row['_hdr_tag']]
+        else:
+            cds_index = guide_design.cds_index
+        assert isinstance(cds_index, int)
+
+        ultramer_seq = get_ultramer_seq(row['target_input'], cds_index)
+
+        left_bit, codon_aligned, right_bit = (
+            ultramer_seq[:1],
+            ultramer_seq[1:-1],
+            ultramer_seq[-1:]
+        )
+        assert len(codon_aligned) % 3 == 0
+
+        uhdr = hdr.HDR(
+            codon_aligned,
+            row['_hdr_seq'],
+            row['_hdr_tag'],
+            row['hdr_dist'],
+            row['_guide_strand'])
+        recombined = left_bit + uhdr.template_mutated + right_bit
+        assert len(recombined) == 200, '200bp is standard of leonetti group'
+        # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
+        # stop codons outside of cds? see for example ENST00000299300
+
+        return recombined
+
+    sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
 
     return sheet

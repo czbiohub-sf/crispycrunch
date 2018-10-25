@@ -603,7 +603,7 @@ class UltramerOrderFormView(OrderFormView):
     model = PrimerSelection
     # TODO (gdingle): change this to mutated, also may need
     # exactly 55bp homology arms
-    seq_keys = ('hdr_template',)
+    seq_keys = ('_hdr_ultramer',)
 
 
 class IlluminaSheetView(View):

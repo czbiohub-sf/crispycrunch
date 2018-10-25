@@ -107,9 +107,12 @@ class HDR:
         return '+' if is_for else '-'
 
     def _target_codon_at(self) -> int:
+        # TODO (gdingle): sometimes there is an extra stop codon that is picked up first
+        # ... outside CDS? how to fix?
         for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
             if codon in self.boundary_codons:
                 return i * 3
+
         assert False
 
     @property
