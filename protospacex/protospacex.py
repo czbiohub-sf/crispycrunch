@@ -1,10 +1,10 @@
 """
-This module was extracted from https://github.com/czbiohub/protospacex,
+This module was extracted and adapted from https://github.com/czbiohub/protospacex,
 which was designed for https://czi.quip.com/YbAhAbOV4aXi/.
 
-protospacex: automated guide design for Cas9 knock-in experiments
+Protospacex: automated guide design for Cas9 knock-in experiments.
 
-Given an Ensembl transcript id, return target regions for Crispr guides.
+The code here returns different regions of interest for HDR from a ENST transcript.
 """
 import logging
 import requests
@@ -229,6 +229,7 @@ def get_cds_seq(
     assert len(cds)
 
     # enforce length
+    _validate_length(length)
     start, end, codon_at = _get_start_end(
         cds[cds_index].location,
         length,
@@ -342,6 +343,7 @@ def get_cds_chr_loc(
     assert species == 'GRCh38'
 
     # enforce length
+    _validate_length(length)
     start, end, codon_at = _get_start_end(
         cds_location,
         length,
@@ -364,6 +366,67 @@ def get_cds_chr_loc(
     )
 
 
+def get_ultramer_seq(
+        ensembl_transcript_id: str,
+        cds_index: int = 0,
+        length: int = 110) -> str:
+    """
+    Function to get the precise sequence centered around the target codon
+    needed for IDT ultramer ordering (donor DNA template).
+
+    Length default of 110 is determined by need for max donor length of 200 bp.
+    See https://www.idtdna.com/pages/education/decoded/article/crispr-cas9-mediated-hdr-tips-for-successful-experimental-design .
+
+    >>> get_ultramer_seq('ENST00000398844')
+    'CTCTCTTCTTGTGCGCTGTTGTCGACCCCGACCAGCCCCTTCCAACCCAGTCATCATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCC'
+
+    >>> get_ultramer_seq('ENST00000411809')
+    'CGGGGTCCGTGGGGAGCAGGAGAGGGAGGCGGCGGACCGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGCGTGAGTATCGGGGG'
+
+    Stop codon.
+
+    >>> get_ultramer_seq('ENST00000398844', -1)
+    'TGCATTATCATATTATGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGAATGAATGAAGAAATTTGACTTATTTTTAAGGAATGTCACGATAGTGCAGAATACC'
+
+    >>> get_ultramer_seq('ENST00000411809', -1)
+    'AACTGTGCAACCCAAGCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAAGCAGATTGAATGAAGAATTTTTAGCTGTGCAGATAGGTGA'
+
+    >>> get_ultramer_seq('ENST00000221801', -1)
+    'CCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTGTGT'
+
+    """
+
+    record = fetch_ensembl_transcript(ensembl_transcript_id)
+    cds = [f for f in record.features if f.type == 'cds']
+    assert len(cds)
+
+    location = cds[cds_index].location
+    # see also _get_start_end
+    start = location.start
+    end = location.end
+    if cds_index == -1:  # stop codon
+        start = end - length // 2
+        codon_at = end - 3
+        end = end + length // 2
+    elif cds_index == 0:  # start codon
+        end = start + length // 2
+        codon_at = start
+        start = start - length // 2
+    assert end - start == length
+
+    cds_seq = record.seq[start:end]
+
+    assert len(cds_seq) == length, len(cds_seq)
+
+    codon_at = codon_at - start  # make relative to
+    if cds_index == 0:
+        assert cds_seq[codon_at:codon_at + 3] == 'ATG', (start, end, codon_at, cds_seq)
+    elif cds_index == -1:
+        assert cds_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
+
+    return str(cds_seq)
+
+
 def _get_start_end(
         location: FeatureLocation,
         length: int,
@@ -377,13 +440,6 @@ def _get_start_end(
 
     assert length > 0
 
-    def divisible(i: int) -> bool:
-        return i % 3 == 0 and i % 2 == 0
-
-    if not divisible(length):
-        raise ValueError(
-            f'length {length} must be divisible by 3 and 2 to ensure codon frame and symmetry')
-
     if cds_index == -1:  # stop codon
         start = end - length // 2
         codon_at = end - 3
@@ -395,17 +451,17 @@ def _get_start_end(
     return start, end, codon_at - start
 
 
-# TODO (gdingle): do we really need this for anything?
-def get_exon_junctions(ensembl_transcript_id: str) -> list:
-    """
-    >>> get_exon_junctions('ENST00000221801')
-    [124, 5798, 6001, 6182, 7380, 8704, 9859, 11747, 11957]
-    """
-    record = fetch_ensembl_transcript(ensembl_transcript_id)
-    exons = [f for f in record.features if f.type == 'exon']
-    assert len(exons)
-    locations = [int(exon.location.end) for exon in exons]
-    return locations
+def _validate_length(length: int) -> None:
+    # TODO (gdingle): refactor to somewhere better
+    if length == -1:
+        return None
+
+    def divisible(i: int) -> bool:
+        return i % 3 == 0 and i % 2 == 0
+
+    if not divisible(length):
+        raise ValueError(
+            f'length {length} must be divisible by 3 and 2 to ensure codon frame and symmetry')
 
 
 if __name__ == '__main__':

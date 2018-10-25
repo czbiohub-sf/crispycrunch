@@ -256,6 +256,8 @@ def get_insert(
     Get the desired insert point assuming the start or stop codon
     is in the expected place. See protospacex._get_start_end.
 
+    # TODO (gdingle): we shouldn't need to recompute this... refactor with protospacex
+
     >>> get_insert(ChrLoc('chr5:1-30'))
     4
     >>> get_insert(ChrLoc('chr5:1-60'))

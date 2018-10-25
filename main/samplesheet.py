@@ -351,6 +351,7 @@ def _new_samplesheet() -> DataFrame:
             '_hdr_tag',
             '_hdr_seq',
             'hdr_dist',
+            # TODO (gdingle): does template technically include 55bp arms? rename? hdr_inserted?
             'hdr_template',
             'hdr_mutated',
             # TODO (gdingle): we can't have these and join with ps_df
