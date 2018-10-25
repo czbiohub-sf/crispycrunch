@@ -410,6 +410,7 @@ class GuideDesign(BaseModel):
             raise ValueError(
                 'HDR tags entered per target but also "{}". Did you mean to select "per target" HDR?'.format(
                     self.hdr_tag_verbose))
+        # TODO (gdingle): write exception
         assert not target_tags or len(target_tags) == len(targets_raw)
         return targets_raw, target_tags
 
@@ -426,13 +427,13 @@ class GuideDesign(BaseModel):
             'target_loc': self.targets,
             'target_seq': self.target_seqs,
             'target_gene': self.target_genes,
+            # Below only used per_target
             'target_tag': target_tags or None,
-            'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags],
-            'target_terminus': [tag_to_terminus[t] for t in target_tags],
+            'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags] or None,
+            'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
         })
         df_guides = DataFrame()
         for gd in self.guide_data:
-            # TODO (gdingle): should this be in scraperequest?
             df_guides = df_guides.append(DataFrame(data={
                 # scalars
                 'target_loc': gd['target'],

@@ -413,6 +413,7 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 
 def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
     hdr_tag = guide_design.hdr_tag
+    # TODO (gdingle): move this logic into to_df in model
     if hdr_tag == 'per_target':
         sheet['_hdr_tag'] = list(guides['target_tag'])
         sheet['_hdr_seq'] = list(guides['hdr_seq'])
@@ -453,6 +454,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
         if guide_design.hdr_tag == 'per_target':
+            # TODO (gdingle): move this logic into to_df in model
             cds_index = GuideDesign.HDR_TAG_TO_CDS_INDEX[row['_hdr_tag']]
         else:
             cds_index = guide_design.cds_index
