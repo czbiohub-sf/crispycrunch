@@ -39,6 +39,8 @@ _cache = _cached_session.cache
 # NOTE: This monkey-patch is needed for a stable cache key for file uploads.
 urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boundary'
 
+# CRISPOR_BASE_URL = 'http://crispor.tefor.net/crispor.py'
+CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
 
 class AbstractScrapeRequest:
 
@@ -84,8 +86,9 @@ class CrispressoRequest(AbstractScrapeRequest):
     """
 
     # TODO (gdingle): parameterize
-    # base_url = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
-    base_url = 'http://crispresso.pinellolab.partners.org'
+    base_url = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
+    # TODO (gdingle): why is this broken currently?
+    # base_url = 'http://crispresso.pinellolab.partners.org'
 
     def __init__(self,
                  amplicon: str,
@@ -322,9 +325,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # sort by number of off-targets
             'submit': 'SUBMIT',
         }
-        # TODO (gdingle): parameterizea
-        self.endpoint = 'http://crispor.tefor.net/crispor.py'
-        # self.endpoint = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
+        self.endpoint = CRISPOR_BASE_URL
         self.request = requests.Request(  # type: ignore
             'POST', self.endpoint, data=self.data).prepare()
         self.target = target or seq
@@ -484,7 +485,7 @@ class CrisporGuideRequestByBatchId(CrisporGuideRequest):
     """
 
     def __init__(self, batch_id: str, pre_filter: int = 5) -> None:
-        self.endpoint = 'http://crispor.tefor.net/crispor.py?batchId=' + batch_id
+        self.endpoint = CRISPOR_BASE_URL + '?batchId=' + batch_id
         self.request = requests.Request('GET', self.endpoint).prepare()  # type: ignore
         self.target = batch_id
         self.pre_filter = pre_filter
@@ -496,12 +497,29 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
     NOTE: Crispor uses Primer3 under the covers.
 
-    >>> req = CrisporPrimerRequest('9cJNEsbfWiSKa8wlaJMZ', 's185+')
+    NOTE: These test came from
+    CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
+
+    >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's45-')
     >>> data = req.run()
     >>> len(data['ontarget_primers']) == 2
     True
 
     >>> req.in_cache()
+    True
+
+    With HDR.
+
+    >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's45-', hdr_dist=0)
+    >>> data = req.run()
+    >>> data['ontarget_primers']
+    {}
+
+    Test guide #2 has HDR primers.
+
+    >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's11-', hdr_dist=0)
+    >>> data = req.run()
+    >>> len(data['ontarget_primers']) == 2
     True
     """
 
@@ -512,13 +530,17 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             amp_len: int=250,
             tm: int=60,
             pam: str='NGG',
-            target: str='') -> None:
+            target: str='',
+            hdr_dist: int = None) -> None:
 
         self.pam_id = pam_id
         quoted_pam_id = urllib.parse.quote(pam_id)  # percent encode the '+' symbol
-        self.endpoint = 'http://crispor.tefor.net/crispor.py' + \
-            '?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'.format(
-                **locals())
+
+        self.endpoint = CRISPOR_BASE_URL
+        self.endpoint += f'?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'
+        if hdr_dist is not None:
+            self.endpoint += f'&hdrDist={hdr_dist}'
+
         self.target = target  # just for metadata
         self.request = requests.Request('GET', self.endpoint).prepare()  # type: ignore
 

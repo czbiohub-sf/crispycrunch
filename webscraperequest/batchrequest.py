@@ -220,4 +220,5 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
 
 
 if __name__ == '__main__':
+    # TODO (gdingle): fix tests
     doctest.testmod()
