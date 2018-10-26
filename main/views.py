@@ -328,6 +328,7 @@ class PrimerDesignView(CreatePlusView):
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   row['_crispor_guide_id'],
+                  # TODO (gdingle): convert to using _hdr_insert_at
                   int(row['hdr_dist'])]
                  for row in sheet.to_records()]
         batch.start(largs, [-2, -1])

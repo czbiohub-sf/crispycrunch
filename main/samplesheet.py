@@ -20,7 +20,7 @@ from main.models import Analysis, Experiment, GuideDesign, GuideSelection, Prime
 from protospacex import get_cds_seq, get_ultramer_seq
 from utils import conversions
 from utils import hdr
-from utils.chrloc import ChrLoc, get_guide_cut_to_insert, get_guide_loc, get_primer_loc
+from utils.chrloc import *
 
 # TODO (gdingle): move to conversions
 from crispresso.fastqs import reverse_complement
@@ -350,6 +350,7 @@ def _new_samplesheet() -> DataFrame:
             '_crispor_guide_id',
             '_hdr_tag',
             '_hdr_seq',
+            '_hdr_insert_at',
             'hdr_dist',
             'hdr_inserted',
             'hdr_mutated',
@@ -429,6 +430,10 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['guide_loc'],
             row['_hdr_tag'],
         ),
+        axis=1,
+    )
+    sheet['_hdr_insert_at'] = sheet.apply(
+        lambda row: get_insert(row['target_loc'], row['_hdr_tag']),
         axis=1,
     )
     sheet['hdr_inserted'] = sheet.apply(
