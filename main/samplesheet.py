@@ -533,7 +533,10 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
         # stop codons outside of cds? see for example ENST00000299300
 
-        return recombined
+        if not row['_guide_strand_same']:
+            return reverse_complement(recombined)
+        else:
+            return recombined
 
     sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
 
