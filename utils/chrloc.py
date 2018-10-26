@@ -92,6 +92,10 @@ class ChrLoc:
             ':' + self.strand if self.strand else '')
 
     @property
+    def opposite_strand(self):
+        return {'+': '-', '-': '+'}[self.strand]
+
+    @property
     def as_strand_direction(self):
         return 'chr{}:{}-{}'.format(
             self.chr,

@@ -66,16 +66,16 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     # DEFINITION: number of chars before the first char of NGG PAM
     sheet['guide_offset'] = [int(g['_crispor_pam_id'][1:-1]) for g in guides.to_records()]
 
-    # Currently, this is relative to target strand, because that's how
-    # Crispor defines it. So _guide_strand == '+' means "same strand as target".
-    sheet['_guide_strand'] = [g['_crispor_pam_id'][-1] for g in guides.to_records()]
+    # Crispor returns guide strand relative to target, NOT genome.
+    sheet['_guide_strand_same'] = [g['_crispor_pam_id'][-1] == '+'
+                                   for g in guides.to_records()]
 
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
             row['target_loc'],
             row['guide_offset'],
             len(row['guide_seq']),
-            row['_guide_strand']),
+            '+' if row['_guide_strand_same'] else '-'),
         axis=1,
     )
 
@@ -132,7 +132,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand']).guide_seq_aligned
+            row['_guide_strand_same']).guide_seq_aligned
 
         # Crispor returns primer products by strand. Normalize to positive strand.
         if row['target_loc'].strand == '-':
@@ -155,7 +155,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand']).inserted
+            row['_guide_strand_same']).inserted
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
 
@@ -215,7 +215,7 @@ def _transform_primer_product(row) -> str:
     if 'N' not in row['primer_product']:
         return row['primer_product']
 
-    if row['_guide_strand'] == '+':
+    if row['_guide_strand_same']:
         guide_seq = row['guide_seq']
     else:
         guide_seq = reverse_complement(row['guide_seq'])
@@ -341,7 +341,7 @@ def _new_samplesheet() -> DataFrame:
             'target_seq',
             'guide_offset',
             'guide_loc',
-            '_guide_strand',
+            '_guide_strand_same',
             'guide_seq',
             'guide_pam',
             'guide_score',
@@ -437,7 +437,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand']).inserted,
+            row['_guide_strand_same']).inserted,
         axis=1,
     )
 
@@ -467,7 +467,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand'],
+            row['_guide_strand_same'],
             cds_seq)
 
         if not row_hdr.should_mutate:
@@ -493,8 +493,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand'])
-        if row['_guide_strand'] == '+':
+            row['_guide_strand_same'])
+        if row['_guide_strand_same']:
             guide_seq = ghdr.guide_seq
         else:
             guide_seq = reverse_complement(ghdr.guide_seq)
@@ -527,7 +527,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand'])
+            row['_guide_strand_same'])
         recombined = left_bit + uhdr.inserted_mutated + right_bit
         assert len(recombined) == 200, '200bp is standard of leonetti group'
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
