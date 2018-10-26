@@ -528,7 +528,12 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same'])
-        recombined = left_bit + uhdr.inserted_mutated + right_bit
+        try:
+            # TODO (gdingle): figure out why some guides are not found in HDR
+            recombined = left_bit + uhdr.inserted_mutated + right_bit
+        except Exception:
+            return 'error in ultramer: codon false positive?'
+
         assert len(recombined) == 200, '200bp is standard of leonetti group'
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
         # stop codons outside of cds? see for example ENST00000299300

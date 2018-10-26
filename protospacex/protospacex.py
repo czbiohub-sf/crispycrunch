@@ -394,6 +394,9 @@ def get_ultramer_seq(
     >>> get_ultramer_seq('ENST00000221801', -1)
     'CCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTGTGT'
 
+    # TODO (gdingle): what about this case where there is not enough in the transcript for the ultarmer?
+    >> get_ultramer_seq('ENST00000258648')
+
     """
 
     record = fetch_ensembl_transcript(ensembl_transcript_id)
@@ -414,17 +417,17 @@ def get_ultramer_seq(
         start = start - length // 2
     assert end - start == length
 
-    cds_seq = record.seq[start:end]
+    ult_seq = record.seq[start:end]
 
-    assert len(cds_seq) == length, len(cds_seq)
+    assert len(ult_seq) == length, (len(ult_seq), start, end)
 
     codon_at = codon_at - start  # make relative to
     if cds_index == 0:
-        assert cds_seq[codon_at:codon_at + 3] == 'ATG', (start, end, codon_at, cds_seq)
+        assert ult_seq[codon_at:codon_at + 3] == 'ATG', (start, end, codon_at, ult_seq)
     elif cds_index == -1:
-        assert cds_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
+        assert ult_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
 
-    return str(cds_seq)
+    return str(ult_seq)
 
 
 def _get_start_end(

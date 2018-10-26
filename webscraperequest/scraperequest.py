@@ -42,6 +42,7 @@ urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boun
 # CRISPOR_BASE_URL = 'http://crispor.tefor.net/crispor.py'
 CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
 
+
 class AbstractScrapeRequest:
 
     def __repr__(self):
@@ -557,6 +558,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             return self._extract_data(soup)
         except RuntimeError as e:
             logger.warning(str(e))
+            _cache.delete(self.cache_key)
             if retries:
                 return self.run(retries - 1)
             else:

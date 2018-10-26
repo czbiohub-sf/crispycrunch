@@ -307,10 +307,7 @@ class GuideSelectionView(CreatePlusView):
 
     def get_context_data(self, **kwargs):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        kwargs['crispor_urls'] = dict(
-            (gd['target'], gd['url'])
-            for gd in guide_design.guide_data
-            if gd.get('url'))
+        kwargs['crispor_urls'] = guide_design.crispor_urls
         return super().get_context_data(**kwargs)
 
 
@@ -331,7 +328,7 @@ class PrimerDesignView(CreatePlusView):
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   row['_crispor_guide_id'],
-                  row['hdr_dist']]
+                  int(row['hdr_dist'])]
                  for row in sheet.to_records()]
         batch.start(largs, [-2, -1])
 
@@ -383,10 +380,7 @@ class PrimerSelectionView(CreatePlusView):
         return obj
 
     def get_context_data(self, **kwargs):
-        primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
-        kwargs['crispor_urls'] = dict(
-            (p['target'], p['url'] + '#ontargetPcr')
-            for p in primer_data)
+        kwargs['crispor_urls'] = PrimerDesign.objects.get(id=self.kwargs['id']).crispor_urls
         return super().get_context_data(**kwargs)
 
 

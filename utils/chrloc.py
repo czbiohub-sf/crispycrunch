@@ -205,23 +205,6 @@ class GuideChrLoc(ChrLoc):
                 end=self.end + 3
             )
 
-    @property
-    def cut(self):
-        """
-        Cut location is assumed to be always in between the 3rd and 4th
-        nucleotide in the guide. ChrLoc always starts at 1.
-        """
-        if self.strand == '-':
-            return self.copy(
-                start=self.start + 2,
-                end=self.start + 3
-            )
-        else:
-            return self.copy(
-                start=self.end - 3,
-                end=self.end - 2
-            )
-
 
 def get_guide_loc(
         target_loc: ChrLoc,
@@ -303,9 +286,12 @@ def get_guide_cut_to_insert(
     >>> get_guide_cut_to_insert(ChrLoc('chr5:1-30:+'),
     ... GuideChrLoc('chr5:1-20:+'), 'stop_codon')
     5
+
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-30:+'),
+    ... GuideChrLoc('chr5:1-20:-'), 'stop_codon')
+    -9
     """
     assert guide_loc in target_loc
-    # cut = guide_loc.cut.end
 
     assert target_loc.strand
     if target_loc.strand == guide_loc.strand:

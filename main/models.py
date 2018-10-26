@@ -28,12 +28,14 @@ from utils.validators import *
 N_TERMINUS_EXAMPLES = [
     # TODO (gdingle): understand why all commented out are "not found"
     # 'ENST00000066544',
-    'ENST00000222990',
+    # TODO (gdingle): why error during processing?
+    # 'ENST00000222990',
     'ENST00000225728',
     'ENST00000250498',
     'ENST00000252992',
     'ENST00000256474',
-    'ENST00000258648',
+    # TODO (gdingle): why does get_ultramer_seq not work for this?
+    # 'ENST00000258648',
     'ENST00000264935',
     'ENST00000264982',
     'ENST00000268711',
@@ -49,7 +51,8 @@ N_TERMINUS_EXAMPLES = [
     'ENST00000309439',
     'ENST00000313525',
     'ENST00000321685',
-    'ENST00000323927',
+    # TODO (gdingle): why does get_ultramer_seq not work for this?
+    # 'ENST00000323927',
     'ENST00000324817',
     'ENST00000331821',
     'ENST00000339839',
@@ -60,7 +63,8 @@ N_TERMINUS_EXAMPLES = [
     'ENST00000370277',
     'ENST00000394903',
     'ENST00000431606',
-    'ENST00000455511',
+    # TODO (gdingle): why does get_ultramer_seq not work for this?
+    # 'ENST00000455511',
     # 'ENST00000529196',
     'ENST00000579978',
     'ENST00000610888',
@@ -134,6 +138,7 @@ ENST_EXAMPLE = [
     'ENST00000411809',
     'ENST00000398844',
 ]
+
 
 # TODO (gdingle): temp
 JASON_LI_EXAMPLE = [
@@ -356,8 +361,8 @@ class GuideDesign(BaseModel):
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
         # default=ENST_EXAMPLE,
-        # default=N_TERMINUS_EXAMPLES,
-        default=C_TERMINUS_EXAMPLES,
+        default=N_TERMINUS_EXAMPLES,
+        # default=C_TERMINUS_EXAMPLES,
     )
 
     # TODO (gdingle): rename to target_locs when wiping whole database
@@ -489,7 +494,6 @@ class GuideDesign(BaseModel):
             # 5 based on safe-harbor experiment
             return self.wells_per_target * 5
 
-
     @property
     def cds_index(self):
         if not self.hdr_tag:
@@ -518,6 +522,12 @@ class GuideDesign(BaseModel):
         if not self.hdr_tag:
             return None
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
+
+    @property
+    def crispor_urls(self):
+        return dict((gd['target'], gd['url'])
+                    for gd in self.guide_data
+                    if gd.get('url'))
 
 
 class GuideSelection(BaseModel):
@@ -603,6 +613,12 @@ class PrimerDesign(BaseModel):
             return self.max_amplicon_length - 100
         else:
             return self.max_amplicon_length
+
+    @property
+    def crispor_urls(self):
+        return dict(
+            (p['target'], p['url'] + '#ontargetPcr')
+            for p in self.primer_data)
 
 
 class PrimerSelection(BaseModel):
