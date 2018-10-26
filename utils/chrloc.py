@@ -227,29 +227,29 @@ def get_guide_loc(
         target_loc: ChrLoc,
         guide_offset: int,
         guide_len: int = 20,
-        guide_direction: str = '+') -> GuideChrLoc:
+        guide_strand_same: bool = True) -> GuideChrLoc:
     """
     Example forward:
     AAGATAGGTGATGAAGGAGGGTCCCCAGG
           GGTGATGAAGGAGGGTCCCC
 
-    >>> get_guide_loc(ChrLoc('chr7:1-30'), 26)
+    >>> get_guide_loc(ChrLoc('chr7:1-30:+'), 26)
     ChrLoc('chr7:7-26:+')
 
     Example reverse:
     CCATGGCTGAGCTGGATCCGTTCGGC
        TGGCTGAGCTGGATCCG
 
-    >>> get_guide_loc(ChrLoc('chr7:1-26'), 0, 20, '-')
+    >>> get_guide_loc(ChrLoc('chr7:1-26:+'), 0, 20, False)
     ChrLoc('chr7:4-23:-')
     """
     pam = target_loc.start + guide_offset
     return GuideChrLoc(
         'chr{}:{}-{}:{}'.format(
             target_loc.chr,
-            pam + 3 if guide_direction == '-' else pam - guide_len,
-            pam + guide_len + 2 if guide_direction == '-' else pam - 1,
-            guide_direction)
+            pam + 3 if not guide_strand_same else pam - guide_len,
+            pam + guide_len + 2 if not guide_strand_same else pam - 1,
+            target_loc.strand if guide_strand_same else target_loc.opposite_strand)
     )
 
 
@@ -290,22 +290,28 @@ def get_guide_cut_to_insert(
     """
     Based on example from https://czi.quip.com/YbAhAbOV4aXi/
 
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40'),
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40:+'),
     ... GuideChrLoc('chr5:1-20:+'))
     14
 
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40'),
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40:+'),
     ... GuideChrLoc('chr5:2-21:-'))
     1
 
     # 30bp target, stop codon ends at 16, insert at 13
     # 20bp guide, end of cut is at 18
-    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-30'),
+    >>> get_guide_cut_to_insert(ChrLoc('chr5:1-30:+'),
     ... GuideChrLoc('chr5:1-20:+'), 'stop_codon')
     5
     """
     assert guide_loc in target_loc
-    cut = guide_loc.cut.end
+    # cut = guide_loc.cut.end
+
+    assert target_loc.strand
+    if target_loc.strand == guide_loc.strand:
+        cut = guide_loc.end - 2
+    else:
+        cut = guide_loc.start + 3
 
     insert = get_insert(target_loc, hdr_tag)
     return cut - insert

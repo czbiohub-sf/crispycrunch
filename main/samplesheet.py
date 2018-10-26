@@ -75,7 +75,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
             row['target_loc'],
             row['guide_offset'],
             len(row['guide_seq']),
-            '+' if row['_guide_strand_same'] else '-'),
+            row['_guide_strand_same']),
         axis=1,
     )
 
