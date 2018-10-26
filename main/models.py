@@ -477,6 +477,20 @@ class GuideDesign(BaseModel):
     }
 
     @property
+    def pre_filter(self):
+        """
+        The number of guides to check for primer existance *before* saving in guide_data.
+        """
+        # TODO (gdingle): review when and how to prefilter
+        if self.hdr_tag:
+            # Don't prefilter because primer design is too different with hdr_dist in crispor
+            return 0
+        else:
+            # 5 based on safe-harbor experiment
+            return self.wells_per_target * 5
+
+
+    @property
     def cds_index(self):
         if not self.hdr_tag:
             return None

@@ -210,10 +210,16 @@ class GuideDesignView(CreatePlusView):
         )
 
         batch = webscraperequest.CrisporGuideBatchWebRequest(obj)
-        pre_filter = obj.wells_per_target * 5  # 5 based on safe-harbor experiment
-        largs = [[target_seq, obj.experiment.name, obj.genome, obj.pam, target, pre_filter]
-                 for target, target_seq in zip(obj.targets, obj.target_seqs)]
-        batch.start(largs, [-2])
+
+        largs = [[
+            target_seq,
+            obj.experiment.name,
+            obj.genome,
+            obj.pam,
+            target,
+            obj.pre_filter]
+            for target, target_seq in zip(obj.targets, obj.target_seqs)]
+        batch.start(largs, [-2, 0])
 
         return obj
 
