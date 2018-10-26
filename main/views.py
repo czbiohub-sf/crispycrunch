@@ -324,9 +324,10 @@ class PrimerDesignView(CreatePlusView):
                   obj.amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
-                  row['_crispor_guide_id']]
+                  row['_crispor_guide_id'],
+                  row['hdr_dist']]
                  for row in sheet.to_records()]
-        batch.start(largs, [-1])
+        batch.start(largs, [-2, -1])
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
