@@ -219,7 +219,7 @@ class GuideDesignView(CreatePlusView):
             target,
             obj.pre_filter]
             for target, target_seq in zip(obj.targets, obj.target_seqs)]
-        batch.start(largs, [-2, 0])
+        batch.start(largs, [-2])
 
         return obj
 
@@ -328,7 +328,7 @@ class PrimerDesignView(CreatePlusView):
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   row['_crispor_guide_id'],
-                  # TODO (gdingle): convert to using _hdr_insert_at
+                  # TODO (gdingle): convert to using _hdr_insert_at... or not?
                   int(row['hdr_dist'])]
                  for row in sheet.to_records()]
         batch.start(largs, [-2, -1])

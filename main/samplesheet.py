@@ -146,16 +146,22 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             return 'guide not found: ' + primer_product
 
         start = guide_offset % 3
+
+        # TODO (gdingle): HACK ALERT!!! For as yet unknown reason,
+        # the insert is misidentified. We set a buffer here to avoid the worst.
+        start += 81
+
         before, primer_product_aligned = \
             primer_product[:start], primer_product[start:]
         assert before + primer_product_aligned == primer_product
 
-        hdr_primer_product = hdr.HDR(
+        phdr = hdr.HDR(
             primer_product_aligned,
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand_same']).inserted
+            row['_guide_strand_same'])
+        hdr_primer_product = phdr.inserted_mutated if phdr.should_mutate else phdr.inserted
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
 
@@ -170,6 +176,10 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             # previous warning
             return primer_product
 
+        if row['hdr_mutated'] not in primer_product and \
+                row['hdr_inserted'] not in primer_product:
+            return 'inconsistent HDR insertion: ' + primer_product
+
         plen = len(primer_product)
         if plen > max_amplicon_length:
             return f'too long, {plen}bp: {primer_product}'
@@ -183,6 +193,9 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
     sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
+
+    # TODO (gdingle): need to get mutated primer product as well?
+
     return sheet
 
 
@@ -198,6 +211,7 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     return guides_df
 
 
+# TODO (gdingle): should not be needed anymore after crispor mods
 def _transform_primer_product(row) -> str:
     """
     This is only necessary because Crispor returns NNNs in primer product.

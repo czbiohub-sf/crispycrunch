@@ -550,6 +550,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
     def run(self,
             retries: int=1) -> dict:
+        # TODO (gdingle): temp for working on crispor
+        # _cache.delete(self.cache_key)
         try:
             logger.info('GET request to: {}'.format(self.endpoint))
             response = _cached_session.send(self.request)  # type: ignore
@@ -605,6 +607,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             #     message.get_text()))
 
         if table is None:
+            # TODO (gdingle): catch crispor execptions here?
             text = ontargetPcr.find_next('div').get_text()
             if 'No perfect match found' in text:
                 raise ValueError('Cripor at {}: "{}"'.format(
