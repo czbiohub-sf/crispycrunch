@@ -415,7 +415,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     },
                 )
             if 'An error occured during processing' in soup.get_text():
-                raise RuntimeError('Crispor: An error occured during processing.')
+                raise RuntimeError(
+                    'Crispor: An error occured during processing: {}'.format(self.data['seq']))
 
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
                 self.target, soup.find('body')))
@@ -630,13 +631,14 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
 
 if __name__ == '__main__':
-    import doctest  # noqa
-    doctest.testmod()
+    # import doctest  # noqa
+    # doctest.testmod()
 
-    # seq = 'chr2:150500625-150500725'
-    # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
-    # data = req.run()
-    # print(data)
+    # seq = 'chrX:49250226-49250297'
+    seq = 'AACGCTGGCCTCCTAGGCCGGGTCCGGGAGGCCTGAGGAGCCGCCGGCAGAGGTCTCTCCCCAGCCTCAGGC'
+    req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
+    data = req.run()
+    print(data)
 
     # req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl', pre_filter=5)
     # data = req.run()
