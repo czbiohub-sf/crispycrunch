@@ -154,10 +154,10 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [['chr1:11,130,540-11,130,751'], ['chr1:1-1']]
     >>> batch.start(largs)
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, True, None), (1, True, None)])
+    BatchStatus([], [], [(0, 'in cache'), (1, 'in cache')])
     >>> time.sleep(1)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
-    BatchStatus([(0, True, True, ...)], [(1, True, False, 'Crispor on chr1:1-1: Bad sequence size: 8')], [])
+    BatchStatus([(0, 'in cache', ...)], [(1, 'in cache', 'Crispor on chr1:1-1: Bad sequence size: 8')], [])
     """
     requester = CrisporGuideRequest
     field_name = 'guide_data'
@@ -171,10 +171,10 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [['9cJNEsbfWiSKa8wlaJMZ', 's185+']]
     >>> batch.start(largs, [0, 1])
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, True, None, '9cJNEsbfWiSKa8wlaJMZ', 's185+')])
+    BatchStatus([], [], [(0, '', '9cJNEsbfWiSKa8wlaJMZ', 's185+')])
     >>> time.sleep(1)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
-    BatchStatus([(0, True, True, '9cJNEsbfWiSKa8wlaJMZ', 's185+', ...)], [], [])
+    BatchStatus([], [], [(0, '', '9cJNEsbfWiSKa8wlaJMZ', 's185+')])
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
@@ -191,15 +191,13 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
     >>> largs = [[amplicon, sgRNA, fastq_r1, fastq_r2]]
     >>> batch.start(largs)
     >>> print(batch.get_batch_status())
-    BatchStatus([], [], [(0, True, None)])
+    BatchStatus([], [], [(0, 'in cache')])
     >>> time.sleep(4)
     >>> print(batch.get_batch_status()) # doctest: +ELLIPSIS
-    BatchStatus([(0, True, True, ...)], [], [])
+    BatchStatus([(0, ...)], [], [])
     """
     requester = CrispressoRequest
     field_name = 'results_data'
-    # Crispresso appears to process only 1 (!) analysis simulatenously.
-    # TODO (gdingle): can we increase by talking to Luca Pinello?
     max_workers = 4
 
     @staticmethod
@@ -220,5 +218,5 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
 
 
 if __name__ == '__main__':
-    # TODO (gdingle): fix tests
+    # TODO (gdingle): re-run tests on new crispor server, save in cache
     doctest.testmod()

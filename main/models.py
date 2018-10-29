@@ -23,8 +23,6 @@ from utils.validators import *
 # https://docs.djangoproject.com/en/2.1/_modules/django/contrib/postgres/forms/array/
 
 
-# TODO (gdingle): temp
-
 N_TERMINUS_EXAMPLES = [
     # TODO (gdingle): understand why all commented out are "not found"
     # 'ENST00000066544',
@@ -139,8 +137,6 @@ ENST_EXAMPLE = [
     'ENST00000398844',
 ]
 
-
-# TODO (gdingle): temp
 JASON_LI_EXAMPLE = [
     'chr2:38377424-38377154',
     'chr11:63671469-63671209',
@@ -396,8 +392,7 @@ class GuideDesign(BaseModel):
         blank=True,
         max_length=40,
         verbose_name='Insert tag by HDR',
-        # TODO (gdingle): no longer GFP... switch to other name Neon something?
-        help_text='Insert GFP (Green Fluorescent Protein) by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
+        help_text='Insert green protein by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
 
     # TODO (gdingle): custom encoder/decoder for custom dict wrapper object
     guide_data = JSONField(default=list, blank=True,
@@ -411,11 +406,15 @@ class GuideDesign(BaseModel):
         targets_raw = [p[0].strip() for p in parsed]
         target_tags = [self.TERMINUS_TO_TAG[p[1].strip()]
                        for p in parsed if len(p) > 1]
+
         if self.hdr_tag != 'per_target' and target_tags:
             raise ValueError(
                 'HDR tags entered per target but also "{}". Did you mean to select "per target" HDR?'.format(
                     self.hdr_tag_verbose))
-        # TODO (gdingle): write exception
+
+        if self.hdr_tag == 'per_target' and not target_tags:
+            raise ValueError('You must specify "N" or "C" for each target')
+
         assert not target_tags or len(target_tags) == len(targets_raw)
         return targets_raw, target_tags
 
@@ -486,7 +485,6 @@ class GuideDesign(BaseModel):
         """
         The number of guides to check for primer existance *before* saving in guide_data.
         """
-        # TODO (gdingle): review when and how to prefilter
         if self.hdr_tag:
             # Don't prefilter because primer design is too different with hdr_dist in crispor
             return 0

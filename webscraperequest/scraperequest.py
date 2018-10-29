@@ -363,20 +363,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
         if 'Input sequence range too long' in soup.get_text() or \
                 'cannot handle sequences longer than' in soup.get_text():
-
-            # This is a hack to re-route to the dev version of Crispor which has
-            # a higher bp limit.
-            # TODO (gdingle): unfortunately dev version does not have hg38!!!
-            # TODO (gdingle): split up input into mulitple requests
-            size = len(self.data['seq'])
-            # if size <= 10000:
-            #     self.endpoint = 'http://crispor-max.tefor.net/crispor.py'
-            #     self.request = requests.Request('POST', self.endpoint, data=self.data).prepare()  # type: ignore
-            #     raise TimeoutError('Large seq size {}. Retry on {}'.format(
-            #         size, self.endpoint))
-            # else:
-            raise ValueError('Crispor on {}: Bad sequence size: {}'.format(
-                self.target, size))
+            raise ValueError('Crispor on {}: Bad sequence size.'.format(
+                self.target))
 
         if 'This page will refresh every 10 seconds' in soup.get_text():
             raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(
@@ -473,6 +461,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             scores=scores,
             primer_urls=primer_urls,
             # TODO (gdingle): are these links ever needed?
+            # TODO (gdingle): add link to batch primer download
             fasta_url=self.endpoint + '?batchId={}&download=fasta'.format(batch_id),
             benchling_url=self.endpoint + '?batchId={}&download=benchling'.format(batch_id),
             guides_url=self.endpoint + '?batchId={}&download=guides&format=tsv'.format(batch_id),
@@ -602,10 +591,6 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         message = ontargetPcr.find_next('strong')
         if message and 'Warning' in message.get_text():
             return {}  # will be interpreted as 'not found'
-            # TODO (gdingle): better to raise exception?
-            # raise ValueError('Cripor at {}: "{}"'.format(
-            #     self.endpoint,
-            #     message.get_text()))
 
         if table is None:
             # TODO (gdingle): catch crispor execptions here?

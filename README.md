@@ -50,7 +50,6 @@ Create a superuser for admin.
 NOTE: a superuser is automatically created by `eb deploy`.
 
 # Usage
-<!-- TODO: better homepage -->
 
 Go to http://localhost:8000/main/experiment. Create a new experiment and follow the subsequent steps.
 

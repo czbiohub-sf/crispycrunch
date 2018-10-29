@@ -53,14 +53,13 @@ def _reformat_fasta(fasta: str) -> str:
     return ''.join(fasta.split('\n')[1:])
 
 
-# TODO (gdingle): switch to togows
+# TODO (gdingle): switch to togows?
+# TODO (gdingle): need to filter better among all the chr results for a gene
+# TODO (gdingle): how does this deal with reverse strand?
 def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     """
     Takes the top result from USCS genome browser. See for example:
     https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=ATL2
-
-    # TODO (gdingle): need to filter better among all the chr results for a gene
-    # TODO (gdingle): how does this deal with reverse strand?
 
     >>> gene_to_chr_loc('ATL2')
     'chr2:38294880-38377262'

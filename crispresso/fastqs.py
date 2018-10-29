@@ -188,6 +188,7 @@ def find_matching_pair(
                 len(list(fastq_r1s)), primer_seq_fwd))
 
 
+# TODO (gdingle): move to conversions or somewhere?
 def reverse_complement(seq: str) -> str:
     """
     >>> seq_in = 'AATCGGTACAAGATGGCGGA'
@@ -198,7 +199,7 @@ def reverse_complement(seq: str) -> str:
     True
     """
     complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A',
-        'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
+                  'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
     return ''.join(complement[base] for base in reversed(seq))
 
 

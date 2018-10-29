@@ -22,7 +22,6 @@ from utils import conversions
 from utils import hdr
 from utils.chrloc import *
 
-# TODO (gdingle): move to conversions
 from crispresso.fastqs import reverse_complement
 
 logger = logging.getLogger(__name__)
@@ -168,12 +167,13 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
 
-        # TODO: Normalize back to direction of Crispor return?
+        # TODO: Normalize back to direction of Crispor return? what strand to show primer product?
         return before + hdr_primer_product
 
-    # TODO (gdingle): fix root cause of issues... need more control over primer3
-    # can we remove now that we modified crispor?
     def warn_hdr_primer(row) -> str:
+        """
+        These should happen rarely when using Crispor modified for HDR.
+        """
         primer_product = row['primer_product']
 
         if ' ' in primer_product:
@@ -197,8 +197,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
     sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
-
-    # TODO (gdingle): need to get mutated primer product as well?
 
     return sheet
 
@@ -387,12 +385,11 @@ def _new_samplesheet() -> DataFrame:
             'report_stats',
         ])
 
+
 # TODO (gdingle): _insert_fastqs is deprecated pending whether
 # illumina sequencer sample sheet will correctly communicate names
 # of fastq files.
 # TODO (gdingle): remove me when matching proven
-
-
 def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
     """
     Insert pairs of fastq sequence files into their corresponding rows.
@@ -536,6 +533,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             cds_index = guide_design.cds_index
         assert isinstance(cds_index, int)
 
+        # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
+        # stop codons outside of cds? see for example ENST00000299300
         ultramer_seq = get_ultramer_seq(row['target_input'], cds_index)
 
         left_bit, codon_aligned, right_bit = (
@@ -558,8 +557,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             return 'error in ultramer: codon false positive?'
 
         assert len(recombined) == 200, '200bp is standard of leonetti group'
-        # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
-        # stop codons outside of cds? see for example ENST00000299300
 
         if not row['_guide_strand_same']:
             return reverse_complement(recombined)

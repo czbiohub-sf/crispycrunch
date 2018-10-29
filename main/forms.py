@@ -14,7 +14,7 @@ class PrettyJsonWidget(widgets.Textarea):
         return json.dumps(json.loads(value), indent=2)
 
 
-# TODO (gdingle): get this working
+# TODO (gdingle): get this working or use YAML
 # class FriendlyJSONField(JSONField):
 
 #     def clean(self, value):
