@@ -42,6 +42,9 @@ urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boun
 # CRISPOR_BASE_URL = 'http://crispor.tefor.net/crispor.py'
 CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
 
+CRISPRESSO_BASE_URL = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
+# CRISPRESSO_BASE_URL = 'http://crispresso.pinellolab.partners.org'
+
 
 class AbstractScrapeRequest:
 
@@ -86,11 +89,6 @@ class CrispressoRequest(AbstractScrapeRequest):
     True
     """
 
-    # TODO (gdingle): parameterize
-    base_url = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
-    # TODO (gdingle): why is this broken currently?
-    # base_url = 'http://crispresso.pinellolab.partners.org'
-
     def __init__(self,
                  amplicon: str,
                  sgRNA: str,
@@ -98,7 +96,7 @@ class CrispressoRequest(AbstractScrapeRequest):
                  fastq_r2: str,
                  hdr_seq: str='',
                  optional_name: str='') -> None:
-        self.endpoint = self.base_url + '/submit'
+        self.endpoint = CRISPRESSO_BASE_URL + '/submit'
         self.data = {
             # NOTE: all post vars are required, even if empty
             'amplicon': amplicon,
@@ -145,10 +143,10 @@ class CrispressoRequest(AbstractScrapeRequest):
 
         self._wait_for_success(report_id)
 
-        report_data_url = self.base_url + '/reports_data/CRISPRessoRun{}'.format(report_id)
+        report_data_url = CRISPRESSO_BASE_URL + '/reports_data/CRISPRessoRun{}'.format(report_id)
         report_files_url = '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
         report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
-        report_url = self.base_url + '/view_report/' + report_id
+        report_url = CRISPRESSO_BASE_URL + '/view_report/' + report_id
         stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
 
         return {
@@ -205,7 +203,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         return soup.find(id='log_params').get_text()
 
     def _check_report_status(self, report_id: str) -> bool:
-        status_endpoint = self.base_url + '/status/'
+        status_endpoint = CRISPRESSO_BASE_URL + '/status/'
         status_url = status_endpoint + report_id
         logger.info('GET request to: {}'.format(status_url))
         # no cache here
@@ -217,7 +215,7 @@ class CrispressoRequest(AbstractScrapeRequest):
         elif report_status['state'] == 'PENDING':
             # Sometimes pending status is never set to success though the report exists.
             # The bug was reported to Luca Pinello.
-            report_url = self.base_url + '/view_report/' + report_id
+            report_url = CRISPRESSO_BASE_URL + '/view_report/' + report_id
             response = _cached_session.get(report_url)
             if response.status_code == 200:
                 return True
