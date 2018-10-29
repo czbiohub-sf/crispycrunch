@@ -109,6 +109,8 @@ class GuideDesignView(CreatePlusView):
             if guide_design.hdr_tag == 'per_target':
                 func = get_cds_chr_loc
                 cds_indexes = guide_design.cds_index
+                if not cds_indexes:
+                    raise ValidationError('You must specify "N" or "C" for each target')
                 cds_lengths = guide_design.cds_length
                 with ThreadPoolExecutor() as pool:
                     return list(pool.map(func, targets, cds_indexes, cds_lengths))
@@ -328,9 +330,11 @@ class PrimerDesignView(CreatePlusView):
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   row['_crispor_guide_id'],
-                  # TODO (gdingle): convert to using _hdr_insert_at... or not?
-                  int(row['hdr_dist'])]
-                 for row in sheet.to_records()]
+                  int(row['hdr_dist']) * (
+            # Crispycrunch hdr_dist is relative to strand of gene.
+            # Crispor hdr_dist is relative to positive genome strand.
+            1 if row['target_loc'].strand == '+' else -1)]
+            for row in sheet.to_records()]
         batch.start(largs, [-2, -1])
 
         # TODO (gdingle): run crispr-primer if HDR experiment

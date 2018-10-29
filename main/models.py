@@ -320,7 +320,7 @@ class GuideDesign(BaseModel):
         # See cds_length below
         ('start_codon', 'Within 36bp after start codon (N-terminus)'),
         ('stop_codon', 'Within 36bp before or after stop codon (C-terminus)'),
-        ('per_target', 'As indicated per target ("N" or "C")'),
+        ('per_target', 'As specified per target ("N" or "C")'),
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
         'start_codon': 'ACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATGGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
@@ -606,6 +606,8 @@ class PrimerDesign(BaseModel):
     def amplicon_length(self):
         """
         Knocks down size a notch to make space for hdr_seq in primer
+        # TODO (gdingle): this is no longer needed with mods to crispor
+        # need to indicate this somehow in UI
         """
         hdr_tag = self.guide_selection.guide_design.hdr_tag
         if hdr_tag:
