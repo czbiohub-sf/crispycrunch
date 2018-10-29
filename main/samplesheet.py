@@ -132,7 +132,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand_same']).guide_seq_aligned
+            row['_guide_strand_same'],
+        ).guide_seq_aligned
 
         # Crispor returns primer products by strand. Normalize to positive strand.
         if row['target_loc'].strand == '-':
@@ -149,6 +150,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         # TODO (gdingle): HACK ALERT!!! For as yet unknown reason,
         # the insert is misidentified. We set a buffer here to avoid the worst.
+        # The buffer length is a multiple of 3 less than the min homology len,
+        # and larger than the largest observed misidentification.
         start += 81
 
         before, primer_product_aligned = \
@@ -169,6 +172,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         return before + hdr_primer_product
 
     # TODO (gdingle): fix root cause of issues... need more control over primer3
+    # can we remove now that we modified crispor?
     def warn_hdr_primer(row) -> str:
         primer_product = row['primer_product']
 
