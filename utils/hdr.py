@@ -269,10 +269,22 @@ class HDR:
     @property
     def mutated(self) -> str:
         """
+        Mutates target sequence. If the guide PAM is outside the coding region,
+        the PAM is mutated in place. Otherwise, some codons in the guide are
+        mutated silently.
+
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.mutated
         'GCCATGGCTGAGCTGGATCCGTTtGGC'
+
+        PAM is outside.
+        >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >>> hdr.mutated
+        'CCTTccCTGATGTGGATCCGTTCGGC'
         """
+        if self.pam_outside_cds:
+            return self._pam_mutated
+
         start = self.target_seq.index(self.guide_seq_aligned)
         mutated = self.guide_mutated
         return ''.join((
@@ -280,6 +292,35 @@ class HDR:
             mutated,
             self.target_seq[start + len(mutated):],
         ))
+
+    @property
+    def _pam_mutated(self) -> str:
+        """
+        Target seq with 3bp PAM mutated inside it.
+
+        >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >>> hdr._pam_mutated
+        'CCTTccCTGATGTGGATCCGTTCGGC'
+
+        >>> hdr = HDR('ATGCCTTGGCTGATATGGATCCGT', hdr_dist=6, guide_strand_same=False)
+        >>> hdr._pam_mutated
+        'ATGggTTGGCTGATATGGATCCGT'
+        """
+        before, pam, after = (
+            self.target_seq[:self.pam_at],
+            self.target_seq[self.pam_at:self.pam_at + 3],
+            self.target_seq[self.pam_at + 3:]
+        )
+        assert len(pam) == 3
+        if self.guide_strand_same:
+            assert 'GG' in pam, pam
+            pam_mutated = pam.replace('GG', 'cc')
+        else:
+            assert 'CC' in pam, pam
+            pam_mutated = pam.replace('CC', 'gg')
+        combined = before + pam_mutated + after
+        assert len(combined) == len(self.target_seq)
+        return combined
 
     @property
     def guide_mutated(self) -> str:
@@ -305,7 +346,6 @@ class HDR:
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
         # in 3bp PAM? should we try to align to the hit_score_m? lols
-
         for mutated in mutate_silently(self.guide_seq_aligned, self.guide_strand_same):
             score = mit_hit_score(
                 mutated.upper(),
@@ -420,6 +460,38 @@ class HDR:
 
         # intact <= 0 means the insert is outside the guide + pam
         return intact <= 0 or intact >= 14
+
+    @property
+    def pam_at(self) -> int:
+        """
+        >>> hdr = HDR('ATGCCTTGGCTGATATGGATCCGT', hdr_dist=6, guide_strand_same=False)
+        >>> hdr.pam_at
+        3
+
+        >>> hdr = HDR('TCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >>> hdr.pam_at
+        3
+        """
+        if self.guide_strand_same is True:
+            return self.cut_at + 3
+        else:
+            return self.cut_at - 6
+
+    @property
+    def pam_outside_cds(self) -> bool:
+        """
+        >>> hdr = HDR('ATGCCTTGGCTGATATGGATCCGT', hdr_dist=6, guide_strand_same=False)
+        >>> hdr.pam_outside_cds
+        False
+
+        >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >>> hdr.pam_outside_cds
+        True
+        """
+        if self.hdr_tag == 'start_codon':
+            return self.pam_at <= self.insert_at - 6
+        else:
+            return self.pam_at >= self.insert_at + 6
 
 
 def mutate_silently(
