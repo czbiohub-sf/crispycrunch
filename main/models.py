@@ -432,8 +432,8 @@ class GuideDesign(BaseModel):
             'target_seq': self.target_seqs,
             'target_gene': self.target_genes,
             # Below only used per_target
-            'target_tag': target_tags or None,
-            'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags] or None,
+            'target_tag': target_tags or self.hdr_tag,
+            'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags] or self.hdr_seq,
             'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
         })
         df_guides = DataFrame()

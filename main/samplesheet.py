@@ -429,15 +429,9 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 
 
 def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
-    hdr_tag = guide_design.hdr_tag
-    # TODO (gdingle): move this logic into to_df in model
-    if hdr_tag == 'per_target':
-        sheet['_hdr_tag'] = list(guides['target_tag'])
-        sheet['_hdr_seq'] = list(guides['hdr_seq'])
-        sheet['target_terminus'] = list(guides['target_terminus'])
-    else:
-        sheet['_hdr_tag'] = hdr_tag
-        sheet['_hdr_seq'] = guide_design.hdr_seq
+    sheet['_hdr_tag'] = list(guides['target_tag'])
+    sheet['_hdr_seq'] = list(guides['hdr_seq'])
+    sheet['target_terminus'] = list(guides['target_terminus'])
 
     sheet['hdr_dist'] = sheet.apply(
         lambda row: get_guide_cut_to_insert(
