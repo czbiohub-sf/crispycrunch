@@ -430,6 +430,7 @@ def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
 
 def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
     sheet['_hdr_tag'] = list(guides['target_tag'])
+    sheet['_cds_index'] = list(guides['cds_index'])
     sheet['_hdr_seq'] = list(guides['hdr_seq'])
     sheet['target_terminus'] = list(guides['target_terminus'])
 
@@ -468,13 +469,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
-        if guide_design.hdr_tag == 'per_target':
-            # TODO (gdingle): move this logic into to_df in model
-            cds_index = GuideDesign.HDR_TAG_TO_CDS_INDEX[row['_hdr_tag']]
-        else:
-            cds_index = guide_design.cds_index
-        assert isinstance(cds_index, int)
-        cds_seq = get_cds_seq(row['target_input'], cds_index, -1)
+        cds_seq = get_cds_seq(row['target_input'], row['_cds_index'], -1)
 
         row_hdr = hdr.HDR(
             row['target_seq'],
@@ -517,23 +512,21 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
     sheet.apply(check_hdr_guide_match, axis=1)
 
     def set_ultramer(row):
-        # HACK ALERT! Get the CDS seq to check for ultramer.
+        # HACK ALERT! Get the ultramer from the ENST.
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
-        if guide_design.hdr_tag == 'per_target':
-            # TODO (gdingle): move this logic into to_df in model
-            cds_index = GuideDesign.HDR_TAG_TO_CDS_INDEX[row['_hdr_tag']]
-        else:
-            cds_index = guide_design.cds_index
-        assert isinstance(cds_index, int)
-
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
         # stop codons outside of cds? see for example ENST00000299300
-        ultramer_seq = get_ultramer_seq(row['target_input'], cds_index)
+        ultramer_seq = get_ultramer_seq(row['target_input'], row['_cds_index'])
+
+        # TODO (gdingle): HACK ALERT!!! For as yet unknown reason,
+        # the insert is misidentified. We set a buffer here to avoid the worst.
+        # See primer product above as well.
+        start = 45
 
         left_bit, codon_aligned, right_bit = (
-            ultramer_seq[:1],
-            ultramer_seq[1:-1],
+            ultramer_seq[:1 + start],
+            ultramer_seq[1 + start:-1],
             ultramer_seq[-1:]
         )
         assert len(codon_aligned) % 3 == 0

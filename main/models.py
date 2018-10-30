@@ -431,8 +431,9 @@ class GuideDesign(BaseModel):
             'target_loc': self.targets,
             'target_seq': self.target_seqs,
             'target_gene': self.target_genes,
-            # Below only used per_target
+            # Below depends on per_target
             'target_tag': target_tags or self.hdr_tag,
+            'cds_index': [self.HDR_TAG_TO_CDS_INDEX[t] for t in target_tags] or self.cds_index,
             'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags] or self.hdr_seq,
             'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
         })
