@@ -367,33 +367,47 @@ class HDR:
         """
         Determines whether a guide should be mutated depending on the cut to
         insert distance and the guide orientation. The rule is: mutate if more
-        than 14 bp of the PAM-side of guide will be intact after insertion.
+        than 14bp of the PAM-side of protospacer will be intact after insertion.
 
-        14bp intact.
+        1a. 14bp or more intact on PAM side, positive guide.
         GCC|ATG|GCTGAGCTGGATCC|GTT|CGG|C
             codon              cut pam
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.should_mutate
         True
 
-        Don't mutate because insert is near PAM.
-        G|CCA|TG|G|CTGAGCTGGATCCGTTCGGC
-          pam ins
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, guide_strand_same=False)
+        1b. Less than 14bp intact on PAM side, positive guide.
+        GCC|ATG|GCTGAGCT|GTT|CGG|C
+            codon           cut pam
+        >>> hdr = HDR('GCCATGGCTGAGCTGTTCGGC', hdr_dist=8)
         >>> hdr.should_mutate
         False
 
-        Only 12bp intact of guide.
+        2a. 14bp or more intact on PAM side, negative guide.
+        |CCA|CGA|GCGGCGGCGGCG|ATG|
+         pam cut              codon
+        >>> hdr = HDR('CCACGAGCGGCGGCGGCGATG', hdr_dist=-15, guide_strand_same=False)
+        >>> hdr.should_mutate
+        True
+
+        2b. Less than 14bp intact on PAM side, negative guide.
         |CCA|CGA|GCG|ATG|GCTGAGCTGGATCCG
          pam cut     codon
         >>> hdr = HDR('CCACGAGCGATGGCTGAGCTGGATCCG', hdr_dist=-6, guide_strand_same=False)
         >>> hdr.should_mutate
         False
 
-        Insert is outside of guide.
+        3a. Insert is outside of guide, positive guide.
         |CCT|TGG|CTG|ATG|TGGATCCGTTCGGC
          cut pam     codon
         >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >>> hdr.should_mutate
+        True
+
+        3b. Insert is outside of guide, negative guide.
+        |ATG|CCT|TGG|CTGATATGGATCCGT
+         cod pam cut
+        >>> hdr = HDR('ATGCCTTGGCTGATATGGATCCGT', hdr_dist=6, guide_strand_same=False)
         >>> hdr.should_mutate
         True
         """
