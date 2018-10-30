@@ -32,6 +32,48 @@ def from_experiment(experiment: Experiment) -> DataFrame:
     return _new_samplesheet()
 
 
+def _new_samplesheet() -> DataFrame:
+    return DataFrame(
+        index=_new_index(),
+        columns=[
+            'target_genome',
+            'target_pam',
+            'target_input',
+            'target_terminus',
+            'target_gene',
+            'target_loc',
+            'target_seq',
+            'guide_offset',
+            'guide_loc',
+            '_guide_strand_same',
+            'guide_seq',
+            'guide_pam',
+            'guide_score',
+            '_crispor_batch_id',
+            '_crispor_pam_id',
+            '_crispor_guide_id',
+            '_hdr_tag',
+            '_hdr_seq',
+            '_hdr_insert_at',
+            'hdr_dist',
+            'hdr_inserted',
+            'hdr_mutated',
+            '_hdr_ultramer',
+            # TODO (gdingle): we can't have these and join with ps_df
+            # We only need this here for ordering... is it okay because those are last?
+            # 'primer_seq_fwd',
+            # 'primer_seq_rev',
+            # 'primer_product',
+            's3_bucket',
+            's3_prefix',
+            'fastq_fwd',
+            'fastq_rev',
+            'report_url',
+            'report_zip',
+            'report_stats',
+        ])
+
+
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     guide_design = guide_selection.guide_design
     sheet = from_experiment(guide_design.experiment)
@@ -86,11 +128,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     sheet['_crispor_batch_id'] = list(guides['_crispor_batch_id'])
     sheet['_crispor_pam_id'] = list(guides['_crispor_pam_id'])
-    # TODO (gdingle): why cannot use guide_id? see _join_guide_data
-    sheet['_crispor_guide_id'] = [
-        str(g['target_loc']) + ' ' + g['_crispor_pam_id']
-        for g in guides.to_records()]
-
+    sheet['_crispor_guide_id'] = list(guides.index)  # guide_id
     return sheet
 
 
@@ -205,7 +243,6 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     gd_df = guide_selection.guide_design.to_df()
     gs_df = guide_selection.to_df()
 
-    # TODO (gdingle): why can't keep guide_id? ValueError: name already used as a name or title
     guides_df = gd_df.set_index('guide_id').join(
         gs_df.set_index('guide_id'), how='inner')
     assert len(guides_df) >= len(gs_df)
@@ -342,48 +379,6 @@ def _new_index(size=192,
     ints = list(range(1, end_int + 1))
     assert len(chars) * len(ints) >= size
     return [c + str(i) for c in chars for i in ints][:size]
-
-
-def _new_samplesheet() -> DataFrame:
-    return DataFrame(
-        index=_new_index(),
-        columns=[
-            'target_genome',
-            'target_pam',
-            'target_input',
-            'target_terminus',
-            'target_gene',
-            'target_loc',
-            'target_seq',
-            'guide_offset',
-            'guide_loc',
-            '_guide_strand_same',
-            'guide_seq',
-            'guide_pam',
-            'guide_score',
-            '_crispor_batch_id',
-            '_crispor_pam_id',
-            '_crispor_guide_id',
-            '_hdr_tag',
-            '_hdr_seq',
-            '_hdr_insert_at',
-            'hdr_dist',
-            'hdr_inserted',
-            'hdr_mutated',
-            '_hdr_ultramer',
-            # TODO (gdingle): we can't have these and join with ps_df
-            # We only need this here for ordering... is it okay because those are last?
-            # 'primer_seq_fwd',
-            # 'primer_seq_rev',
-            # 'primer_product',
-            's3_bucket',
-            's3_prefix',
-            'fastq_fwd',
-            'fastq_rev',
-            'report_url',
-            'report_zip',
-            'report_stats',
-        ])
 
 
 # TODO (gdingle): _insert_fastqs is deprecated pending whether
