@@ -62,8 +62,6 @@ class CreatePlusView(CreateView):
     See https://github.com/django/django/blob/master/django/views/generic/edit.py.
     """
 
-    # TODO (gdingle): handle exceptions here to form
-    # see form_invalid, non_field_errors, https://docs.djangoproject.com/en/2.1/topics/class-based-views/generic-editing/
     def form_valid(self, form: ModelForm) -> HttpResponse:
         obj = form.save(commit=False)
         try:
@@ -247,6 +245,7 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
+    # TODO (gdingle): too ugly... refactor to model, change algol or do something
     @staticmethod
     def _top_guides(guide_data, guide_design, min_score=30):
         """
@@ -283,6 +282,7 @@ class GuideSelectionView(CreatePlusView):
                 guide_offset = int(t[0][1:-1])
                 if guide_design.cds_index == -1:
                     # Reproduce protospacex min_length fetch behavior
+                    # TODO (gdingle): we shouldn't need to do this
                     mid = guide_design.cds_length // 2
                     return abs(mid - guide_offset)
                 else:
@@ -298,7 +298,6 @@ class GuideSelectionView(CreatePlusView):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         return {
             'selected_guides': dict(
-                # TODO (gdingle): refactor _top_guides to use to_df
                 (g['target'], self._top_guides(g, guide_design))
                 for g in guide_design.guide_data),
         }
@@ -370,7 +369,6 @@ class PrimerSelectionView(CreatePlusView):
             values = list(ontarget_primers.values())
             if not values:
                 return 'not found'
-            # TODO (gdingle): _transform_primer_product here instead of later?
             return values[0], values[1]
 
         return {
@@ -417,7 +415,7 @@ class ExperimentSummaryView(View):
             title = experiment.name + ' summary'
             return _excel_download_response(excel_file, title)
 
-        # TODO (gdingle): download csv
+        # TODO (gdingle): download csv?
 
         # max length to show of table cell values
         # 26 is optimized for laptop screen and chr loc
@@ -607,8 +605,6 @@ class UltramerOrderFormView(OrderFormView):
     For HDR donor template DNA.
     """
     model = PrimerSelection
-    # TODO (gdingle): change this to mutated, also may need
-    # exactly 55bp homology arms
     seq_keys = ('_hdr_ultramer',)
 
 

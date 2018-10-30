@@ -119,25 +119,26 @@ class ChrLoc:
         True
         >>> ChrLoc('chr5:1-20:-') == ChrLoc('chr5:1-20:-')
         True
-        >>> ChrLoc('chr5:1-20') == ChrLoc('chr5:1-20:-')
+        >>> ChrLoc('chr5:1-20') == ChrLoc('chr5:1-20:+')
         True
+        >>> ChrLoc('chr5:1-20') == ChrLoc('chr5:1-20:-')
+        False
         >>> ChrLoc('chr5:1-20:+') == ChrLoc('chr5:1-20:-')
         False
         """
         if isinstance(other, str):
-            # TODO (gdingle): wise idea to promote on comparison?
             other = ChrLoc(other)
         return (self.chr == other.chr and
                 self.start == other.start and
                 self.end == other.end
-                # Only compare if both have a strand specified
-                and (self.strand == other.strand  # noqa
-                     if self.strand and other.strand
-                     else True))
+                # Assume positive if no strand
+                and (self.strand or '+') == (other.strand or '+'))
 
     def __lt__(self, other):
         """
-        # TODO (gdingle): does this make sense?
+        This appears to be needed for pandas join.
+
+        # TODO (gdingle): what to do about strands?
 
         >>> ChrLoc('chr5:1-20') < ChrLoc('chr5:1-20')
         False
@@ -147,7 +148,6 @@ class ChrLoc:
         True
         """
         if isinstance(other, str):
-            # TODO (gdingle): wise idea to promote on comparison?
             other = ChrLoc(other)
         return (self.chr < other.chr or
                 self.start < other.start)
@@ -160,7 +160,6 @@ class ChrLoc:
         False
         """
         if isinstance(other, str):
-            # TODO (gdingle): wise idea to promote on comparison?
             other = ChrLoc(other)
         return (self.chr == other.chr and
                 self.start <= other.start and
@@ -209,8 +208,8 @@ class GuideChrLoc(ChrLoc):
 def get_guide_loc(
         target_loc: ChrLoc,
         guide_offset: int,
-        guide_len: int = 20,
-        guide_strand_same: bool = True) -> GuideChrLoc:
+        guide_len: int=20,
+        guide_strand_same: bool=True) -> GuideChrLoc:
     """
     Example forward:
     AAGATAGGTGATGAAGGAGGGTCCCCAGG
@@ -238,7 +237,7 @@ def get_guide_loc(
 
 def get_insert(
         target_loc: ChrLoc,
-        hdr_tag: str = 'start_codon') -> int:
+        hdr_tag: str='start_codon') -> int:
     """
     Get the desired insert point assuming the start or stop codon
     is in the expected place. See protospacex._get_start_end.
@@ -269,7 +268,7 @@ def get_insert(
 def get_guide_cut_to_insert(
         target_loc: ChrLoc,
         guide_loc: GuideChrLoc,
-        hdr_tag: str = 'start_codon') -> int:
+        hdr_tag: str='start_codon') -> int:
     """
     Based on example from https://czi.quip.com/YbAhAbOV4aXi/
 

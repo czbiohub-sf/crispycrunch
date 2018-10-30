@@ -538,7 +538,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         except Exception:
             return 'error in ultramer: codon false positive?'
 
-        assert len(recombined) == 200, '200bp is standard of leonetti group'
+        assert len(recombined) == 200, '200bp is max for IDT ultramer'
 
         if not row['_guide_strand_same']:
             return reverse_complement(recombined)
