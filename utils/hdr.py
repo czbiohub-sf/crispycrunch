@@ -24,6 +24,10 @@ class HDR:
     guide_strand_same refers to strand of target_seq.
     """
 
+    # When mutating, compare mutated 20-mer guide to all 20-mer sequences in
+    # target_seq.
+    score_all = True
+
     def __init__(
             self,
             target_seq: str,
@@ -366,11 +370,23 @@ class HDR:
                 guide_seq_no_pam = self.guide_seq[3:]
             assert len(guide_mutated_no_pam) == 20 and len(guide_seq_no_pam) == 20
 
-            score = mit_hit_score(
-                guide_mutated_no_pam.upper(),
-                guide_seq_no_pam.upper(),
-                self.guide_strand_same,
-            )
+            if self.score_all:
+                scores = []
+                assert len(self.target_seq) >= 20
+                for i in range(0, len(self.target_seq) - 20):
+                    test_seq = self.target_seq[i:i + 20]
+                    scores.append(mit_hit_score(
+                        guide_mutated_no_pam.upper(),
+                        test_seq.upper(),
+                        self.guide_strand_same,
+                    ))
+                score = max(scores)
+            else:
+                score = mit_hit_score(
+                    guide_mutated_no_pam.upper(),
+                    guide_seq_no_pam.upper(),
+                    self.guide_strand_same,
+                )
             if score <= self.target_mutation_score:
                 break
 
@@ -379,11 +395,33 @@ class HDR:
     @property
     def mutated_score(self) -> float:
         """
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_tag='start_codon', hdr_dist=14, target_mutation_score=50.0)
+        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCcTTtGG'
         >>> hdr.mutated_score
         0.30061204819277104
+
+        Verify score_all returns same for normal input.
+        >>> hdr.score_all = True
+        >>> hdr.mutated_score
+        0.30061204819277104
+        >>> hdr.score_all = False
+        >>> hdr.mutated_score
+        0.30061204819277104
+
+        Artifical score_all example. The mutated seq was copied into target seq.
+        score_all then causes more mutation.
+        >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGGATGAAAAAAAAAAAgAAgAAgGG', hdr_dist=14)
+        >>> hdr.score_all = False
+        >>> hdr.guide_mutated
+        'ATGAAAAAAAAAAAgAAgAAgGG'
+        >>> hdr.mutated_score
+        0.0657338345381526
+        >>> hdr.score_all = True
+        >>> hdr.guide_mutated
+        'ATGAAgAAgAAgAAgAAgAAgGG'
+        >>> hdr.mutated_score
+        0.005989664209428497
         """
         return mit_hit_score(
             self.guide_mutated,
