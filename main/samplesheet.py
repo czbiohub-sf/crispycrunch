@@ -55,6 +55,7 @@ def _new_samplesheet() -> DataFrame:
             '_hdr_tag',
             '_hdr_seq',
             '_hdr_insert_at',
+            '_cds_seq',
             'hdr_dist',
             'hdr_inserted',
             'hdr_mutated',
@@ -200,7 +201,9 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand_same'])
+            row['_guide_strand_same'],
+            row['_cds_seq'])
+
         hdr_primer_product = phdr.inserted_mutated if phdr.should_mutate else phdr.inserted
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
@@ -451,6 +454,13 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         axis=1,
     )
 
+    # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
+    # It's another instance of IO, but should be cached always.
+    # TODO (gdingle): return more info from protospacex, and store throughout
+    sheet['_cds_seq'] = sheet.apply(
+        lambda row: get_cds_seq(row['target_input'], row['_cds_index'], -1),
+        axis=1)
+
     # TODO (gdingle): override hdr_inserted when good enough
     def mutate(row):
         """
@@ -460,19 +470,13 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         The best response is not clear, so we return a warning. In future,
         we may filter guides further upstream, and-or mutate around junction.
         """
-
-        # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
-        # It's another instance of IO, but should be cached always.
-        # TODO (gdingle): return more info from protospacex, and store throughout
-        cds_seq = get_cds_seq(row['target_input'], row['_cds_index'], -1)
-
         row_hdr = hdr.HDR(
             row['target_seq'],
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same'],
-            cds_seq)
+            row['_cds_seq'])
 
         if not row_hdr.should_mutate:
             return 'not needed'
@@ -531,7 +535,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
-            row['_guide_strand_same'])
+            row['_guide_strand_same'],
+            row['_cds_seq'])
         try:
             # TODO (gdingle): figure out why some guides are not found in HDR
             recombined = left_bit + uhdr.inserted_mutated + right_bit
