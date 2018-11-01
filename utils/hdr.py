@@ -233,24 +233,17 @@ class HDR:
         'TGGCTGAGCTGGATCCGTTCGGG'
         >>> hdr.guide_seq_aligned
         'GCTGAGCTGGATCCGTTCGGG'
-
-        |CCA|CGA|GCGGCGGCGGCG|ATG|GGG
-         pam cut              codon
-        >>> hdr = HDR('CCACGAGCGGCGGCGGCGATGGGG', hdr_dist=-15, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned
-        'CCACGAGCGGCGGCGGCGATG'
         """
-        return self._guide_seq_aligned[1]
 
-    @property
-    def _guide_seq_aligned(self) -> tuple:
+        # TODO (gdingle): do we want to extend to always include entire PAM?
+
         codon_offset = abs(self.hdr_dist % 3)
         if self.guide_strand_same == True:
             aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
-            return '', aligned[-21:], self.guide_seq[-codon_offset:]
+            return aligned[-21:]
         else:
             aligned = self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
-            return self.guide_seq[:3 - codon_offset], aligned[:21], ''
+            return aligned[:21]
 
     @property
     def inserted(self) -> str:
@@ -266,7 +259,7 @@ class HDR:
         """
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.inserted_mutated
-        'GCCATGnnnGCTGAGCTGGATCCcTTtGGC'
+        'GCCATGnnnGCTGAGCTGGATCCGTTtGGC'
         """
         return self._inserted(True)
 
@@ -286,7 +279,7 @@ class HDR:
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.mutated
-        'GCCATGGCTGAGCTGGATCCcTTtGGC'
+        'GCCATGGCTGAGCTGGATCCGTTtGGC'
 
         PAM is outside.
         >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
@@ -296,7 +289,7 @@ class HDR:
         if self.pam_outside_cds:
             return self._pam_mutated
 
-        start = self.target_seq.index(self.guide_seq)
+        start = self.target_seq.index(self.guide_seq_aligned)
         mutated = self.guide_mutated
         return ''.join((
             self.target_seq[:start],
@@ -340,92 +333,68 @@ class HDR:
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATCCcTTtGG'
+        'ATGGCTGAGCTGGATCCGTTt'
 
         Varying target score.
         >>> hdr.target_mutation_score = 1
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGAcCCcTTtGG'
+        'ATGGCTGAGCTGGATCCcTTt'
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTcGAcCCcTTtGG'
+        'ATGGCTGAGCTGGAcCCcTTt'
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, target_mutation_score=50.0)
         >>> hdr.guide_mutated
-        'CCATGGCcGAGCTGGATCCGTTC'
+        'ATGGCcGAGCTGGATCCGTTC'
         """
 
-        left, guide_seq_aligned, right = self._guide_seq_aligned
-        for mutated in mutate_silently(guide_seq_aligned, self.guide_strand_same):
-            # Align back to PAM so we can apply MIT score as it is intended.
-            # NOTE: this means mutations in the 3bp of the PAM itself will not
-            # add to the score. # TODO (gdingle): is this acceptable?
-            if self.guide_strand_same:
-                guide_mutated = (mutated + right)
-                guide_mutated_no_pam = guide_mutated[:-3]
-                guide_seq_no_pam = self.guide_seq[:-3]
-            else:
-                guide_mutated = (left + mutated)
-                guide_mutated_no_pam = guide_mutated[3:]
-                guide_seq_no_pam = self.guide_seq[3:]
-            assert len(guide_mutated_no_pam) == 20 and len(guide_seq_no_pam) == 20
-
-            if self.score_all:
-                scores = []
-                assert len(self.target_seq) >= 20
-                for i in range(0, len(self.target_seq) - 20):
-                    test_seq = self.target_seq[i:i + 20]
-                    scores.append(mit_hit_score(
-                        guide_mutated_no_pam.upper(),
-                        test_seq.upper(),
-                        self.guide_strand_same,
-                    ))
-                score = max(scores)
-            else:
-                score = mit_hit_score(
-                    guide_mutated_no_pam.upper(),
-                    guide_seq_no_pam.upper(),
-                    self.guide_strand_same,
-                )
+        # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
+        # in 3bp PAM? should we try to align to the hit_score_m? lols
+        for mutated in mutate_silently(self.guide_seq_aligned, self.guide_strand_same):
+            score = mit_hit_score(
+                mutated.upper(),
+                self.guide_seq_aligned.upper(),
+                self.guide_strand_same,
+            )
             if score <= self.target_mutation_score:
                 break
 
-        return guide_mutated
+        return mutated
 
     @property
     def mutated_score(self) -> float:
         """
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATCCcTTtGG'
+        'ATGGCTGAGCTGGATCCGTTt'
         >>> hdr.mutated_score
-        0.30061204819277104
+        41.7
 
         Verify score_all returns same for normal input.
         >>> hdr.score_all = True
         >>> hdr.mutated_score
-        0.30061204819277104
+        41.7
         >>> hdr.score_all = False
         >>> hdr.mutated_score
-        0.30061204819277104
+        41.7
 
         Artifical score_all example. The mutated seq was copied into target seq.
         score_all then causes more mutation.
-        >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGGATGAAAAAAAAAAAgAAgAAgGG', hdr_dist=14)
+        >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAgGG', hdr_dist=14)
         >>> hdr.score_all = False
         >>> hdr.guide_mutated
-        'ATGAAAAAAAAAAAgAAgAAgGG'
+        'ATGAAAAAAAAAAAAAAgAAg'
         >>> hdr.mutated_score
-        0.0657338345381526
+        0.9187816265060242
         >>> hdr.score_all = True
         >>> hdr.guide_mutated
-        'ATGAAgAAgAAgAAgAAgAAgGG'
+        'ATGAAAAAAAAAAAAAAgAAg'
         >>> hdr.mutated_score
         0.005989664209428497
         """
         return mit_hit_score(
             self.guide_mutated,
-            self.guide_seq,
+            self.guide_seq_aligned,
             self.guide_strand_same)
 
     @property
@@ -433,17 +402,17 @@ class HDR:
         """
         Determines whether there is a mutation inside an intron/exon junction.
 
-        Mutation inside 3 bp window.
+        Mutation just inside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
         ... cds_seq='ATGGCTGAGCTGGATCCG', target_mutation_score=50.0)
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
-        ('GCCATGGCTGAGCTGGATCCcTTtGGC', (21, 24), True)
+        ('GCCATGGCTGAGCTGGATCCGTTtGGC', (21, 24), True)
 
-        Mutation outside 3 bp window.
+        Mutation just outside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGA', target_mutation_score=50.0)
+        ... cds_seq='ATGGCTGAGCTGGATCC', target_mutation_score=50.0)
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
-        ('GCCATGGCTGAGCTGGATCCcTTtGGC', (17, 20), False)
+        ('GCCATGGCTGAGCTGGATCCGTTtGGC', (20, 23), False)
 
         >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
         >>> hdr.mutation_in_junction
@@ -510,7 +479,7 @@ class HDR:
         >>> hdr.should_mutate
         True
         """
-        if self.guide_strand_same:
+        if self.guide_strand_same is True:
             guide_right = self.cut_at + 3
             intact = guide_right - self.insert_at
         else:
@@ -531,7 +500,7 @@ class HDR:
         >>> hdr.pam_at
         3
         """
-        if self.guide_strand_same:
+        if self.guide_strand_same is True:
             return self.cut_at + 3
         else:
             return self.cut_at - 6
