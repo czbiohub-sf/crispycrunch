@@ -466,3 +466,7 @@ def _validate_length(length: int) -> None:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+
+    seq = get_ultramer_seq('ENST00000398868')
+    seq = get_ultramer_seq('ENST00000398868', -1)
+    print(seq)
