@@ -439,6 +439,9 @@ class GuideDesign(BaseModel):
         })
         df_guides = DataFrame()
         for gd in self.guide_data:
+            if 'not found' in gd['guide_seqs']:
+                # TODO (gdingle): how and when to deal with "not found"?
+                continue
             df_guides = df_guides.append(DataFrame(data={
                 # scalars
                 'target_loc': gd['target'],

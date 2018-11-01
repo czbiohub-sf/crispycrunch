@@ -49,8 +49,15 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
     >>> fetch_ensembl_transcript('ENST00000398844').description
     'chromosome:GRCh38:5:134648789:134727823:1'
+
+    >>> fetch_ensembl_transcript('ATL3').description
+    'Reverse complement of chromosome:GRCh38:11:63624087:63671612:-1'
     """
     base_url = "http://rest.ensembl.org"
+
+    if not ensembl_transcript_id.startswith('ENS'):
+        # could be a gene symbol
+        ensembl_transcript_id = _gene_to_enst(ensembl_transcript_id)
 
     # First, fetch the transcript sequence
     url = base_url + f"/sequence/id/{ensembl_transcript_id}"
@@ -416,7 +423,9 @@ def get_ultramer_seq(
 
     ult_seq = record.seq[start:end]
 
-    assert len(ult_seq) == length, (len(ult_seq), start, end)
+    if len(ult_seq) < length:
+        log.warning('Ultramer length {} is less than {}bp. Is there enough in the transcript {}?'.format(
+            len(ult_seq), length, ensembl_transcript_id))
 
     codon_at = codon_at - start  # make relative to
     if cds_index == 0:
@@ -463,10 +472,47 @@ def _validate_length(length: int) -> None:
             f'length {length} must be divisible by 3 and 2 to ensure codon frame and symmetry')
 
 
+# TODO (gdingle): share code with conversions.py
+def _gene_to_enst(gene: str, genome: str = 'hg38') -> str:
+    """
+    >>> _gene_to_enst('ATL3')
+    'ENST00000398868'
+
+    >>> _gene_to_enst('ATL3', 'wooky')
+    Traceback (most recent call last):
+    ...
+    ValueError: Unsupported genome: "wooky"
+
+    >>> _gene_to_enst('ATL3', 'mm10')
+    'ENSMUST00000025668'
+
+    >>> _gene_to_enst('ATL9')
+    Traceback (most recent call last):
+    ValueError: No gene of name "ATL9" found
+    """
+    if genome.startswith('hg'):
+        species = 'human'
+    elif genome.startswith('mm'):
+        species = 'mouse'
+    else:
+        raise ValueError('Unsupported genome: "{}"'.format(genome))
+
+    url = 'http://rest.ensembl.org/lookup/symbol/{}/{}?expand=1;content-type=application/json'.format(
+        species, gene)
+    response = _cached_session.get(url)
+    if response.status_code == 400:
+        raise ValueError('No gene of name "{}" found'.format(gene))
+    else:
+        response.raise_for_status()
+
+    res = response.json()
+    transcripts = [t for t in res['Transcript'] if t['is_canonical']]
+    assert len(transcripts) == 1
+    transcript = transcripts[0]['id']
+    assert transcript.startswith('ENS')
+    return transcript
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
-
-    seq = get_ultramer_seq('ENST00000398868')
-    seq = get_ultramer_seq('ENST00000398868', -1)
-    print(seq)

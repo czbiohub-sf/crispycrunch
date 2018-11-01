@@ -98,9 +98,9 @@ class GuideDesignView(CreatePlusView):
                 'Targeting fasta sequences is not currently implemented')
 
         if guide_design.hdr_tag:
-            if not all(is_ensemble_transcript(t) for t in targets):
+            if not all(is_ensemble_transcript(t) or is_gene(t) for t in targets):
                 raise ValidationError(
-                    'Targets must all be ENST transcripts for HDR')
+                    'Targets must all be ENST transcripts or gene symbols for HDR')
             if genome != 'hg38':
                 raise ValidationError(
                     'ENST transcripts are only currently implemented for the hg38 genome')

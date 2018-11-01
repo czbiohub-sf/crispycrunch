@@ -148,46 +148,8 @@ def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -
     assert len(matches) == 1, matches
     return matches.pop()
 
-
-def gene_to_enst(gene: str, genome: str = 'hg38') -> str:
-    """
-    >>> gene_to_enst('ATL3')
-    'ENST00000398868'
-
-    >>> gene_to_enst('ATL3', 'wooky')
-    Traceback (most recent call last):
-    ...
-    ValueError: Unsupported genome: "wooky"
-
-    >>> gene_to_enst('ATL3', 'mm10')
-    'ENSMUST00000025668'
-
-    >>> gene_to_enst('ATL9')
-    Traceback (most recent call last):
-    ValueError: No gene of name "ATL9" found
-    """
-    if genome.startswith('hg'):
-        species = 'human'
-    elif genome.startswith('mm'):
-        species = 'mouse'
-    else:
-        raise ValueError('Unsupported genome: "{}"'.format(genome))
-
-    url = 'http://rest.ensembl.org/lookup/symbol/{}/{}?expand=1;content-type=application/json'.format(
-        species, gene)
-    response = _cached_session.get(url)
-    if response.status_code == 400:
-        raise ValueError('No gene of name "{}" found'.format(gene))
-    else:
-        response.raise_for_status()
-
-    res = response.json()
-    transcripts = [t for t in res['Transcript'] if t['is_canonical']]
-    assert len(transcripts) == 1
-    transcript = transcripts[0]['id']
-    assert transcript.startswith('ENS')
-    return transcript
-
+# TODO (gdingle): share code with protospacex
+# For gene_to_enst, see protospacex
 
 if __name__ == '__main__':
     doctest.testmod()
