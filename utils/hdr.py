@@ -351,11 +351,23 @@ class HDR:
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
         # in 3bp PAM? should we try to align to the hit_score_m? lols
         for mutated in mutate_silently(self.guide_seq_aligned, self.guide_strand_same):
-            score = mit_hit_score(
-                mutated.upper(),
-                self.guide_seq_aligned.upper(),
-                self.guide_strand_same,
-            )
+            if self.score_all:
+                scores = []
+                assert len(self.target_seq) >= 20
+                for i in range(0, len(self.target_seq) - 20):
+                    test_seq = self.target_seq[i:i + 21]
+                    scores.append(mit_hit_score(
+                        mutated.upper(),
+                        test_seq.upper(),
+                        self.guide_strand_same,
+                    ))
+                score = max(scores)
+            else:
+                score = mit_hit_score(
+                    mutated.upper(),
+                    self.guide_seq_aligned.upper(),
+                    self.guide_strand_same)
+
             if score <= self.target_mutation_score:
                 break
 
@@ -380,7 +392,7 @@ class HDR:
 
         Artifical score_all example. The mutated seq was copied into target seq.
         score_all then causes more mutation.
-        >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAgGG', hdr_dist=14)
+        >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAg', hdr_dist=14)
         >>> hdr.score_all = False
         >>> hdr.guide_mutated
         'ATGAAAAAAAAAAAAAAgAAg'
@@ -388,9 +400,9 @@ class HDR:
         0.9187816265060242
         >>> hdr.score_all = True
         >>> hdr.guide_mutated
-        'ATGAAAAAAAAAAAAAAgAAg'
+        'ATGAAAAAAAAgAAgAAgAAg'
         >>> hdr.mutated_score
-        0.005989664209428497
+        0.01899466165097892
         """
         return mit_hit_score(
             self.guide_mutated,
