@@ -424,8 +424,11 @@ def get_ultramer_seq(
     ult_seq = record.seq[start:end]
 
     if len(ult_seq) < length:
-        log.warning('Ultramer length {} is less than {}bp. Is there enough in the transcript {}?'.format(
+        log.warning('Ultramer length {} is less than {}bp. Is there enough in the transcript {}? Shortening by 36bp.'.format(
             len(ult_seq), length, ensembl_transcript_id))
+        start += 18
+        end -= 18
+        ult_seq = record.seq[start:end]
 
     codon_at = codon_at - start  # make relative to
     if cds_index == 0:
