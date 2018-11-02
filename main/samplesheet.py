@@ -516,12 +516,15 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # TODO (gdingle): return more info from protospacex, and store throughout
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
         # stop codons outside of cds? see for example ENST00000299300
-        ultramer_seq = get_ultramer_seq(row['target_input'], row['_cds_index'])
+        try:
+            ultramer_seq = get_ultramer_seq(row['target_input'], row['_cds_index'])
+        except ValueError:
+            return 'not found'
 
         # TODO (gdingle): HACK ALERT!!! For as yet unknown reason,
         # the insert is misidentified. We set a buffer here to avoid the worst.
         # See primer product above as well.
-        start = 45
+        start = 36
 
         left_bit, codon_aligned, right_bit = (
             ultramer_seq[:1 + start],
@@ -543,7 +546,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         except Exception:
             return 'error in ultramer: codon false positive?'
 
-        assert len(recombined) == 200, '200bp is max for IDT ultramer'
+        assert len(recombined) <= 200, '200bp is max for IDT ultramer'
+        assert len(recombined) >= 150, '150bp is min for IDT ultramer'
 
         if not row['_guide_strand_same']:
             return reverse_complement(recombined)

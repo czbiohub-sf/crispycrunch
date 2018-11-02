@@ -423,12 +423,15 @@ def get_ultramer_seq(
 
     ult_seq = record.seq[start:end]
 
-    if len(ult_seq) < length:
-        log.warning('Ultramer length {} is less than {}bp. Is there enough in the transcript {}? Shortening by 36bp.'.format(
+    if start < 0 or end > len(record.seq):
+        log.warning('Transcript {} is not large enough. Shortening by 36bp.'.format(
             len(ult_seq), length, ensembl_transcript_id))
+        # IDT ultramers should be good >150bp
         start += 18
         end -= 18
         ult_seq = record.seq[start:end]
+        if start < 0 or end > len(record.seq):
+            raise ValueError('Cannot get ultramer for transcript {}'.format(ensembl_transcript_id))
 
     codon_at = codon_at - start  # make relative to
     if cds_index == 0:
