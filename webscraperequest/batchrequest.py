@@ -56,10 +56,12 @@ class BaseBatchWebRequest:
         completed, running, errorred = [], [], []
         current_results = getattr(self.model_instance, str(self.field_name))
         for i, result in enumerate(current_results):
-            key = tuple([i, 'in cache' if result['in_cache'] else '',
+            key = tuple([i,
                          # result['cache_key'],
                          # result['success']
                          ] + result['request_key'])
+            if result['in_cache']:
+                key += ('in cache',)
             if result['success'] is True:
                 duration = round(result['end_time'] - result['start_time'], 1)
                 key += (f'{duration}s',)

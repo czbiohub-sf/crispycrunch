@@ -315,6 +315,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             pre_filter: int = 2) -> None:
 
         self.data = {
+            # TODO (gdingle): because name is in URL, it affects cache key,
+            # so for better hit rate, change to a constant such as 'crispycrunch'
             'name': name,
             'seq': seq,
             'org': org,

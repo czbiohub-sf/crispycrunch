@@ -373,11 +373,15 @@ def to_excel(sheet: DataFrame) -> BytesIO:
     return excel_file
 
 
-# We actually assume a larger well-plate here so we can assign more than
-# 96 wells before there have been any drop-outs.
-def _new_index(size=192,
-               end_char='P',
+def _new_index(size=96 * 3,
+               end_char='Z',
                end_int=12) -> list:
+    """
+    end_char and end_int determine the shape of the plate together.
+
+    Size is the number of wells returned. We actually assume a larger than 96
+    well-plate here so we can have drop-outs.
+    """
     chars = [chr(i) for i in range(ord('A'), ord(end_char) + 1)]
     ints = list(range(1, end_int + 1))
     assert len(chars) * len(ints) >= size

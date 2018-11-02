@@ -22,6 +22,104 @@ from utils.validators import *
 # "Item 1 in the array did not validate:". See:
 # https://docs.djangoproject.com/en/2.1/_modules/django/contrib/postgres/forms/array/
 
+VAR_TERMINUS_EXAMPLES = [
+    # ENST00000447866,C length of cds only 36',
+    # ENST00000617316,N # Not Found for url: http://togows.org/search/ncbi-gene/'ENST00000617316/1,50.json',
+    # ENST00000361781,C 'crispor error'
+    # ENST00000317551,C 'crispor error'
+    # more 'crispor error'
+    # 'ENST00000460006,N',
+    # 'ENST00000323646,N',
+    # 'ENST00000300737,C',
+    # 'ENST00000356978,N',
+    'ENST00000325110,C',
+    'ENST00000287936,C',
+    'ENST00000228510,C',
+    'ENST00000368467,N',
+    'ENST00000301012,C',
+    'ENST00000381344,C',
+    'ENST00000282841,C',
+    'ENST00000220584,C',
+    'ENST00000265896,N',
+    'ENST00000430767,C',
+    'ENST00000356396,C',
+    'ENST00000450723,C',
+    'ENST00000279263,N',
+    'ENST00000261507,C',
+    'ENST00000352397,C',
+    'ENST00000370274,N',
+    'ENST00000495186,C',
+    'ENST00000264027,C',
+    'ENST00000355527,N',
+    'ENST00000371269,C',
+    'ENST00000216484,C',
+    'ENST00000406396,C',
+    'ENST00000623882,C',
+    'ENST00000271688,C',
+    'ENST00000251363,C',
+    'ENST00000323699,C',
+    'ENST00000374279,C',
+    'ENST00000306851,N',
+    'ENST00000341156,N',
+    'ENST00000638572,N',
+    'ENST00000394684,C',
+    'ENST00000351288,N',
+    'ENST00000323374,C',
+    'ENST00000245222,C',
+    'ENST00000247225,N',
+    'ENST00000321276,N',
+    'ENST00000373202,C',
+    'ENST00000216264,N',
+    'ENST00000352035,C',
+    'ENST00000306749,C',
+    'ENST00000372458,C',
+    'ENST00000354666,C',
+    'ENST00000369816,C',
+    'ENST00000304434,C',
+    'ENST00000394607,C',
+    'ENST00000508821,C',
+    'ENST00000370355,C',
+    'ENST00000319540,C',
+    'ENST00000350997,C',
+    'ENST00000278840,C',
+    'ENST00000278829,C',
+    'ENST00000611707,C',
+    'ENST00000396987,C',
+    'ENST00000371696,C',
+    'ENST00000398063,C',
+    'ENST00000320285,C',
+    'ENST00000285518,C',
+    'ENST00000302182,N',
+    'ENST00000283415,N',
+    'ENST00000262134,N',
+    'ENST00000261407,C',
+    'ENST00000314891,N',
+    'ENST00000305997,C',
+    'ENST00000245615,C',
+    'ENST00000366997,C',
+    'ENST00000264775,C',
+    'ENST00000371250,C',
+    'ENST00000424479,C',
+    'ENST00000381883,C',
+    'ENST00000295887,N',
+    'ENST00000545121,N',
+    'ENST00000219789,C',
+    'ENST00000229266,N',
+    'ENST00000517309,N',
+    'ENST00000308020,N',
+    'ENST00000367466,C',
+    'ENST00000539276,C',
+    'ENST00000374316,N',
+    'ENST00000283006,C',
+    'ENST00000447750,C',
+    'ENST00000380191,c',
+    'ENST00000306480,C',
+    'ENST00000268607,N',
+    'ENST00000377190,C',
+    'ENST00000358901,N',
+    'ENST00000274140,C',
+]
+
 
 N_TERMINUS_EXAMPLES = [
     # TODO (gdingle): understand why all commented out are "not found"
@@ -357,7 +455,8 @@ class GuideDesign(BaseModel):
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
         # default=ENST_EXAMPLE,
-        default=N_TERMINUS_EXAMPLES,
+        default=VAR_TERMINUS_EXAMPLES,
+        # default=N_TERMINUS_EXAMPLES,
         # default=C_TERMINUS_EXAMPLES,
     )
 
@@ -478,7 +577,7 @@ class GuideDesign(BaseModel):
 
     @property
     def wells_per_target(self):
-        return max(1, 96 // len(self.targets))
+        return max(1, 96 * 3 // len(self.targets))
 
     HDR_TAG_TO_CDS_INDEX = {
         'per_target': None,
@@ -546,7 +645,8 @@ class GuideSelection(BaseModel):
         default=dict,
         blank=True,
         validators=[
-            functools.partial(validate_num_wells, max=96 * 2),
+            # See wells_per_target
+            functools.partial(validate_num_wells, max=96 * 3),
             _validate_selected_guides],
         help_text='Guides returned by Crispor. Filtered and ranked.')
 
