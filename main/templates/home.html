@@ -4,7 +4,7 @@
 
 <h2>Introduction</h2>
 
-<p>CrispyCrunch is a tool for defining <strong>batches</strong> of <a target="_blank" href="https://en.wikipedia.org/wiki/CRISPR">CRISPR</a> edits and analyzing their basic effects. An edit can be either a plain CRISPR/Cas9 cut––a "<strong>knock-out</strong>"––or a cut plus insertion through <a target="_blank" href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>––a "<strong>knock-in</strong>".</p>
+<p>CrispyCrunch is a tool for defining <strong>batches</strong> of <a target="_blank" href="https://en.wikipedia.org/wiki/CRISPR">CRISPR</a> edits and analyzing their basic effects. An edit can be either a plain CRISPR/Cas9 cut––a "<strong>knock-out</strong>"––or a cut plus insertion through <a target="_blank" href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>––a "<strong>knock-in</strong>". It was originally built for the <a target="_blank" href="https://www.czbiohub.org">CZ Biohub</a> <a target="_blank" href="https://www.czbiohub.org/people3/cz-biohub-staff#l-start">project</a> to tag all <a target="_blank" href="https://en.wikipedia.org/wiki/Human_genome#Coding_sequences_(protein-coding_genes)">22,000 protein coding genes</a> in the human genome with <a target="_blank" href="https://en.wikipedia.org/wiki/Green_fluorescent_protein">GFP</a>.</p>
 
 <p>
   {# TODO (gdingle): background gradient #}
@@ -31,7 +31,9 @@
 
 <p>For analysis, CrispyCrunch uses another popular tool, <a target="_blank" href="http://crispresso.pinellolab.partners.org/"><strong>Crispresso</strong></a>. The analysis quantifies the efficiency of knock-in or knock-out edits by repair outcome––<a target="_blank" href="https://en.wikipedia.org/wiki/Non-homologous_end_joining">NHEJ</a> or <a target="_blank" href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>. Click here to see <a target="_blank" href="http://crispresso.pinellolab.partners.org/view_report/dlJzEa">an example analysis report</a> from Crispresso.</p>
 
-<p>The advantages of using CrispyCrunch over these underlying tools are:</p>
+<h2>Key Features</h2>
+
+<p>The advantages of using CrispyCrunch over the underlying tools are:</p>
 <ul>
   <li>Define multiple CRISPR edits as unit and analyze them as a unit. <strong>Save time and avoid mistakes</strong> by not doing your own record keeping.</li>
   <li><strong>Automatic quality control</strong> of CRISPR edits. Just point CrispyCrunch to the FastQ output files of your <a target="_blank" href="https://en.wikipedia.org/wiki/DNA_sequencer">DNA sequencer</a>.</li>
