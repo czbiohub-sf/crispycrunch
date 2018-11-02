@@ -330,7 +330,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         self.target = target or seq
         self.pre_filter = pre_filter
 
-    def run(self, retries: int=3) -> Dict[str, Any]:
+    def run(self, retries: int=5) -> Dict[str, Any]:
         try:
             logger.info('POST request to: {}'.format(self.endpoint))
             response = _cached_session.send(self.request)  # type: ignore
