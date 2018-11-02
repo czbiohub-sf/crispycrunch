@@ -2,33 +2,6 @@
 
 {% block content %}
 
-<h2>Introduction</h2>
-
-<p>CrispyCrunch is a tool for defining <strong>batches</strong> of <a target="_blank" href="https://en.wikipedia.org/wiki/CRISPR">CRISPR</a> edits and analyzing their basic effects. An edit can be either a plain CRISPR/Cas9 cut––a "<strong>knock-out</strong>"––or a cut plus insertion through <a target="_blank" href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>––a "<strong>knock-in</strong>".</p>
-
-<p>CrispyCrunch uses the popular tool <a target="_blank" href="http://crispor.tefor.net/"><strong>Crispor</strong></a> for finding potential guide sequences––sgRNAs––and for designing primers for <a target="_blank" href="https://en.wikipedia.org/wiki/Polymerase_chain_reaction">PCR</a> amplification. Crispor in turn uses the ubiquitous <a target="_blank" href="https://primer3plus.com/">primer3</a> for primer design. Click here to see <a target="_blank" href="http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py?batchId=gYvicTzp9e5VPFC9YwLR">an example set of guide sequences</a> from Crispor.</p>
-
-{# TODO (gdingle): place screenshot #}
-
-<p>For analysis, CrispyCrunch uses another popular tool, <a target="_blank" href="http://crispresso.pinellolab.partners.org/"><strong>Crispresso</strong></a>. The analysis quantifies the efficiency of knock-in or knock-out edits by repair outcome––<a target="_blank" href="https://en.wikipedia.org/wiki/Non-homologous_end_joining">NHEJ</a> or <a target="_blank" href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>. Click here to see <a target="_blank" href="http://crispresso.pinellolab.partners.org/view_report/dlJzEa">an example analysis report</a> from Crispresso.</p>
-
-{# TODO (gdingle): place screenshot #}
-
-<p>The advantages of using CrispyCrunch over these underlying tools are:</p>
-<ul>
-  <li>Define multiple CRISPR edits as unit and analyze them as a unit. <strong>Save time and avoid mistakes</strong> by not doing your own record keeping.</li>
-  <li><strong>Automatic quality control</strong> of CRISPR edits. Just point CrispyCrunch to the FastQ output files of your <a target="_blank" href="https://en.wikipedia.org/wiki/DNA_sequencer">DNA sequencer</a>.</li>
-  <li>Benefit from <strong>sophisticated HDR design rules</strong> which consider cut-to-insert distance, re-cutting, synonymous mutations, optimal primer length, intron/exon junctions, UTR boundaries and more.</li>
-</ul>
-
-<p>When <strong>not</strong> to use CrispyCrunch:</p>
-<ul>
-  <li>When you only want to make a single, knock-out CRISPR edit.</li>
-  <li>When you are planning a knock-out <a target="_blank" href="https://en.wikipedia.org/wiki/Genetic_screen">genetic screen</a>. Try <a target="_blank" href="http://crispor.tefor.net/crispor.py?libDesign=1">Crispor</a>.</li>
-</ul>
-
-
-
 <h2>Experiments</h2>
 <ul>
 {% for experiment in object_list %}

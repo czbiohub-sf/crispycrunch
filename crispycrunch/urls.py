@@ -5,9 +5,10 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 """
 from django.contrib import admin
 from django.urls import include, path
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 
 urlpatterns = [
+    path('', TemplateView.as_view(template_name='home.html'), name='CrispyCrunch'),
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
 
