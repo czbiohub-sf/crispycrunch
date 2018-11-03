@@ -138,11 +138,9 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet = from_guide_selection(guide_selection)
 
     ps_df = primer_selection.to_df()
-    sheet = sheet.set_index('_crispor_guide_id', drop=False).join(ps_df, how='inner')
-    assert len(sheet) <= len(ps_df)
+    sheet = sheet.set_index('_crispor_guide_id', drop=False).join(ps_df, how='left')
+    assert len(sheet) >= len(ps_df)
 
-    sheet = sheet.dropna(subset=['primer_seq_fwd'])
-    assert len(sheet)
     sheet.index = _new_index(size=len(sheet))
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
@@ -266,6 +264,10 @@ def _transform_primer_product(row) -> str:
     repeats, which is at least something to reduce the amount of
     nonspecific binding. "
     """
+
+    if not isinstance(row['primer_product'], str):
+        # TODO (gdingle):  also 'not found' for fwd and rev
+        return 'not found'
 
     # Only look up product from chr loc if crispor returns mysterious Ns
     if 'N' not in row['primer_product']:

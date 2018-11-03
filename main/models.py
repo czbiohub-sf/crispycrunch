@@ -577,6 +577,11 @@ class GuideDesign(BaseModel):
 
     @property
     def wells_per_target(self):
+        """
+        Should be target size of plate times number of expected drop-outs.
+        For example, if have a 96 well plate and expect to choose 1 in 3 guides,
+        then the wells should be 96 * 3.
+        """
         return max(1, 96 * 3 // len(self.targets))
 
     HDR_TAG_TO_CDS_INDEX = {
@@ -741,7 +746,8 @@ class PrimerSelection(BaseModel):
         blank=True,
         validators=[
             # TODO (gdingle): check explicitly for "not found" or else different user instructions
-            functools.partial(validate_num_wells, max=96 * 2),
+            # TODO (gdingle): temporary up to 384 for comparison with other method
+            functools.partial(validate_num_wells, max=96 * 4),
             _validate_selected_primers,
         ],
         help_text='Primers returned by Crispor, grouped by guide, forward primer then reverse primer')
