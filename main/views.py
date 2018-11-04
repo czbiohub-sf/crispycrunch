@@ -296,10 +296,34 @@ class GuideSelectionView(CreatePlusView):
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        selected_guides = dict(
+            (g['target'], g['guide_seqs'])
+            for g in guide_design.guide_data)
+
+        # TODO (gdingle): refactor into method
+        # TODO (gdingle): sort by score and remove _top_guides
+        # TODO (gdingle): filter by min_score=30
+        if guide_design.hdr_tag:
+            # Make temp obj for samplesheet
+            guide_selection = GuideSelection(
+                guide_design=guide_design,
+                selected_guides=selected_guides
+            )
+            sheet = samplesheet.from_guide_selection(guide_selection)
+            sheet['_hdr_dist'] = sheet.apply(lambda row: abs(row['hdr_dist']), axis=1)
+            sheet.sort_values('_hdr_dist', inplace=True)
+            top = guide_design.wells_per_target
+            grouped = sheet.groupby(['target_loc'])
+            # Take top then regroup for iteration by group
+            grouped = grouped.head(top).groupby(['target_loc'])
+            selected_guides = dict((
+                str(name),
+                dict(zip(group['_crispor_pam_id'],
+                         group['guide_seq'] + ' ' + group['guide_pam'])))
+                for name, group in grouped)
+
         return {
-            'selected_guides': dict(
-                (g['target'], self._top_guides(g, guide_design))
-                for g in guide_design.guide_data),
+            'selected_guides': selected_guides,
         }
 
     def plus(self, obj):
