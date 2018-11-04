@@ -24,14 +24,14 @@ from utils.validators import *
 
 VAR_TERMINUS_EXAMPLES = [
     # ENST00000447866,C length of cds only 36',
-    # ENST00000617316,N # Not Found for url: http://togows.org/search/ncbi-gene/'ENST00000617316/1,50.json',
-    # ENST00000361781,C 'crispor error'
-    # ENST00000317551,C 'crispor error'
-    # more 'crispor error'
-    # 'ENST00000460006,N',
-    # 'ENST00000323646,N',
-    # 'ENST00000300737,C',
-    # 'ENST00000356978,N',
+    # ENST00000617316,N # Not Found for url: http://togows.org/search/ncbi-gene/ENST00000617316/1,50.json',
+    'ENST00000361781,C',
+    'ENST00000317551,C',
+    'ENST00000460006,N',
+    'ENST00000323646,N',
+    'ENST00000300737,C',
+    'ENST00000356978,N',
+    'ENST00000617316,N',
     'ENST00000325110,C',
     'ENST00000287936,C',
     'ENST00000228510,C',

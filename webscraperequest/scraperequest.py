@@ -315,9 +315,10 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             pre_filter: int = 2) -> None:
 
         self.data = {
-            # TODO (gdingle): because name is in URL, it affects cache key,
-            # so for better hit rate, change to a constant such as 'crispycrunch'
-            'name': name,
+            # NOTE: Don't use "name" because it lowers cache hit rate, it actually
+            # causes some inexplicable errors in Crispor, for example:
+            # "mNG11 plate 4".
+            # 'name': name,
             'seq': seq,
             'org': org,
             'pam': pam,
@@ -333,6 +334,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         self.pre_filter = pre_filter
 
     def run(self, retries: int=5) -> Dict[str, Any]:
+        # TODO (gdingle): temp for working on crispor
+        # _cache.delete(self.cache_key)
         try:
             logger.info('POST request to: {}'.format(self.endpoint))
             response = _cached_session.send(self.request)  # type: ignore
@@ -404,7 +407,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 )
             if 'An error occured during processing' in soup.get_text():
                 raise RuntimeError(
-                    'Crispor: An error occured during processing')
+                    'Crispor: An error occured during processing.')
 
             raise RuntimeError('Crispor on {}: No output rows. "{}"'.format(
                 self.target, soup.find('body')))
@@ -618,12 +621,6 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 if __name__ == '__main__':
     import doctest  # noqa
     doctest.testmod()
-
-    # seq = 'chrX:49250226-49250297'
-    # seq = 'AACGCTGGCCTCCTAGGCCGGGTCCGGGAGGCCTGAGGAGCCGCCGGCAGAGGTCTCTCCCCAGCCTCAGGC'
-    # req = CrisporGuideRequest(name='test-crispr-guides', seq=seq)
-    # data = req.run()
-    # print(data)
 
     # req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl', pre_filter=5)
     # data = req.run()
