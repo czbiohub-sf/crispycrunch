@@ -334,7 +334,7 @@ class PrimerDesignView(CreatePlusView):
             # Crispor hdr_dist is relative to positive genome strand.
             1 if row['target_loc'].strand == '+' else -1)]
             for row in sheet.to_records()]
-        batch.start(largs, [-2, -1])
+        batch.start(largs, [-2])
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
@@ -371,11 +371,16 @@ class PrimerSelectionView(CreatePlusView):
                 return 'not found'
             return values[0], values[1]
 
+        sprimers = dict(
+            (p['target'], get_fwd_and_rev_primers(p['ontarget_primers'])
+             if p['success'] else p['error'])
+            for p in primer_data)
         return {
-            'selected_primers': dict(
-                (p['target'], get_fwd_and_rev_primers(p['ontarget_primers'])
-                 if p['success'] else p['error'])
-                for p in primer_data)
+            'selected_primers': {
+                # Put "not found" on top for readability
+                **dict((t, p) for t, p in sprimers.items() if p == 'not found'),
+                **dict((t, p) for t, p in sprimers.items() if p != 'not found')
+            }
         }
 
     def plus(self, obj):

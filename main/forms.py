@@ -76,7 +76,8 @@ class GuideSelectionForm(ModelForm):
         fields = '__all__'
         exclude = ['guide_design']
         widgets = {
-            'selected_guides': PrettyJsonWidget(attrs={'rows': 40}),
+            'selected_guides': PrettyJsonWidget(
+                attrs={'rows': 40, 'spellcheck': "false"}),
         }
 
 
@@ -93,7 +94,8 @@ class PrimerSelectionForm(ModelForm):
         model = PrimerSelection
         fields = '__all__'
         exclude = ['primer_design']
-        widgets = {'selected_primers': PrettyJsonWidget(attrs={'rows': 20})}
+        widgets = {'selected_primers': PrettyJsonWidget(
+            attrs={'rows': 20, 'spellcheck': "false"})}
 
 
 class AnalysisForm(ModelForm):
