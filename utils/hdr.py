@@ -36,7 +36,9 @@ class HDR:
             hdr_dist: int = 0,
             guide_strand_same: bool = None,
             cds_seq: str = '',
-            target_mutation_score: float = 1.0) -> None:
+            # Default based on analysis of
+            # https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
+            target_mutation_score: float = 0.1) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
@@ -342,10 +344,24 @@ class HDR:
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGAcCCcTTt'
+        >>> hdr.target_mutation_score = 0.01
+        >>> hdr.guide_mutated
+        'ATGGCcGAaCTcGAcCCcTTt'
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, target_mutation_score=50.0)
         >>> hdr.guide_mutated
         'ATGGCcGAGCTGGATCCGTTC'
+
+        Varying target score.
+        >>> hdr.target_mutation_score = 1
+        >>> hdr.guide_mutated
+        'ATGGCcGAaCTGGATCCGTTC'
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.guide_mutated
+        'ATGGCcGAaCTcGAcCCGTTC'
+        >>> hdr.target_mutation_score = 0.01
+        >>> hdr.guide_mutated
+        'ATGGCcGAaCTcGAcCCcTTt'
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
