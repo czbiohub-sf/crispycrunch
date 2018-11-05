@@ -262,7 +262,13 @@ class GuideSelectionView(CreatePlusView):
         """
         selected_guides = dict(
             (g['target'], g['guide_seqs'])
-            for g in guide_design.guide_data)
+            for g in guide_design.guide_data
+            # TODO (gdingle): what best to do with not founds?
+            if 'not found' not in g['guide_seqs'])
+        not_founds = dict(
+            (g['target'], g['guide_seqs'])
+            for g in guide_design.guide_data
+            if 'not found' in g['guide_seqs'])
 
         # Make temp obj for samplesheet
         guide_selection = GuideSelection(
@@ -282,11 +288,13 @@ class GuideSelectionView(CreatePlusView):
         # Take top then regroup for iteration by group
         top = guide_design.wells_per_target
         grouped = grouped.head(top).groupby(['target_loc'])
-        return dict((
+        top_guides = dict((
             str(target_loc),
             dict(zip(group['_crispor_pam_id'],
                      group['guide_seq'] + ' ' + group['guide_pam'])))
             for target_loc, group in grouped)
+        # Place not founds at top for easy reading
+        return {**not_founds, **top_guides}
 
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])

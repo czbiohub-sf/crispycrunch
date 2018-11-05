@@ -5,9 +5,12 @@
 {% block intro_content %}
 
 <ol>
-  <li>Review Crispor recommended guides
+  <li>Review
+    <a href="#collapsibleLinks" data-toggle="collapse">
+      Crispor recommended guides
+    </a>
       {# TODO: wrap into two cols #}
-      <ul class="small">
+      <ul id="collapsibleLinks" class="small collapse">
         {% for target, url in crispor_urls.items %}
         <li>
           <a target="_blank" href="{{ url }}">

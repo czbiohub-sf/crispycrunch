@@ -557,10 +557,8 @@ class GuideDesign(BaseModel):
                 'scores': list(gd['scores'].values()),  # list of lists
                 'primer_url': list(gd['primer_urls'].values()),
             }))
-        # TODO (gdingle): sort by score if knock-out else hdr_dist here instead
-        # of in views _top_guides and samplesheet
         return df_targets.set_index('target_loc', drop=False).join(
-            df_guides.set_index('target_loc'))
+            df_guides.set_index('target_loc'), how='inner')
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(

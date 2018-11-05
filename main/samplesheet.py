@@ -242,7 +242,12 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
 def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     gd_df = guide_selection.guide_design.to_df()
+    dupes = gd_df['guide_id'][gd_df['guide_id'].duplicated()]
+    assert not len(dupes), dupes
+
     gs_df = guide_selection.to_df()
+    dupes = gs_df['guide_id'][gs_df['guide_id'].duplicated()]
+    assert not len(dupes), dupes
 
     guides_df = gd_df.set_index('guide_id').join(
         gs_df.set_index('guide_id'), how='inner')
@@ -375,8 +380,8 @@ def to_excel(sheet: DataFrame) -> BytesIO:
     return excel_file
 
 
-def _new_index(size=96 * 3,
-               end_char='Z',
+def _new_index(size=96 * 6,
+               end_char='z',
                end_int=12) -> list:
     """
     end_char and end_int determine the shape of the plate together.
