@@ -12,6 +12,7 @@ See also SampleSheetTestCase for sample return data.
 """
 
 import logging
+import re
 import time
 import urllib.parse
 
@@ -371,6 +372,12 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
     def _extract_data(self, soup: BeautifulSoup, url: str) -> Dict[str, Any]:
         title = soup.find(class_='title')
+
+        # Parse from wacky JS redirect so we can have proper URLs for errors
+        match = re.search(r'batchId=(\w+)', soup.get_text())
+        if match:
+            url += '?batchId=' + match.group(1) if match else ''
+
         if title and 'not present in the selected genome' in title.get_text():
             raise ValueError('Crispor on {}: {}'.format(
                 self.target, title.get_text()))
