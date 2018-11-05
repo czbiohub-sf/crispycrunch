@@ -355,6 +355,17 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             logger.warning(str(e))
             # IMPORTANT: Delete cache of unexpected output
             _cache.delete(self.cache_key)
+            # Unfortunately, Crispor has some sort of caching of error results,
+            # so we need to change the name to try again.
+            self.data['name'] = 'retries' + str(retries)
+            self.request = requests.Request(  # type: ignore
+                'POST', self.endpoint, data=self.data).prepare()
+            if retries:
+                logger.warning('Retrying with different name for Crispor')
+                # retry immediately
+                return self.run(retries - 1)
+            else:
+                raise
             raise
         raise RuntimeError('unknown error')
 

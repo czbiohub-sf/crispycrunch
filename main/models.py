@@ -25,10 +25,8 @@ from utils.validators import *
 VAR_TERMINUS_EXAMPLES = [
     # ENST00000447866,C length of cds only 36',
     # ENST00000617316,N # Not Found for url: http://togows.org/search/ncbi-gene/ENST00000617316/1,50.json',
-    # crispor error... won't accept sequence GGGAAGCTGTGGCTGGACGCCTACCTTCACAAATGAAGCCACAGCCCCCGGGACACCGTGGGGAAGGGGTGC
-    # 'ENST00000278840,C',
-    # crispor error... won't accept sequence ATGCGGACGAAGGCGGCGGGCTGCGCGGAGCGGCGT
-    # 'ENST00000638572,N',
+    'ENST00000278840,C',
+    'ENST00000638572,N',
     'ENST00000361781,C',
     'ENST00000317551,C',
     'ENST00000460006,N',

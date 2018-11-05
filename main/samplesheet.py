@@ -246,7 +246,7 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
 
     guides_df = gd_df.set_index('guide_id').join(
         gs_df.set_index('guide_id'), how='inner')
-    assert len(guides_df) >= len(gs_df)
+    assert len(guides_df) >= len(gs_df), (len(guides_df), len(gs_df))
 
     return guides_df
 
