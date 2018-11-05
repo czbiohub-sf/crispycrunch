@@ -128,6 +128,9 @@ class GuideDesignView(CreatePlusView):
             with ThreadPoolExecutor() as pool:
                 return list(pool.map(func, targets))
 
+        elif all(is_chr(t) for t in targets):
+            return targets
+
         assert False
 
     def _get_target_seqs(self, targets, guide_design):
@@ -245,82 +248,49 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
-    # TODO (gdingle): too ugly... refactor to model, change algol or do something
-    @staticmethod
-    def _top_guides(guide_data, guide_design, min_score=30):
+    def _filter_guides(self, guide_design, min_score=30) -> dict:
         """
-        Select the top guides for further manual selection depending on a few
-        vars, such as HDR and wells_per_target.
+        Filters all guides returned by Crispor down to those that have a score
+        greater than min_score, then takes top guides by cut-to-insert distance
+        if HDR, else by score.
         """
-        by = 'distance' if guide_design.hdr_tag else 'score'
-        top = guide_design.wells_per_target
-
-        guide_seqs = guide_data['guide_seqs']
-        guide_scores = guide_data.get('scores')
-        if not guide_seqs or not guide_scores:
-            return guide_seqs
-
-        # First score should be the MIT specificity score
-        # Filter out 'Not found'
-        scores = dict((k, int(s[0]))
-                      for k, s in guide_scores.items()
-                      if s[0].isdigit())
-
-        if by == 'distance':
-            guide_seqs = dict(g for g in guide_seqs.items()
-                              # TODO (gdingle): is 30 (yellow) a good cut-off?
-                              if scores.get(g[0], 0) > min_score)
-
-        def func(t):
-            if by == 'score':
-                return int(scores[t[0]])
-            elif by == 'distance':
-                # s29+, s26+, etc
-                # change dist depending on codon target
-                # TODO (gdingle): what about forward and reverse?
-                # we should really rank by cut to insert distance
-                guide_offset = int(t[0][1:-1])
-                if guide_design.cds_index == -1:
-                    # Reproduce protospacex min_length fetch behavior
-                    # TODO (gdingle): we shouldn't need to do this
-                    mid = guide_design.cds_length // 2
-                    return abs(mid - guide_offset)
-                else:
-                    return guide_offset
-
-        guide_seqs = sorted(
-            guide_seqs.items(),
-            key=func,
-            reverse=(by == 'score'))
-        return dict(islice(guide_seqs, top))
-
-    def get_initial(self):
-        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
         selected_guides = dict(
             (g['target'], g['guide_seqs'])
             for g in guide_design.guide_data)
 
+        # Make temp obj for samplesheet
+        guide_selection = GuideSelection(
+            guide_design=guide_design,
+            selected_guides=selected_guides
+        )
+        sheet = samplesheet.from_guide_selection(guide_selection)
+        sheet = sheet.loc[sheet['guide_score'] > min_score, :]
+
+        if guide_design.hdr_tag:
+            sheet['_hdr_dist'] = sheet.apply(lambda row: abs(row['hdr_dist']), axis=1)
+            sheet.sort_values('_hdr_dist', inplace=True)
+        else:
+            sheet.sort_values('guide_score', inplace=True, ascending=False)
+
+        grouped = sheet.groupby(['target_loc'])
+        # Take top then regroup for iteration by group
+        top = guide_design.wells_per_target
+        grouped = grouped.head(top).groupby(['target_loc'])
+        return dict((
+            str(target_loc),
+            dict(zip(group['_crispor_pam_id'],
+                     group['guide_seq'] + ' ' + group['guide_pam'])))
+            for target_loc, group in grouped)
+
+        return selected_guides
+
+    def get_initial(self):
+        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        selected_guides = self._filter_guides(guide_design)
+
         # TODO (gdingle): refactor into method
         # TODO (gdingle): sort by score and remove _top_guides
         # TODO (gdingle): filter by min_score=30
-        if guide_design.hdr_tag:
-            # Make temp obj for samplesheet
-            guide_selection = GuideSelection(
-                guide_design=guide_design,
-                selected_guides=selected_guides
-            )
-            sheet = samplesheet.from_guide_selection(guide_selection)
-            sheet['_hdr_dist'] = sheet.apply(lambda row: abs(row['hdr_dist']), axis=1)
-            sheet.sort_values('_hdr_dist', inplace=True)
-            top = guide_design.wells_per_target
-            grouped = sheet.groupby(['target_loc'])
-            # Take top then regroup for iteration by group
-            grouped = grouped.head(top).groupby(['target_loc'])
-            selected_guides = dict((
-                str(name),
-                dict(zip(group['_crispor_pam_id'],
-                         group['guide_seq'] + ' ' + group['guide_pam'])))
-                for name, group in grouped)
 
         return {
             'selected_guides': selected_guides,

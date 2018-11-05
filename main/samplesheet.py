@@ -122,7 +122,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     )
 
     # Take the MIT score
-    sheet['guide_score'] = [g['scores'][0] for g in guides.to_records()]
+    sheet['guide_score'] = [int(g['scores'][0]) for g in guides.to_records()]
 
     if guide_design.hdr_tag:
         sheet = _set_hdr_cols(sheet, guide_design, guides)

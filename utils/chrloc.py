@@ -93,7 +93,7 @@ class ChrLoc:
 
     @property
     def opposite_strand(self):
-        return {'+': '-', '-': '+'}[self.strand]
+        return {'+': '-', '-': '+', '': '-'}[self.strand]
 
     @property
     def as_strand_direction(self):
@@ -231,7 +231,7 @@ def get_guide_loc(
             target_loc.chr,
             pam + 3 if not guide_strand_same else pam - guide_len,
             pam + guide_len + 2 if not guide_strand_same else pam - 1,
-            target_loc.strand if guide_strand_same else target_loc.opposite_strand)
+            (target_loc.strand or '+') if guide_strand_same else target_loc.opposite_strand)
     )
 
 
