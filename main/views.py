@@ -248,7 +248,7 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
-    def _filter_guides(self, guide_design, min_score=30) -> dict:
+    def _get_top_guides(self, guide_design, min_score=30) -> dict:
         """
         Filters all guides returned by Crispor down to those that have a score
         greater than min_score, then takes top guides by cut-to-insert distance
@@ -282,18 +282,10 @@ class GuideSelectionView(CreatePlusView):
                      group['guide_seq'] + ' ' + group['guide_pam'])))
             for target_loc, group in grouped)
 
-        return selected_guides
-
     def get_initial(self):
         guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
-        selected_guides = self._filter_guides(guide_design)
-
-        # TODO (gdingle): refactor into method
-        # TODO (gdingle): sort by score and remove _top_guides
-        # TODO (gdingle): filter by min_score=30
-
         return {
-            'selected_guides': selected_guides,
+            'selected_guides': self._get_top_guides(guide_design),
         }
 
     def plus(self, obj):
