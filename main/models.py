@@ -442,6 +442,7 @@ class GuideDesign(BaseModel):
     # explain ENST is always converted to forward strand
     targets_raw = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_chr_or_seq_or_enst_or_gene]),
+        validators=[validate_unique_set],
         # TODO (gdingle): support FASTA with description line
         verbose_name='Target regions',
         help_text="""Chromosome location, fasta sequence, ENST transcript ID, or
@@ -462,16 +463,19 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): rename to target_locs when wiping whole database
     targets = fields.ArrayField(
         ChrLocField(max_length=80, validators=[validate_chr], blank=True),
+        validators=[validate_unique_set],
         verbose_name='Target chromosome locations',
     )
     target_seqs = fields.ArrayField(
         models.CharField(max_length=65536, validators=[validate_seq]),
+        validators=[validate_unique_set],
         verbose_name='Target sequences',
         blank=True,
         default=[],
     )
     target_genes = fields.ArrayField(
         models.CharField(max_length=40, validators=[validate_gene], blank=True),
+        validators=[validate_unique_set],
         verbose_name='Target gene symbols',
         blank=True,
         default=[],
@@ -508,7 +512,7 @@ class GuideDesign(BaseModel):
         if self.hdr_tag != 'per_target' and target_tags:
             raise ValueError(
                 'HDR tags entered per target but also "{}". Did you mean to select "per target" HDR?'.format(
-                    self.hdr_tag_verbose))
+                    self.hdr_tag_verbose or '--------'))
 
         if self.hdr_tag == 'per_target' and not target_tags:
             raise ValueError('You must specify "N" or "C" for each target')

@@ -66,8 +66,14 @@ class CreatePlusView(CreateView):
         obj = form.save(commit=False)
         try:
             obj = self.plus(obj)
+            obj.full_clean()
         except (ValidationError, ValueError) as e:
             logging.exception(e)
+            # Force field specific errors to __all__ because they are likely
+            # from fields excluded from form.
+            if isinstance(e, ValidationError) and hasattr(e, 'error_dict'):
+                e.error_list = [e.message for el in e.error_dict.values() for e in el]
+                del e.error_dict
             form.add_error('__all__', e)
             return self.form_invalid(form)
         obj.save()
@@ -95,7 +101,7 @@ class GuideDesignView(CreatePlusView):
         if all(is_seq(t) for t in targets):
             # TODO (gdingle): gggenome all seqs
             raise ValidationError(
-                'Targeting fasta sequences is not currently implemented')
+                'Targeting fasta sequences is not currently implemented: {}'.format(targets))
 
         if guide_design.hdr_tag:
             if not all(is_ensemble_transcript(t) or is_gene(t) for t in targets):

@@ -174,5 +174,13 @@ def validate_num_wells(value: dict, max: int = 96) -> None:
             '{} items do not fit in a 96-well plate'.format(total))
 
 
+def validate_unique_set(value: list) -> None:
+    items = list(value)  # make copy
+    for v in set(items):
+        items.remove(v)
+    if items:
+        raise ValidationError('Duplicate targets: {}'.format(items))
+
+
 if __name__ == '__main__':
     doctest.testmod()
