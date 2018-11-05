@@ -242,6 +242,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
 def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     gd_df = guide_selection.guide_design.to_df()
+    if not len(gd_df):
+        return gd_df
     dupes = gd_df['guide_id'][gd_df['guide_id'].duplicated()]
     assert not len(dupes), dupes
 

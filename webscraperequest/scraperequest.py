@@ -393,8 +393,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     guide_seqs={
                         'not found': 'not found',
                         # TODO (gdingle): make url on error work somehow
-                        # 'url': url,
                     },
+                    url=url,
                 )
             if 'Server error: could not run command' in soup.get_text():
                 # Delete because intermittent
@@ -403,18 +403,18 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     target=self.target,
                     guide_seqs={
                         'server error': 'server error',
-                        # TODO (gdingle): make url on error work somehow
-                        # 'url': url,
                     },
+                    # TODO (gdingle): make url on error work somehow
+                    url=url,
                 )
             if 'are not valid in the genome' in soup.get_text():
                 return dict(
                     target=self.target,
                     guide_seqs={
                         'invalid chromosome range': 'invalid chromosome range',
-                        # TODO (gdingle): make url on error work somehow
-                        # 'url': url,
                     },
+                    # TODO (gdingle): make url on error work somehow
+                    url=url,
                 )
             if 'An error occured during processing' in soup.get_text():
                 raise RuntimeError(

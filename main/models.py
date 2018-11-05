@@ -557,6 +557,11 @@ class GuideDesign(BaseModel):
                 'scores': list(gd['scores'].values()),  # list of lists
                 'primer_url': list(gd['primer_urls'].values()),
             }))
+
+        if not len(df_guides):  # Edge case
+            # TODO (gdingle): handle zero guides case better
+            raise ValueError('No guides found for any targets')
+
         return df_targets.set_index('target_loc', drop=False).join(
             df_guides.set_index('target_loc'), how='inner')
 
