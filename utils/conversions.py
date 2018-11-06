@@ -5,6 +5,7 @@ defaults.
 import doctest
 import re
 
+import requests
 import requests_cache  # type: ignore
 
 # See also CHR_REGEX in validators.py
@@ -16,6 +17,12 @@ _cached_session = requests_cache.CachedSession(
     expire_after=3600 * 24 * 14,
     allowable_methods=('GET', 'POST'),
 )
+
+# Avoid too many connections error. See:
+# https://stackoverflow.com/questions/23632794/
+adapter = requests.adapters.HTTPAdapter(pool_connections=96 * 4, pool_maxsize=96 * 4)
+_cached_session.mount('http://', adapter)
+_cached_session.mount('https://', adapter)
 
 
 def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:

@@ -475,7 +475,7 @@ class GuideDesign(BaseModel):
     )
     target_genes = fields.ArrayField(
         models.CharField(max_length=40, validators=[validate_gene], blank=True),
-        validators=[validate_unique_set],
+        # Genes are not necessarily unique set in an experiment
         verbose_name='Target gene symbols',
         blank=True,
         default=[],

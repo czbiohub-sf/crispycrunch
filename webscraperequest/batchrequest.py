@@ -164,7 +164,7 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     requester = CrisporGuideRequest
     field_name = 'guide_data'
     # More than 8 threads appears to cause a 'no output' Crispor error
-    max_workers = 2
+    max_workers = 4
 
 
 class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
@@ -180,7 +180,7 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
-    max_workers = 16
+    max_workers = 8
 
 
 class CrispressoBatchWebRequest(BaseBatchWebRequest):
