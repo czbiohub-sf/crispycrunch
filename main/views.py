@@ -255,7 +255,7 @@ class GuideSelectionView(CreatePlusView):
 
     # TODO (gdingle): see https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
     # for optimal min_score
-    def _get_top_guides(self, guide_design, min_score=210) -> dict:
+    def _get_top_guides(self, guide_design, min_score=20) -> dict:
         """
         Filters all guides returned by Crispor down to those that have a score
         greater than min_score, then takes top guides by cut-to-insert distance
