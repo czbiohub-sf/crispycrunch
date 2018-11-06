@@ -1,4 +1,4 @@
-  {% load bootstrap4 %}
+{% load bootstrap4 %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -23,7 +23,7 @@
   </a>
 
   <h1>
-    {{request.resolver_match.url_name}}
+    {% block h1 %}{{request.resolver_match.url_name}}{% endblock %}
   </h1>
 
   <hr />

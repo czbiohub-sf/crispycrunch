@@ -94,6 +94,10 @@ def enst_to_gene(enst: str, genome: str = 'hg38') -> str:
 
     >>> enst_to_gene('ENST00000398844')
     'SEC24A'
+    >>> enst_to_gene('ENST00000617316')
+    Traceback (most recent call last):
+    ...
+    requests.exceptions.HTTPError: 404 Client Error: Not Found for url: http://togows.org/search/ncbi-gene/ENST00000617316/1,50.json
     """
     url = 'http://togows.org/search/ncbi-gene/{}/1,50.json'.format(enst)
     response = _cached_session.get(url)
@@ -108,6 +112,18 @@ def enst_to_gene(enst: str, genome: str = 'hg38') -> str:
     res = response.json()
     assert len(res) == 1
     return res[0]
+
+
+def enst_to_gene_or_unknown(enst: str, genome: str = 'hg38') ->str:
+    """
+    Suppresses not foundn exceptions.
+    >>> enst_to_gene_or_unknown('ENST00000617316')
+    'UNKNOWN'
+    """
+    try:
+        return enst_to_gene(enst, genome)
+    except IOError:
+        return 'UNKNOWN'
 
 
 def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -> str:
@@ -150,6 +166,7 @@ def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -
 
 # TODO (gdingle): share code with protospacex
 # For gene_to_enst, see protospacex
+
 
 if __name__ == '__main__':
     doctest.testmod()

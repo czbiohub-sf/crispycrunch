@@ -183,8 +183,7 @@ class GuideDesignView(CreatePlusView):
     def _get_target_genes(self, targets, guide_design):
         if all(is_ensemble_transcript(t) for t in targets):
             func = functools.partial(
-                # enst_to_gene is more precise than chr_loc_to_gene
-                conversions.enst_to_gene,
+                conversions.enst_to_gene_or_unknown,
                 genome=guide_design.genome)
         elif all(is_gene(t) for t in targets):
             return targets
@@ -254,7 +253,9 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
-    def _get_top_guides(self, guide_design, min_score=30) -> dict:
+    # TODO (gdingle): see https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
+    # for optimal min_score
+    def _get_top_guides(self, guide_design, min_score=210) -> dict:
         """
         Filters all guides returned by Crispor down to those that have a score
         greater than min_score, then takes top guides by cut-to-insert distance
@@ -276,7 +277,10 @@ class GuideSelectionView(CreatePlusView):
             selected_guides=selected_guides
         )
         sheet = samplesheet.from_guide_selection(guide_selection)
-        sheet = sheet.loc[sheet['guide_score'] > min_score, :]
+        sheet = sheet.loc[sheet['guide_score'] >= min_score, :]
+        if not len(sheet):
+            # TODO (gdingle): handle zero guides case better
+            raise ValueError('No good guides found for any targets')
 
         if guide_design.hdr_tag:
             sheet['_hdr_dist'] = sheet.apply(lambda row: abs(row['hdr_dist']), axis=1)
