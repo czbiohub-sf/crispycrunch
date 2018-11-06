@@ -244,6 +244,8 @@ class GuideDesignProgressView(View):
         if not batch_status.is_successful:
             return render(request, self.template_name, locals())
         else:
+            # For unknown reason, redirecting too early causes 500 error
+            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
 
@@ -357,6 +359,8 @@ class PrimerDesignProgressView(View):
         if not batch_status.is_successful:
             return render(request, self.template_name, locals())
         else:
+            # For unknown reason, redirecting too early causes 500 error
+            time.sleep(1)
             return HttpResponseRedirect(
                 self.success_url.format(id=self.kwargs['id']))
 

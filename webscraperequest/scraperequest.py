@@ -402,17 +402,9 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     },
                     url=url,
                 )
-            if 'Server error: could not run command' in soup.get_text():
-                # Delete because intermittent
-                _cache.delete(self.cache_key)
-                return dict(
-                    target=self.target,
-                    guide_seqs={
-                        'server error': 'server error',
-                    },
-                    # TODO (gdingle): make url on error work somehow
-                    url=url,
-                )
+            index = soup.get_text().find('Server error: could not run command')
+            if index != -1:
+                raise RuntimeError(soup.get_text()[index:index + 200])
             if 'are not valid in the genome' in soup.get_text():
                 return dict(
                     target=self.target,
