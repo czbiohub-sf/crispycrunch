@@ -323,6 +323,8 @@ def get_cds_chr_loc(
 
     >>> get_cds_chr_loc('ENST00000221801', -1, length=-1)
     'chr19:39834538-39834562:-'
+
+    >>> get_cds_chr_loc('ENST00000638706', -1)
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
