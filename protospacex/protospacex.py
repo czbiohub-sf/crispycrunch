@@ -324,7 +324,9 @@ def get_cds_chr_loc(
     >>> get_cds_chr_loc('ENST00000221801', -1, length=-1)
     'chr19:39834538-39834562:-'
 
+    # TODO (gdingle): fix weird case
     >>> get_cds_chr_loc('ENST00000638706', -1)
+    'chrCHR_HG30_PATCH:179729500-179729535:+'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -430,8 +432,8 @@ def get_ultramer_seq(
     ult_seq = record.seq[start:end]
 
     if start < 0 or end > len(record.seq):
-        log.warning('Transcript {} is not large enough. Shortening by 36bp.'.format(
-            len(ult_seq), length, ensembl_transcript_id))
+        log.warning('Transcript {} is not large enough: {}. Shortening by 36bp.'.format(
+            ensembl_transcript_id, len(ult_seq)))
         # IDT ultramers should be good >150bp
         start += 18
         end -= 18

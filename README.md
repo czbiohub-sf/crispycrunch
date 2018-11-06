@@ -3,7 +3,7 @@ Web app for CRISPR experiment setup and analysis. Fill in a 96-well plate and an
 
 ## Background
 
-This app was developed by Greg Dingle starting in July 2018 for Andy May's genome engineering group in the CZ Biohub. The intention is to streamline the CRISPR experimentation process of researchers in the Biohub and provide a permanent record of experiments and results.
+This app was developed by Greg Dingle starting in July 2018 for the genome engineering group in the CZ Biohub. The intention was to streamline the CRISPR experimentation process of researchers in the Biohub and provide a permanent record of experiments and results.
 
 ## Services
 
