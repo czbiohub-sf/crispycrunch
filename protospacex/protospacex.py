@@ -240,10 +240,14 @@ def get_cds_seq(
         cds_index
     )
 
+    if end > len(record.seq) or start < 0:
+        raise ValueError('Transcript {} is not long enough for targeting {}bp around {} codon'.format(
+            ensembl_transcript_id, length, 'start' if cds_index == 0 else 'stop'))
+
     cds_seq = record.seq[start:end]
 
     if length != -1:
-        assert len(cds_seq) == length, len(cds_seq)
+        assert len(cds_seq) == length, (len(cds_seq), start, end, length)
         assert len(cds_seq) % 3 == 0, 'must be codon aligned'
 
     if cds_index == 0:
