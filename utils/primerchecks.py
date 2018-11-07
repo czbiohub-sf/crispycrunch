@@ -11,11 +11,11 @@ LEFT_ADAPTER_TAG = 'CTCTTTCCCTACACGACGCTCTTCCGATCT'
 RIGHT_ADAPTER_TAG = 'CTGGAGTTCAGACGTGTGCTCTTCCGATCT'
 
 
-def is_self_binding(left_primer: str, right_primer: str) -> bool:
+def is_left_right_binding(left_primer: str, right_primer: str) -> bool:
     """
     >>> left_primer = 'GCAC'
     >>> right_primer = 'ACAT'
-    >>> is_self_binding(left_primer, right_primer)
+    >>> is_left_right_binding(left_primer, right_primer)
     False
     """
     last_4_left_com = complementary_sequence(left_primer[-4:])
@@ -27,11 +27,11 @@ def is_self_binding(left_primer: str, right_primer: str) -> bool:
     return False
 
 
-def is_self_self_binding(left_primer: str, right_primer: str) -> bool:
+def is_same_side_binding(left_primer: str, right_primer: str) -> bool:
     """
     >>> left_primer = 'GCAC'
     >>> right_primer = 'ACAT'
-    >>> is_self_binding(left_primer, right_primer)
+    >>> is_same_side_binding(left_primer, right_primer)
     False
     """
     last_4_left_com = complementary_sequence(left_primer[-4:])
