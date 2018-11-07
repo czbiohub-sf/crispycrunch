@@ -437,29 +437,7 @@ def get_ultramer_seq(
     if start < 0 or end > len(record.seq):
         log.warning('Transcript {} is not large enough: {}. Fetching sequence.'.format(
             ensembl_transcript_id, len(ult_seq)))
-
-        species = record.annotations['reference_species']
-        chr_num = record.annotations['reference_chromosome_number']
-        transcript_strand = record.annotations['transcript_strand']
-        if transcript_strand == -1:
-            seq_end = record.annotations['reference_right_index']
-            ult_seq = _fetch_seq(
-                species,
-                chr_num,
-                seq_end - end + 1,
-                # Note: ensembl is inclusive range and biopython is exclusive
-                seq_end - start
-            )
-            ult_seq = Seq(ult_seq, IUPACUnambiguousDNA()).reverse_complement()
-        else:
-            seq_start = record.annotations['reference_left_index']
-            ult_seq = _fetch_seq(
-                species,
-                chr_num,
-                seq_start + start,
-                # Note: ensembl is inclusive range and biopython is exclusive
-                seq_start + end - 1
-            )
+        ult_seq = _get_seq_from_surrounding(record, start, end)
         assert len(ult_seq) == length, (len(ult_seq), length)
 
     codon_at = codon_at - start  # make relative to
@@ -469,6 +447,32 @@ def get_ultramer_seq(
         assert ult_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
 
     return str(ult_seq)
+
+
+def _get_seq_from_surrounding(record, start: int, end: int) -> str:
+    species = record.annotations['reference_species']
+    chr_num = record.annotations['reference_chromosome_number']
+    transcript_strand = record.annotations['transcript_strand']
+    if transcript_strand == -1:
+        seq_end = record.annotations['reference_right_index']
+        seq = _fetch_seq(
+            species,
+            chr_num,
+            seq_end - end + 1,
+            # Note: ensembl is inclusive range and biopython is exclusive
+            seq_end - start
+        )
+        seq = Seq(seq, IUPACUnambiguousDNA()).reverse_complement()
+    else:
+        seq_start = record.annotations['reference_left_index']
+        seq = _fetch_seq(
+            species,
+            chr_num,
+            seq_start + start,
+            # Note: ensembl is inclusive range and biopython is exclusive
+            seq_start + end - 1
+        )
+    return seq
 
 
 def _get_start_end(
