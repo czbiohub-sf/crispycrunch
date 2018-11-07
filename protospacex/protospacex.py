@@ -324,7 +324,7 @@ def get_cds_chr_loc(
     >>> get_cds_chr_loc('ENST00000221801', -1, length=-1)
     'chr19:39834538-39834562:-'
 
-    # TODO (gdingle): fix weird case
+    Weird case.
     >>> get_cds_chr_loc('ENST00000638706', -1)
     'chrCHR_HG30_PATCH:179729500-179729535:+'
     """
@@ -406,10 +406,12 @@ def get_ultramer_seq(
     >>> get_ultramer_seq('ENST00000221801', -1)
     'CCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTGTGT'
 
-    # TODO (gdingle): what about this case where there is not enough in the transcript for the ultarmer?
+    Not enough in the transcript for the ultramer.
     >>> get_ultramer_seq('ENST00000258648')
     'ACGCACCTGCGTCAGCTCGCTCTGCGCGTGCGCCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGG'
 
+    >>> get_ultramer_seq('ENST00000267113')
+    'CTAGGCAACCTCCAGCCAGTCCCTGGGTCGGGCGGATCCTCCCAGAGGTGGCACAATGGAGCGATCTCCAGGAGAGGGCCCCAGCCCCAGCCCCATGGACCAGCCCTCTG'
     """
 
     record = fetch_ensembl_transcript(ensembl_transcript_id)
