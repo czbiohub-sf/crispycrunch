@@ -227,6 +227,10 @@ def get_cds_seq(
 
     >>> get_cds_seq('ENST00000221801', -1, length=-1)
     'GCCACCCCCCAAGGTGAAGAACTGA'
+
+    Too short.
+    >>> get_cds_seq('ENST00000262033', length=-1)
+    ''
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -250,10 +254,21 @@ def get_cds_seq(
         assert len(cds_seq) == length, (len(cds_seq), start, end, length)
         assert len(cds_seq) % 3 == 0, 'must be codon aligned'
 
-    if cds_index == 0:
-        assert cds_seq[codon_at:codon_at + 3] == 'ATG'
-    elif cds_index == -1:
-        assert cds_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
+    try:
+        if cds_index == 0:
+            # start codon
+            assert cds_seq[0:3] == 'ATG', cds_seq
+        elif cds_index == -1:
+            # stop codon
+            assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
+    except AssertionError:
+        log.warning('Transcript {} has target codon across splice boundary in CCDS "{}"'.format(
+            ensembl_transcript_id, cds_seq))
+
+    if len(cds_seq) < 3:
+        log.warning('CCDS of {} is too short "{}", so returning empty string'.format(
+            ensembl_transcript_id, cds_seq))
+        return ''
 
     return str(cds_seq)
 
