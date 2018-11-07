@@ -411,14 +411,14 @@ class HDR:
         >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAg', hdr_dist=14)
         >>> hdr.score_all = False
         >>> hdr.guide_mutated
-        'ATGAAAAAAAAAAAAAAgAAg'
+        'ATGAAAAAAAAAAAgAAgAAg'
         >>> hdr.mutated_score
-        0.9187816265060242
+        0.06084376104417672
         >>> hdr.score_all = True
         >>> hdr.guide_mutated
-        'ATGAAAAAAAAgAAgAAgAAg'
+        'ATGAAgAAgAAgAAgAAgAAg'
         >>> hdr.mutated_score
-        0.01899466165097892
+        0.00844207184487952
         """
         return mit_hit_score(
             self.guide_mutated,
@@ -457,7 +457,6 @@ class HDR:
         else:
             return False
 
-    # TODO (gdingle): needs review by jason li or nathan cho
     @property
     def should_mutate(self) -> bool:
         """
