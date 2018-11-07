@@ -407,7 +407,8 @@ def get_ultramer_seq(
     'CCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTGTGT'
 
     # TODO (gdingle): what about this case where there is not enough in the transcript for the ultarmer?
-    >> get_ultramer_seq('ENST00000258648')
+    >>> get_ultramer_seq('ENST00000258648')
+    'ACGCACCTGCGTCAGCTCGCTCTGCGCGTGCGCCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGG'
 
     """
 
@@ -432,14 +433,32 @@ def get_ultramer_seq(
     ult_seq = record.seq[start:end]
 
     if start < 0 or end > len(record.seq):
-        log.warning('Transcript {} is not large enough: {}. Shortening by 36bp.'.format(
+        log.warning('Transcript {} is not large enough: {}. Fetching sequence.'.format(
             ensembl_transcript_id, len(ult_seq)))
-        # IDT ultramers should be good >150bp
-        start += 18
-        end -= 18
-        ult_seq = record.seq[start:end]
-        if start < 0 or end > len(record.seq):
-            raise ValueError('Cannot get ultramer for transcript {}'.format(ensembl_transcript_id))
+
+        species = record.annotations['reference_species']
+        chr_num = record.annotations['reference_chromosome_number']
+        transcript_strand = record.annotations['transcript_strand']
+        if transcript_strand == -1:
+            seq_end = record.annotations['reference_right_index']
+            ult_seq = _fetch_seq(
+                species,
+                chr_num,
+                seq_end - end + 1,
+                # Note: ensembl is inclusive range and biopython is exclusive
+                seq_end - start
+            )
+            ult_seq = Seq(ult_seq, IUPACUnambiguousDNA()).reverse_complement()
+        else:
+            seq_start = record.annotations['reference_left_index']
+            ult_seq = _fetch_seq(
+                species,
+                chr_num,
+                seq_start + start,
+                # Note: ensembl is inclusive range and biopython is exclusive
+                seq_start + end - 1
+            )
+        assert len(ult_seq) == length, (len(ult_seq), length)
 
     codon_at = codon_at - start  # make relative to
     if cds_index == 0:
@@ -525,6 +544,31 @@ def _gene_to_enst(gene: str, genome: str = 'hg38') -> str:
     transcript = transcripts[0]['id']
     assert transcript.startswith('ENS')
     return transcript
+
+# TODO (gdingle): refactor with conversions.chr_loc_to_seq?
+
+
+def _fetch_seq(species: str, chr_num: str, start: int, end: int) -> str:
+    """
+    >>> _fetch_seq('human', 'X', 1000000, 1000100)
+    'CTGTAGAAACATTAGCCTGGCTAACAAGGTGAAACCCCATCTCTACTAACAATACAAAATATTGGTTGGGCGTGGTGGCGGGTGCTTGTAATCCCAGCTAC'
+    """
+    if species.startswith(('GRCh', 'human')):
+        species = 'human'
+    elif species.startswith(('GRCm', 'mouse')):
+        species = 'mouse'
+    else:
+        assert False, f'Species "{species}" not supported yet'
+
+    url = f'/sequence/region/{species}/{chr_num}:{start}..{end}:1'
+    response = _cached_session.get(
+        'http://rest.ensembl.org' + url,
+        params={'content-type': 'application/json'})
+    json = response.json()
+    if 'error' in json:
+        raise ValueError(json['error'])
+    response.raise_for_status()
+    return json['seq']
 
 
 if __name__ == '__main__':
