@@ -10,43 +10,63 @@ https://github.com/czbiohub/packer-images/blob/master/assets/crispr-primer/crisp
 LEFT_ADAPTER_TAG = 'CTCTTTCCCTACACGACGCTCTTCCGATCT'
 RIGHT_ADAPTER_TAG = 'CTGGAGTTCAGACGTGTGCTCTTCCGATCT'
 
-
-def is_left_right_binding(left_primer: str, right_primer: str) -> bool:
+def is_self_binding(left_primer: str, right_primer: str) -> bool:
     """
+    Do primers bind on 3' to 3' ends?
+    See https://en.wikipedia.org/wiki/Primer_dimer#Mechanism_of_formation
+
+    No binding, because no complement.
     >>> left_primer = 'GCAC'
-    >>> right_primer = 'ACAT'
-    >>> is_left_right_binding(left_primer, right_primer)
+    >>> right_primer = left_primer
+    >>> is_self_binding(left_primer, right_primer)
     False
+
+    Left binds to right.
+    >>> right_primer = complementary_sequence(left_primer[::-1])
+    >>> is_self_binding(left_primer, right_primer)
+    True
+
+    Left binds to left.
+    >>> right_primer = left_primer + complementary_sequence(left_primer)
+    >>> is_self_binding(left_primer, right_primer)
+    True
     """
     last_4_left_com = complementary_sequence(left_primer[-4:])
     last_4_right_rcom = complementary_sequence(right_primer[::-1][:4])
+
+    # left to right
     if last_4_left_com in right_primer[::-1]:
         return True
     if last_4_right_rcom in left_primer:
         return True
-    return False
 
-
-def is_same_side_binding(left_primer: str, right_primer: str) -> bool:
-    """
-    >>> left_primer = 'GCAC'
-    >>> right_primer = 'ACAT'
-    >>> is_same_side_binding(left_primer, right_primer)
-    False
-    """
-    last_4_left_com = complementary_sequence(left_primer[-4:])
-    last_4_right_rcom = complementary_sequence(right_primer[::-1][:4])
+    # left to left and right to right
     if last_4_left_com in left_primer:
         return True
     if last_4_right_rcom in right_primer[::-1]:
         return True
+
     return False
 
 
 def is_self_binding_with_tags(left_primer: str, right_primer: str) -> bool:
     """
+    >>> left_primer = 'ACAT'
+    >>> right_primer = 'ACAT'
+    >>> is_self_binding_with_tags(left_primer, right_primer)
+    False
+
+    # left in right adapter
     >>> left_primer = 'GCAC'
     >>> right_primer = 'ACAT'
+    >>> complementary_sequence(left_primer[::-1][:4]) in RIGHT_ADAPTER_TAG
+    True
+    >>> is_self_binding_with_tags(left_primer, right_primer)
+    True
+
+    # true in combination with tag
+    >>> left_primer = 'ACAT'
+    >>> right_primer = 'TGT'
     >>> is_self_binding_with_tags(left_primer, right_primer)
     True
     """
