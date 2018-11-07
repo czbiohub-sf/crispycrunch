@@ -10,6 +10,7 @@ https://github.com/czbiohub/packer-images/blob/master/assets/crispr-primer/crisp
 LEFT_ADAPTER_TAG = 'CTCTTTCCCTACACGACGCTCTTCCGATCT'
 RIGHT_ADAPTER_TAG = 'CTGGAGTTCAGACGTGTGCTCTTCCGATCT'
 
+
 def is_self_binding(left_primer: str, right_primer: str) -> bool:
     """
     Do primers bind on 3' to 3' ends?
@@ -49,11 +50,11 @@ def is_self_binding(left_primer: str, right_primer: str) -> bool:
     return False
 
 
-def is_self_binding_with_tags(left_primer: str, right_primer: str) -> bool:
+def is_self_binding_with_adapters(left_primer: str, right_primer: str) -> bool:
     """
     >>> left_primer = 'ACAT'
     >>> right_primer = 'ACAT'
-    >>> is_self_binding_with_tags(left_primer, right_primer)
+    >>> is_self_binding_with_adapters(left_primer, right_primer)
     False
 
     # left in right adapter
@@ -61,13 +62,13 @@ def is_self_binding_with_tags(left_primer: str, right_primer: str) -> bool:
     >>> right_primer = 'ACAT'
     >>> complementary_sequence(left_primer[::-1][:4]) in RIGHT_ADAPTER_TAG
     True
-    >>> is_self_binding_with_tags(left_primer, right_primer)
+    >>> is_self_binding_with_adapters(left_primer, right_primer)
     True
 
     # true in combination with tag
     >>> left_primer = 'ACAT'
     >>> right_primer = 'TGT'
-    >>> is_self_binding_with_tags(left_primer, right_primer)
+    >>> is_self_binding_with_adapters(left_primer, right_primer)
     True
     """
     last_4_left_com = complementary_sequence(left_primer[-4:])

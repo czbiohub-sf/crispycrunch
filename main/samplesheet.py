@@ -20,6 +20,7 @@ from main.models import Analysis, Experiment, GuideDesign, GuideSelection, Prime
 from protospacex import get_cds_seq, get_ultramer_seq
 from utils import conversions
 from utils import hdr
+from utils import primerchecks
 from utils.chrloc import *
 
 from crispresso.fastqs import reverse_complement
@@ -145,6 +146,8 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
+    sheet['primer_product'] = sheet.apply(_warn_primer_self_bind, axis=1)
+
     if guide_selection.guide_design.hdr_tag:
         sheet = _set_hdr_primer(
             sheet,
@@ -152,6 +155,22 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
             primer_selection.primer_design.max_amplicon_length)
 
     return sheet
+
+
+def _warn_primer_self_bind(row) -> DataFrame:
+    primer_product = row['primer_product']
+
+    if ' ' in primer_product:
+        # previous warning
+        return primer_product
+
+    if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
+        return 'self binding: ' + primer_product
+
+    if primerchecks.is_self_binding_with_adapters(row['primer_seq_fwd'], row['primer_seq_rev']):
+        return 'binds to adapters: ' + primer_product
+
+    return primer_product
 
 
 def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
