@@ -327,6 +327,12 @@ def get_cds_chr_loc(
     Weird case.
     >>> get_cds_chr_loc('ENST00000638706', -1)
     'chrCHR_HG30_PATCH:179729500-179729535:+'
+
+    Across splice boundaries.
+    >>> get_cds_chr_loc('ENST00000262033', length=36)
+    'chr12:56687964-56687999:-'
+    >>> get_cds_chr_loc('ENST00000054666', length=36)
+    'chr1:7771384-7771419:+'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -334,12 +340,16 @@ def get_cds_chr_loc(
     cds_location = cds[cds_index].location
     cds_seq = cds[cds_index].location.extract(record).seq
 
-    if cds_index == 0:
-        # start codon
-        assert cds_seq[0:3] == 'ATG', cds_seq
-    elif cds_index == -1:
-        # stop codon
-        assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
+    try:
+        if cds_index == 0:
+            # start codon
+            assert cds_seq[0:3] == 'ATG', cds_seq
+        elif cds_index == -1:
+            # stop codon
+            assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
+    except AssertionError:
+        log.warning('Transcript {} has target codon across splice boundary in CCDS "{}"'.format(
+            ensembl_transcript_id, cds_seq))
 
     species = record.annotations['reference_species']
     chromosome_number = record.annotations['reference_chromosome_number']
