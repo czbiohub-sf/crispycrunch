@@ -203,11 +203,11 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         start = guide_offset % 3
 
-        # TODO (gdingle): HACK ALERT!!! For as yet unknown reason,
-        # the insert is misidentified. We set a buffer here to avoid the worst.
+        # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
+        # in frame but outside the CCDS, the insert is misidentified. We set a buffer here to avoid the worst.
         # The buffer length is a multiple of 3 less than the min homology len,
         # and larger than the largest observed misidentification.
-        start += 81
+        start += 90
 
         before, primer_product_aligned = \
             primer_product[:start], primer_product[start:]
@@ -549,14 +549,19 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
         # stop codons outside of cds? see for example ENST00000299300
         try:
-            ultramer_seq = get_ultramer_seq(row['target_input'], row['_cds_index'])
+            ultramer_length = 110
+            ultramer_seq = get_ultramer_seq(
+                row['target_input'],
+                row['_cds_index'],
+                ultramer_length
+            )
         except ValueError:
             return 'not found'
 
-        # TODO (gdingle): HACK ALERT!!! For as yet unknown reason,
-        # the insert is misidentified. We set a buffer here to avoid the worst.
-        # See primer product above as well.
-        start = 36
+        # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
+        # in frame but outside the CCDS, the insert is misidentified. We set a
+        # buffer here to avoid the worst. See primer product above as well.
+        start = 51
 
         left_bit, codon_aligned, right_bit = (
             ultramer_seq[:1 + start],

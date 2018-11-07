@@ -582,6 +582,7 @@ class OrderFormView(DetailView):
 
         for j, well_pos in enumerate(sheet.index):
             for i, seq_key in enumerate(self.seq_keys):
+                # TODO (gdingle): what to do if empty?
                 index = str((j * len(self.seq_keys)) + i + 2)
                 ws['A' + index] = well_pos
                 # TODO (gdingle): is this a good name for each sequence?
@@ -590,6 +591,7 @@ class OrderFormView(DetailView):
                     row['_crispor_guide_id'], seq_key,
                 )
                 ws['C' + index] = row[seq_key]
+
 
         return openpyxl.writer.excel.save_virtual_workbook(wb)
 
