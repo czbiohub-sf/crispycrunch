@@ -47,9 +47,14 @@ class ChrLoc:
     'chr7:5569177-5569415'
     >>> ChrLoc('chr7:5569177-5569415:-').as_strand_direction
     'chr7:5569415-5569177'
+
+    Weird unknown chromosome. See ENST00000638706.
+    And see https://uswest.ensembl.org/Help/Faq?id=291 .
+    >>> ChrLoc('chrCHR_HG30_PATCH:179706534-179706569:+')
+    ChrLoc('chrCHR_HG30_PATCH:179706534-179706569:+')
     """
     # See also CHR_REGEX in conversions.py
-    CHR_REGEX = r'^chr([0-9XY]+):([0-9,]+)-([0-9,]+[0-9])(:[+\-1])?$'
+    CHR_REGEX = r'^chr([0-9XY]+|\w+_PATCH):([0-9,]+)-([0-9,]+[0-9])(:[+\-1])?$'
 
     max_length = 2000
     min_length = 20
@@ -62,8 +67,10 @@ class ChrLoc:
         if not matches:
             raise ValueError('Cannot parse chromosome location from "{}"'.format(value))
 
-        self.chr = matches[1]  # remember chrX
-        assert self.chr in ('X', 'Y') or int(self.chr) in range(1, 23)
+        self.chr = matches[1]
+        assert self.chr in ('X', 'Y') or \
+            self.chr.endswith('_PATCH') \
+            or int(self.chr) in range(1, 23), self.chr
 
         self.start = int(matches[2].replace(',', ''))
         self.end = int(matches[3].replace(',', ''))
