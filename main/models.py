@@ -588,7 +588,7 @@ class GuideDesign(BaseModel):
         For example, if have a 96 well plate and expect to choose 1 in 3 guides,
         then the wells should be 96 * 3.
         """
-        return max(1, 96 * 3 // len(self.targets))
+        return max(1, 96 * 2 // len(self.targets))
 
     HDR_TAG_TO_CDS_INDEX = {
         'per_target': None,

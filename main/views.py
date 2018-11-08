@@ -404,15 +404,16 @@ class ExperimentSummaryView(View):
     template_name = 'experiment-summary.html'
 
     def get(self, request, *args, **kwargs):
+        # Two paths to this View... see urls.py
         try:
-            primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
-        except PrimerSelection.DoesNotExist:
-            # Alternate path to summary
-            try:
+            experiment_id = kwargs.get('experiment_id')
+            if experiment_id:
                 primer_selection = PrimerSelection.objects.filter(
-                    primer_design__guide_selection__guide_design__experiment=kwargs['id'])[0]
-            except IndexError:
-                raise Http404('Experiment summary does not exist')
+                    primer_design__guide_selection__guide_design__experiment=experiment_id)[0]
+            else:
+                primer_selection = PrimerSelection.objects.get(id=kwargs['primer_selection_id'])
+        except (PrimerSelection.DoesNotExist, IndexError):
+            raise Http404('Experiment summary does not exist')
 
         sheet = samplesheet.from_primer_selection(primer_selection)
         sheet = self._prepare_sheet(sheet)
@@ -591,7 +592,6 @@ class OrderFormView(DetailView):
                     row['_crispor_guide_id'], seq_key,
                 )
                 ws['C' + index] = row[seq_key]
-
 
         return openpyxl.writer.excel.save_virtual_workbook(wb)
 

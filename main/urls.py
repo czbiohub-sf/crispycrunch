@@ -22,10 +22,10 @@ urlpatterns = [
     path('primer-design/<int:id>/primer-selection/',
          views.PrimerSelectionView.as_view(), name='Primer Selection'),
 
-    path('primer-selection/<int:id>/experiment-summary/',
+    path('primer-selection/<int:primer_selection_id>/experiment-summary/',
          views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
     # Alternate path to summary
-    path('experiment/<int:id>/summary/',
+    path('experiment/<int:experiment_id>/summary/',
          views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
 
     path('analysis/', views.AnalysisView.as_view(), name='Analysis'),
