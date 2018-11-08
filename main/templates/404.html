@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}404 Error{% endblock %}
+
+{% block h1 %}404: Not Found{% endblock %}
+
+{% block content %}
+
+<p>The resource you requested was not found. Try looking in the <a href="/main/">index</a>.
+
+{# TODO (gdingle): change email address to maintainer email var in settings #}
+<p>If you think there was an error, please email <a href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch%20Error">gdingle@chanzuckerberg.com</a> with a report of what you were trying to find.</p>
+
+{% endblock %}

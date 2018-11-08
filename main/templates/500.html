@@ -2,14 +2,11 @@
 
 {% block title %}500 Error{% endblock %}
 
-{% block h1 %}500 Error{% endblock %}
+{% block h1 %}500: Server Error{% endblock %}
 
 {% block content %}
 
 <p>Something unexpected happened in the processing of your request. Please <a href="#" onclick="history.back()">go back</a> and try again.</p>
-
-{# TODO (gdingle): pass in exception message with custom view
-see https://docs.djangoproject.com/en/2.0/ref/views/#error-views #}
 
 {# TODO (gdingle): change email address to maintainer email var in settings #}
 <p>If the error persists, please email <a href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch%20Error">gdingle@chanzuckerberg.com</a> with a report of what you were trying to do.</p>
