@@ -513,8 +513,8 @@ class HDR:
             guide_left = self.cut_at - 3
             intact = self.insert_at - guide_left
 
-        # intact <= 0 means the insert is outside the guide + pam
-        return intact <= 0 or intact >= 14
+        # intact <= -3 means the insert is outside the guide + pam
+        return intact <= -3 or intact >= 14
 
     @property
     def pam_at(self) -> int:
