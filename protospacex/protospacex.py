@@ -231,6 +231,8 @@ def get_cds_seq(
     Too short.
     >>> get_cds_seq('ENST00000262033', length=-1)
     ''
+    >>> get_cds_seq('ENST00000295682', -1, length=72)
+    'GCCAAGGTCACAGGCAAGAGCAAGAAGAGAAACTGACCCTGAATGTTCAATAAAGTTGATTCTTTGTAGCTC'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -245,10 +247,9 @@ def get_cds_seq(
     )
 
     if end > len(record.seq) or start < 0:
-        raise ValueError('Transcript {} is not long enough for targeting {}bp around {} codon'.format(
-            ensembl_transcript_id, length, 'start' if cds_index == 0 else 'stop'))
-
-    cds_seq = record.seq[start:end]
+        cds_seq = _get_seq_from_surrounding(record, start, end)
+    else:
+        cds_seq = record.seq[start:end]
 
     if length != -1:
         assert len(cds_seq) == length, (len(cds_seq), start, end, length)
