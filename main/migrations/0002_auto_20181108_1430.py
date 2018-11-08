@@ -5,7 +5,10 @@ from django.db import migrations
 
 def insert_exp_for_custom_analysis(apps, schema_editor):
     Experiment = apps.get_model('main', 'Experiment')
-    exp = Experiment(name='No experiment -- Custom analysis')
+    exp = Experiment(
+        name='No experiment -- Custom analysis',
+        description='Special experiment that represents all custom analyses',
+    )
     exp.save()
 
 

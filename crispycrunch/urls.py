@@ -9,6 +9,8 @@ from django.views.generic import RedirectView, TemplateView
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name='home.html'), name='CrispyCrunch'),
+    # See LOGIN_REDIRECT_URL
+    path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
 
