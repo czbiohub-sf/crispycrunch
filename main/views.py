@@ -204,7 +204,7 @@ class GuideDesignView(CreatePlusView):
         targets_cleaned, target_tags = obj.parse_targets_raw()
         obj.target_tags = target_tags
 
-        obj.targets = self._normalize_targets(
+        obj.target_locs = self._normalize_targets(
             targets_cleaned,
             obj
         )
@@ -226,7 +226,7 @@ class GuideDesignView(CreatePlusView):
             obj.pam,
             target,
             obj.pre_filter]
-            for target, target_seq in zip(obj.targets, obj.target_seqs)]
+            for target, target_seq in zip(obj.target_locs, obj.target_seqs)]
         batch.start(largs, [-2])
 
         return obj

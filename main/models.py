@@ -366,6 +366,7 @@ class ChrLocField(models.CharField):
         return ChrLoc(item)
 
 
+# TODO (gdingle): replace with user accounts
 class Researcher(BaseModel):
     first_name = models.CharField(max_length=40)
     last_name = models.CharField(max_length=40)
@@ -383,7 +384,8 @@ class Researcher(BaseModel):
 
 class Experiment(BaseModel):
     name = models.CharField(max_length=40, unique=True)
-    researcher = models.ForeignKey(Researcher, on_delete=models.CASCADE)
+    # TODO (gdingle): replace with user accounts
+    # researcher = models.ForeignKey(Researcher, on_delete=models.CASCADE)
     description = models.CharField(max_length=65536, blank=True)
 
     def __str__(self):
@@ -460,9 +462,8 @@ class GuideDesign(BaseModel):
         # default=C_TERMINUS_EXAMPLES,
     )
 
-    # TODO (gdingle): rename to target_locs when wiping whole database
-    targets = fields.ArrayField(
-        ChrLocField(max_length=80, validators=[validate_chr], blank=True),
+    target_locs = fields.ArrayField(
+        ChrLocField(max_length=80, validators=[validate_chr]),
         validators=[validate_unique_set],
         verbose_name='Target chromosome locations',
     )
@@ -470,15 +471,11 @@ class GuideDesign(BaseModel):
         models.CharField(max_length=65536, validators=[validate_seq]),
         validators=[validate_unique_set],
         verbose_name='Target sequences',
-        blank=True,
-        default=[],
     )
     target_genes = fields.ArrayField(
         models.CharField(max_length=40, validators=[validate_gene], blank=True),
         # Genes are not necessarily unique set in an experiment
         verbose_name='Target gene symbols',
-        blank=True,
-        default=[],
     )
     target_tags = fields.ArrayField(
         models.CharField(
@@ -487,14 +484,14 @@ class GuideDesign(BaseModel):
             max_length=40),
         verbose_name='Target HDR tags',
         blank=True,
-        default=[],
     )
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
-        blank=True,
         max_length=40,
         verbose_name='Insert tag by HDR',
-        help_text='Insert green protein by HDR (Homology Directed Repair). Requires ENST transcript IDs.')
+        help_text='Insert green protein by HDR (Homology Directed Repair). Requires ENST transcript IDs.',
+        blank=True,
+    )
 
     # TODO (gdingle): custom encoder/decoder for custom dict wrapper object
     guide_data = JSONField(default=list, blank=True,
@@ -530,7 +527,7 @@ class GuideDesign(BaseModel):
         tag_to_terminus = dict((v, k) for k, v in self.TERMINUS_TO_TAG.items())
         df_targets = DataFrame(data={
             'target_input': target_inputs,
-            'target_loc': self.targets,
+            'target_loc': self.target_locs,
             'target_seq': self.target_seqs,
             'target_gene': self.target_genes,
             # Below depends on per_target
@@ -567,7 +564,7 @@ class GuideDesign(BaseModel):
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
-            self.genome, self.pam, self.targets)
+            self.genome, self.pam, self.target_locs)
 
     @property
     def hdr_seq(self):
@@ -588,7 +585,7 @@ class GuideDesign(BaseModel):
         For example, if have a 96 well plate and expect to choose 1 in 3 guides,
         then the wells should be 96 * 3.
         """
-        return max(1, 96 * 2 // len(self.targets))
+        return max(1, 96 * 2 // len(self.target_locs))
 
     HDR_TAG_TO_CDS_INDEX = {
         'per_target': None,
@@ -654,7 +651,6 @@ class GuideSelection(BaseModel):
 
     selected_guides = JSONField(
         default=dict,
-        blank=True,
         validators=[
             # See wells_per_target
             functools.partial(validate_num_wells, max=96 * 3),
@@ -749,7 +745,6 @@ class PrimerSelection(BaseModel):
 
     selected_primers = JSONField(
         default=dict,
-        blank=True,
         validators=[
             # TODO (gdingle): check explicitly for "not found" or else different user instructions
             # TODO (gdingle): temporary up to 384 for comparison with other method
@@ -799,9 +794,10 @@ class Analysis(BaseModel):
         Experiment, on_delete=models.CASCADE,
         help_text='The Crispycrunch experiment to be analyzed')
     # TODO (gdingle): default this to experiment researcher
-    researcher = models.ForeignKey(
-        Researcher, on_delete=models.CASCADE,
-        help_text='The researcher doing the analysis')
+    # TODO (gdingle): replace with user accounts
+    # researcher = models.ForeignKey(
+    #     Researcher, on_delete=models.CASCADE,
+    #     help_text='The researcher doing the analysis')
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview

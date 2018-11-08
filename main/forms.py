@@ -59,10 +59,10 @@ class GuideDesignForm(ModelForm):
         exclude = [
             'experiment',
             'guide_data',
+            'target_locs',
             'target_seqs',
             'target_genes',
             'target_tags',
-            'targets'
         ]
         field_classes = {
             'targets_raw': NewlineArrayField,
