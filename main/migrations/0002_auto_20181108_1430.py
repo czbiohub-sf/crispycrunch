@@ -9,8 +9,7 @@ def insert_exp_for_custom_analysis(apps, schema_editor):
         name='No experiment -- Custom analysis',
         description='Special experiment that represents all custom analyses',
     )
-    # TODO (gdingle): temp disable
-    # exp.save()
+    exp.save()
 
 
 class Migration(migrations.Migration):
