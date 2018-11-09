@@ -476,6 +476,15 @@ class AnalysisView(CreatePlusView):
     form_class = AnalysisForm
     success_url = '/main/analysis/{id}/progress/'
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        owner_exps = Experiment.objects.filter(owner=self.request.user)
+        special_exp = Experiment.objects.filter(id=1)
+        # TODO (gdingle): legacy... remove when id=1
+        legacy_exp = Experiment.objects.filter(name='No experiment -- Custom analysis')
+        context['form'].fields['experiment'].queryset = owner_exps | special_exp | legacy_exp
+        return context
+
     def plus(self, obj):
         # TODO (gdingle): use predetermined s3 location of fastq
         fastqs = download_fastqs(obj.s3_bucket, obj.s3_prefix, overwrite=False)

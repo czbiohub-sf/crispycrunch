@@ -386,8 +386,6 @@ class Researcher(BaseModel):
 
 class Experiment(BaseModel):
     name = models.CharField(max_length=40, unique=True)
-    # TODO (gdingle): replace with user accounts
-    # researcher = models.ForeignKey(Researcher, on_delete=models.CASCADE)
     description = models.CharField(max_length=65536, blank=True)
 
     def __str__(self):
@@ -796,11 +794,6 @@ class Analysis(BaseModel):
     experiment = models.ForeignKey(
         Experiment, on_delete=models.CASCADE,
         help_text='The Crispycrunch experiment to be analyzed')
-    # TODO (gdingle): default this to experiment researcher
-    # TODO (gdingle): replace with user accounts
-    # researcher = models.ForeignKey(
-    #     Researcher, on_delete=models.CASCADE,
-    #     help_text='The researcher doing the analysis')
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
