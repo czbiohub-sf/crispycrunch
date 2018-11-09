@@ -1,5 +1,5 @@
 """
-Database models for Crispycrunch app.
+Database models for CrispyCrunch app.
 
 See SampleSheetTestCase for example data.
 """
@@ -820,7 +820,7 @@ class Analysis(BaseModel):
     # TODO (gdingle): how to filter only to user's own experiments?
     experiment = models.ForeignKey(
         Experiment, on_delete=models.CASCADE,
-        help_text='The Crispycrunch experiment to be analyzed')
+        help_text='The CrispyCrunch experiment to be analyzed')
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview

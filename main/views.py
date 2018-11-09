@@ -372,7 +372,7 @@ class PrimerDesignView(CreatePlusView):
                   guide_selection.guide_design.pam,
                   row['_crispor_guide_id'],
                   int(row['hdr_dist']) * (
-            # Crispycrunch hdr_dist is relative to strand of gene.
+            # CrispyCrunch hdr_dist is relative to strand of gene.
             # Crispor hdr_dist is relative to positive genome strand.
             1 if row['target_loc'].strand == '+' else -1)]
             for row in sheet.to_records()]
@@ -805,7 +805,7 @@ class IlluminaSheetView(View):
 
         illumina_sheet = illumina.SampleSheet()
         # TODO (gdingle): Add link to Biohub submission form
-        illumina_sheet.Header['Crispycrunch'] = 'Please fill in the following required columns: BioSample_ID, BioSample_Description, Index_ID, Index, Index2_ID, Index2.'
+        illumina_sheet.Header['CrispyCrunch'] = 'Please fill in the following required columns: BioSample_ID, BioSample_Description, Index_ID, Index, Index2_ID, Index2.'
         for row in sheet.to_records():
             illumina_sheet.add_sample(self._make_sample(experiment, row))
 

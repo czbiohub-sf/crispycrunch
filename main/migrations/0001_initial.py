@@ -3,11 +3,12 @@
 import django.contrib.postgres.fields
 import django.contrib.postgres.fields.jsonb
 import django.core.validators
-from django.db import migrations, models
 import django.db.models.deletion
 import functools
 import main.models
 import utils.validators
+
+from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
@@ -131,6 +132,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='analysis',
             name='experiment',
-            field=models.ForeignKey(help_text='The Crispycrunch experiment to be analyzed', on_delete=django.db.models.deletion.CASCADE, to='main.Experiment'),
+            field=models.ForeignKey(help_text='The CrispyCrunch experiment to be analyzed', on_delete=django.db.models.deletion.CASCADE, to='main.Experiment'),
         ),
     ]
