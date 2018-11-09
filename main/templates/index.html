@@ -11,9 +11,16 @@
 <h2>Experiments</h2>
 <ul>
 {% for experiment in experiments %}
-  <li><a href="{{ experiment.get_current_step }}">
-    {{ experiment }}
-  </a></li>
+  <li>
+    <a href="{{ experiment.get_current_step }}">
+    {{ experiment }}</a>
+    <form class="d-inline" action="/main/experiment/{{ experiment.id }}/delete" method="post">
+      {% csrf_token %}
+      <button class="text-muted small text-uppercase btn btn-link" role="link" type="submit" value="Submit">
+        delete
+      </button>
+    </form>
+  </li>
 {% empty %}
   None yet
 {% endfor %}
@@ -22,9 +29,17 @@
 <h2>Analyses</h2>
 <ul>
 {% for analysis in analyses %}
-  <li><a href="/main/analysis/{{ analysis.id }}/results/">
-    {{ analysis }}
-  </a></li>
+  <li>
+    <a href="/main/analysis/{{ analysis.id }}/results/">
+      {{ analysis }}
+    </a>
+    <form class="d-inline" action="/main/analysis/{{ analysis.id }}/delete" method="post">
+      {% csrf_token %}
+      <button class="text-muted small text-uppercase btn btn-link" role="link" type="submit" value="Submit">
+        delete
+      </button>
+    </form>
+  </li>
 {% empty %}
   None yet
 {% endfor %}

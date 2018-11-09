@@ -26,7 +26,9 @@ from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView, ListView
-from django.views.generic.edit import CreateView
+from django.views.generic.edit import CreateView, DeleteView
+from django.views.generic.detail import SingleObjectMixin
+
 
 import webscraperequest
 
@@ -95,10 +97,26 @@ class CreatePlusView(CreateView):
         return obj
 
 
+class BaseDeleteView(SingleObjectMixin, View):
+    """
+    Works like DeleteView, but without confirmation screens or a success_url.
+    """
+    pk_url_kwarg = 'id'
+
+    def post(self, *args, **kwargs):
+        self.object = self.get_object()
+        self.object.delete()
+        return HttpResponseRedirect('/main/')
+
+
 class ExperimentView(CreatePlusView):
     template_name = 'experiment.html'
     form_class = ExperimentForm
     success_url = '/main/experiment/{id}/guide-design/'
+
+
+class ExperimentDeleteView(BaseDeleteView):
+    model = Experiment
 
 
 class GuideDesignView(CreatePlusView):
@@ -507,6 +525,10 @@ class AnalysisView(CreatePlusView):
         webscraperequest.CrispressoBatchWebRequest.start_analysis(
             obj, sheet.to_records())
         return obj
+
+
+class AnalysisDeleteView(BaseDeleteView):
+    model = Analysis
 
 
 class CustomAnalysisView(View):

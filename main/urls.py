@@ -14,6 +14,8 @@ urlpatterns = [
          login_required(views.ExperimentView.as_view()),
          name='Experiment'
          ),
+    path('experiment/<int:id>/delete',
+         login_required(views.ExperimentDeleteView.as_view())),
 
     path('signup/', views.CreateUserView.as_view(), name='Sign-up'),
 
@@ -75,6 +77,8 @@ urlpatterns = [
         login_required(views.CustomAnalysisView.as_view()),
         name='Custom Analysis'
     ),
+    path('analysis/<int:id>/delete',
+         login_required(views.AnalysisDeleteView.as_view())),
 
     # Downloads
     path('guide-selection/<int:id>/order-form',
