@@ -49,9 +49,9 @@ class IndexView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['analyses'] = (a for a in Analysis.objects.all() if a.is_complete)
-        # TODO (gdingle): owner of experiments
-        # context['experiments'] = (e for e in Experiment.objects.all() if e.is_owner)
+        context['analyses'] = (a for a in Analysis.objects.filter(
+            owner=self.request.user) if a.is_complete)
+        context['experiments'] = (e for e in Experiment.objects.filter(owner=self.request.user))
         return context
 
 
@@ -73,6 +73,7 @@ class CreatePlusView(CreateView):
 
     def form_valid(self, form: ModelForm) -> HttpResponse:
         obj = form.save(commit=False)
+        obj.owner = self.request.user
         try:
             obj = self.plus(obj)
             obj.full_clean()
@@ -208,7 +209,8 @@ class GuideDesignView(CreatePlusView):
             return list(pool.map(func, targets))
 
     def plus(self, obj):
-        obj.experiment = Experiment.objects.get(id=self.kwargs['id'])
+        obj.experiment = Experiment.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
 
         targets_cleaned, target_tags = obj.parse_targets_raw()
         obj.target_tags = target_tags
@@ -247,7 +249,8 @@ class GuideDesignProgressView(View):
     success_url = '/main/guide-design/{id}/guide-selection/'
 
     def get(self, request, **kwargs):
-        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        guide_design = GuideDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         batch_status = webscraperequest.CrisporGuideBatchWebRequest(guide_design).get_batch_status()
 
         if not batch_status.is_successful:
@@ -312,17 +315,20 @@ class GuideSelectionView(CreatePlusView):
         return {**not_founds, **top_guides}
 
     def get_initial(self):
-        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        guide_design = GuideDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         return {
             'selected_guides': self._get_top_guides(guide_design),
         }
 
     def plus(self, obj):
-        obj.guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        obj.guide_design = GuideDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         return obj
 
     def get_context_data(self, **kwargs):
-        guide_design = GuideDesign.objects.get(id=self.kwargs['id'])
+        guide_design = GuideDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         kwargs['crispor_urls'] = guide_design.crispor_urls
         return super().get_context_data(**kwargs)
 
@@ -333,7 +339,8 @@ class PrimerDesignView(CreatePlusView):
     success_url = '/main/primer-design/{id}/progress/'
 
     def plus(self, obj):
-        guide_selection = GuideSelection.objects.get(id=self.kwargs['id'])
+        guide_selection = GuideSelection.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         obj.guide_selection = guide_selection
 
         sheet = samplesheet.from_guide_selection(guide_selection)
@@ -361,7 +368,8 @@ class PrimerDesignProgressView(View):
     success_url = '/main/primer-design/{id}/primer-selection/'
 
     def get(self, request, **kwargs):
-        primer_design = PrimerDesign.objects.get(id=kwargs['id'])
+        primer_design = PrimerDesign.objects.get(
+            owner=self.request.user, id=kwargs['id'])
         batch_status = webscraperequest.CrisporPrimerBatchWebRequest(
             primer_design).get_batch_status()
 
@@ -380,7 +388,8 @@ class PrimerSelectionView(CreatePlusView):
     success_url = '/main/primer-selection/{id}/experiment-summary/'
 
     def get_initial(self):
-        primer_data = PrimerDesign.objects.get(id=self.kwargs['id']).primer_data
+        primer_data = PrimerDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id']).primer_data
 
         def get_fwd_and_rev_primers(ontarget_primers: dict):
             values = list(ontarget_primers.values())
@@ -401,11 +410,13 @@ class PrimerSelectionView(CreatePlusView):
         }
 
     def plus(self, obj):
-        obj.primer_design = PrimerDesign.objects.get(id=self.kwargs['id'])
+        obj.primer_design = PrimerDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         return obj
 
     def get_context_data(self, **kwargs):
-        kwargs['crispor_urls'] = PrimerDesign.objects.get(id=self.kwargs['id']).crispor_urls
+        kwargs['crispor_urls'] = PrimerDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id']).crispor_urls
         return super().get_context_data(**kwargs)
 
 
@@ -418,9 +429,11 @@ class ExperimentSummaryView(View):
             experiment_id = kwargs.get('experiment_id')
             if experiment_id:
                 primer_selection = PrimerSelection.objects.filter(
+                    owner=self.request.user,
                     primer_design__guide_selection__guide_design__experiment=experiment_id)[0]
             else:
-                primer_selection = PrimerSelection.objects.get(id=kwargs['primer_selection_id'])
+                primer_selection = PrimerSelection.objects.get(
+                    owner=self.request.user, id=kwargs['primer_selection_id'])
         except (PrimerSelection.DoesNotExist, IndexError):
             raise Http404('Experiment summary does not exist')
 
@@ -493,7 +506,8 @@ class CustomAnalysisView(View):
     form = CustomAnalysisForm
 
     def get(self, request, **kwargs):
-        analysis = Analysis.objects.get(id=kwargs['id'])
+        analysis = Analysis.objects.get(
+            owner=self.request.user, id=kwargs['id'])
         return render(request, self.template_name, {
             **kwargs,
             'form': self.form(),
@@ -501,7 +515,8 @@ class CustomAnalysisView(View):
         })
 
     def post(self, request, **kwargs):
-        analysis = Analysis.objects.get(id=kwargs['id'])
+        analysis = Analysis.objects.get(
+            owner=self.request.user, id=kwargs['id'])
         form = self.form(request.POST, request.FILES)
 
         if not form.is_valid():
@@ -540,7 +555,8 @@ class AnalysisProgressView(View):
     success_url = '/main/analysis/{id}/results/'
 
     def get(self, request, **kwargs):
-        analysis = Analysis.objects.get(id=kwargs['id'])
+        analysis = Analysis.objects.get(
+            owner=self.request.user, id=kwargs['id'])
         batch_status = webscraperequest.CrispressoBatchWebRequest(analysis).get_batch_status()
 
         if not batch_status.is_successful:
@@ -554,7 +570,8 @@ class ResultsView(View):
     template_name = 'crispresso-results.html'
 
     def get(self, request, *args, **kwargs):
-        analysis = Analysis.objects.get(id=self.kwargs['id'])
+        analysis = Analysis.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
         try:
             if analysis.is_custom:
                 sheet = samplesheet.from_custom_analysis(analysis)
@@ -605,7 +622,8 @@ class OrderFormView(DetailView):
         return openpyxl.writer.excel.save_virtual_workbook(wb)
 
     def get(self, request, *args, **kwargs):
-        instance = self.model.objects.get(id=kwargs['id'])
+        instance = self.model.objects.get(
+            owner=self.request.user, id=kwargs['id'])
         # TODO (gdingle): friendlier title?
         title = request.path.replace('/', ' ').replace('main ', '')
         excel_file = self._create_excel_file(instance.samplesheet, title)
@@ -690,7 +708,7 @@ class IlluminaSheetView(View):
             # FirstName_LastName. If left blank, we will use submitter's
             # information.
             # e.g. Stephen_Quake
-            'Sample_Owner': experiment.researcher.full_name.replace(' ', '_'),
+            'Sample_Owner': experiment.owner.username,
 
             # Name of the first index. Accepted characters are numbers,
             # letters, "-", and "_"
@@ -744,7 +762,8 @@ class IlluminaSheetView(View):
 
     def get(self, request, **kwargs):
         # TODO (gdingle): do we actually need primer selection here? or is guide enough?
-        primer_selection = PrimerSelection.objects.get(id=kwargs['id'])
+        primer_selection = PrimerSelection.objects.get(
+            owner=self.request.user, id=kwargs['id'])
         sheet = samplesheet.from_primer_selection(primer_selection)
         experiment = primer_selection.primer_design.guide_selection.guide_design.experiment
 

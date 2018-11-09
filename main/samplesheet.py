@@ -356,9 +356,10 @@ def from_excel(file: UploadedFile) -> DataFrame:
 
 
 def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
-    sheet.analysis_id = analysis.id
-    sheet.analysis_create_time = analysis.create_time
-    sheet.analyst_name = analysis.researcher.full_name
+    # TODO (gdingle): does this do anything?
+    # sheet.analysis_id = analysis.id
+    # sheet.analysis_create_time = analysis.create_time
+    # sheet.analyst_name = analysis.owner.username
 
     sheet['s3_bucket'] = analysis.s3_bucket
     sheet['s3_prefix'] = analysis.s3_prefix

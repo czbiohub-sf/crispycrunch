@@ -15,7 +15,7 @@ urlpatterns = [
          name='Experiment'
          ),
 
-    path('user/', views.CreateUserView.as_view(), name='User'),
+    path('signup/', views.CreateUserView.as_view(), name='Sign-up'),
 
     # Urls here are structured as:
     # The parent object followed by the type of the object to-be-created.

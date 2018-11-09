@@ -8,6 +8,7 @@ import functools
 
 from pandas import DataFrame
 
+from django.conf import settings
 from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -349,6 +350,7 @@ class BaseModel(models.Model):
 
     create_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 
 class ChrLocField(models.CharField):
@@ -366,7 +368,7 @@ class ChrLocField(models.CharField):
         return ChrLoc(item)
 
 
-# TODO (gdingle): replace with user accounts
+# TODO (gdingle): join with user accounts, one to one
 class Researcher(BaseModel):
     first_name = models.CharField(max_length=40)
     last_name = models.CharField(max_length=40)

@@ -9,8 +9,8 @@
   <dt class="col-sm-3">Description</dt>
   <dd class="col-sm-9">{{ experiment.description }}</dd>
   {% endif %}
-  <dt class="col-sm-3">Researcher</dt>
-  <dd class="col-sm-9">{{ experiment.researcher.first_name }} {{ experiment.researcher.last_name }}</dd>
+  <dt class="col-sm-3">Owner</dt>
+  <dd class="col-sm-9">{{ experiment.owner.username }}</dd>
   <dt class="col-sm-12">&nbsp;</dt>
   <dt class="col-sm-3">Genome</dt>
   <dd class="col-sm-9">{{ guide_design.genome }}</dd>

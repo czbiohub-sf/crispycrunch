@@ -60,14 +60,14 @@ class GuideDesignForm(ModelForm):
     class Meta:
         model = GuideDesign
         fields = '__all__'
-        exclude = [
-            'experiment',
-            'guide_data',
-            'target_locs',
-            'target_seqs',
-            'target_genes',
-            'target_tags',
-        ]
+        exclude = ['owner',
+                   'experiment',
+                   'guide_data',
+                   'target_locs',
+                   'target_seqs',
+                   'target_genes',
+                   'target_tags',
+                   ]
         field_classes = {
             'targets_raw': NewlineArrayField,
             'target_fastas': NewlineArrayField,
@@ -78,7 +78,7 @@ class GuideSelectionForm(ModelForm):
     class Meta:
         model = GuideSelection
         fields = '__all__'
-        exclude = ['guide_design']
+        exclude = ['owner', 'guide_design']
         widgets = {
             'selected_guides': PrettyJsonWidget(
                 attrs={'rows': 40, 'spellcheck': "false"}),
@@ -89,7 +89,7 @@ class PrimerDesignForm(ModelForm):
     class Meta:
         model = PrimerDesign
         fields = '__all__'
-        exclude = ['guide_selection', 'primer_data']
+        exclude = ['owner', 'guide_selection', 'primer_data']
 
 
 class PrimerSelectionForm(ModelForm):
@@ -97,7 +97,7 @@ class PrimerSelectionForm(ModelForm):
     class Meta:
         model = PrimerSelection
         fields = '__all__'
-        exclude = ['primer_design']
+        exclude = ['owner', 'primer_design']
         widgets = {'selected_primers': PrettyJsonWidget(
             attrs={'rows': 20, 'spellcheck': "false"})}
 
@@ -106,7 +106,7 @@ class AnalysisForm(ModelForm):
     class Meta:
         model = Analysis
         fields = '__all__'
-        exclude = ['fastq_data', 'results_data']
+        exclude = ['owner', 'fastq_data', 'results_data']
 
     # TODO (gdingle): fetch only for display experiments that have status of "ready"
     def clean_experiment(self):
@@ -150,7 +150,7 @@ class CustomUserCreationForm(UserCreationForm):
         fields = ('username', 'email', 'password1', 'password2')
 
     def save(self, commit=True):
-        user = super(UserCreationForm, self).save(commit=False)
+        user = super().save(commit=False)
         user.email = self.cleaned_data['email']
         if commit:
             user.save()
