@@ -106,3 +106,5 @@ To login to prod postgres:
 eb ssh
 psql -h aa798nzxm9ji03.cpmmq0ugoybf.us-west-2.rds.amazonaws.com -U ebroot ebdb
 ```
+
+Hint: Look in `/opt/python/current/env` for secrets.
