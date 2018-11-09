@@ -792,6 +792,7 @@ class PrimerSelection(BaseModel):
 
 
 class Analysis(BaseModel):
+    # TODO (gdingle): how to filter only to user's own experiments?
     experiment = models.ForeignKey(
         Experiment, on_delete=models.CASCADE,
         help_text='The Crispycrunch experiment to be analyzed')

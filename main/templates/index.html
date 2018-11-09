@@ -35,7 +35,7 @@
   <li><a href="/accounts/password_change/">Change password</a></li>
   {# TODO (gdingle): change email address to maintainer email var in settings #}
   <li>
-    <a href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch%20Delete%20Account">Delete account</a>
+    <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch%20Delete%20Account">Delete account</a>
   </li>
 </ul>
 

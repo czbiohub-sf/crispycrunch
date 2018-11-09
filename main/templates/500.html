@@ -9,6 +9,6 @@
 <p>Something unexpected happened in the processing of your request. Please <a href="#" onclick="history.back()">go back</a> and try again.</p>
 
 {# TODO (gdingle): change email address to maintainer email var in settings #}
-<p>If the error persists, please email <a href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch%20Error">gdingle@chanzuckerberg.com</a> with a report of what you were trying to do.</p>
+<p>If the error persists, please email <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch%20Error">gdingle@chanzuckerberg.com</a> with a report of what you were trying to do.</p>
 
 {% endblock %}

@@ -60,6 +60,7 @@
 <h2>Get Started</h2>
 
 <ul>
+  {# TODO (gdingle): create an account #}
   <li class="h4"><a href="/main/experiment/">Define a new experiment</a></li>
   <li class="h4"><a href="/main/analysis/">Start a new analysis</a></li>
   <li class="h4"><a href="/main/">View current experiments and analyses</a></li>
@@ -68,6 +69,6 @@
 <h2>Feedback</h2>
 
 {# TODO (gdingle): link to github #}
-<p>Questions and comments are welcome! Please email <a href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch">gdingle@chanzuckerberg.com</a>.</p>
+<p>Questions and comments are welcome! Please email <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch">{{ settings.ADMIN_EMAIL }}</a>.</p>
 
 {% endblock %}

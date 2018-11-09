@@ -83,7 +83,7 @@ class GuideSelectionForm(ModelForm):
         exclude = ['owner', 'guide_design']
         widgets = {
             'selected_guides': PrettyJsonWidget(
-                attrs={'rows': 40, 'spellcheck': "false"}),
+                attrs={'rows': 20, 'spellcheck': "false"}),
         }
 
 

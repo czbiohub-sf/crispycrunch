@@ -105,7 +105,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             'be_from': 'C',
             'be_to': 'T',
             'demo_used': '',
-            'email': 'gdingle@chanzuckerberg.com',
+            'email': '{{ settings.ADMIN_EMAIL }}',
             'exons': '',
             'fastq_se': '',
             # TODO (gdingle): - [ ] Hook up crispresso2 to HDR

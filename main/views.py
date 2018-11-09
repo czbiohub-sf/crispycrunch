@@ -80,7 +80,7 @@ class CreatePlusView(CreateView):
         except (ValidationError, ValueError) as e:
             logging.exception(e)
             # Force field specific errors to __all__ because they are likely
-            # from fields excluded from form.
+            # from fields excluded from the form.
             if isinstance(e, ValidationError) and hasattr(e, 'error_dict'):
                 e.error_list = [e.message for el in e.error_dict.values() for e in el]
                 del e.error_dict
@@ -91,7 +91,7 @@ class CreatePlusView(CreateView):
         return HttpResponseRedirect(self.get_success_url())
 
     def plus(self, obj: models.Model) -> models.Model:
-        """Add attributes to a model before saving it."""
+        """Set more fields a model before saving it."""
         return obj
 
 

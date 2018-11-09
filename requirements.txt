@@ -2,6 +2,8 @@ beautifulsoup4
 biopython
 boto3
 django-bootstrap4
+django-ses
+django-settings-export
 Django>=2
 httmock
 openpyxl
