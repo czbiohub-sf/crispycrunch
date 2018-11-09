@@ -21,7 +21,6 @@ from typing import Any
 import openpyxl  # type: ignore
 import sample_sheet as illumina  # type: ignore
 
-from django.contrib.auth.forms import UserCreationForm
 from django.http import Http404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
@@ -60,7 +59,7 @@ class IndexView(ListView):
 # TODO (gdingle): email confirmation?
 class CreateUserView(CreateView):
     template_name = 'base.html'
-    form_class = UserCreationForm
+    form_class = CustomUserCreationForm
     success_url = '/main/'
 
 

@@ -1,12 +1,16 @@
 import json
 
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from django.contrib.postgres.forms import SimpleArrayField
-from django.forms import FileField, Form, ModelForm, widgets
-from main.models import *
+from django.forms import EmailField, FileField, Form, ModelForm, widgets
 
+from main.models import *
 
 # TODO (gdingle): consider YAML instead for easier editing
 # See https://pyyaml.org/wiki/PyYAMLDocumentation
+
+
 class PrettyJsonWidget(widgets.Textarea):
 
     def format_value(self, value):
@@ -132,3 +136,22 @@ class CustomAnalysisForm(Form):
                 'Cannot handle file format: "{}". Must be one of: {}'.format(
                     file.content_type, valid))
         return file
+
+
+class CustomUserCreationForm(UserCreationForm):
+    """
+    All to put email in the form :/
+    """
+    email = EmailField(label='Email address', required=True,
+                       help_text='Required.')
+
+    class Meta:
+        model = User
+        fields = ('username', 'email', 'password1', 'password2')
+
+    def save(self, commit=True):
+        user = super(UserCreationForm, self).save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+        return user
