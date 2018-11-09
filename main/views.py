@@ -92,9 +92,10 @@ class CreatePlusView(CreateView):
 
     def plus(self, obj: models.Model) -> models.Model:
         """Add attributes to a model before saving it."""
+        return obj
 
 
-class ExperimentView(CreateView):
+class ExperimentView(CreatePlusView):
     template_name = 'experiment.html'
     form_class = ExperimentForm
     success_url = '/main/experiment/{id}/guide-design/'
