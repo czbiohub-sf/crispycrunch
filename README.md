@@ -99,3 +99,10 @@ To read the error logs in prod:
 eb ssh
 tail /opt/python/log/django.log
 ```
+
+To login to prod postgres:
+
+```
+eb ssh
+psql -h aa798nzxm9ji03.cpmmq0ugoybf.us-west-2.rds.amazonaws.com -U ebroot ebdb
+```
