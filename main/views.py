@@ -22,12 +22,12 @@ import openpyxl  # type: ignore
 import sample_sheet as illumina  # type: ignore
 
 from django.http import Http404
-from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView, ListView
-from django.views.generic.edit import CreateView, DeleteView
 from django.views.generic.detail import SingleObjectMixin
+from django.views.generic.edit import CreateView, DeleteView
 
 
 import webscraperequest
@@ -51,8 +51,7 @@ class IndexView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['analyses'] = (a for a in Analysis.objects.filter(
-            owner=self.request.user) if a.is_complete)
+        context['analyses'] = Analysis.objects.filter(owner=self.request.user)
         context['experiments'] = Experiment.objects.filter(owner=self.request.user)
         return context
 
@@ -518,6 +517,9 @@ class AnalysisView(CreatePlusView):
             return obj
 
         sheet = samplesheet.from_analysis(obj)
+        # TODO (gdingle): how to show missing rows in analysis?
+        # Because primers may be saved as na
+        sheet = sheet.dropna(subset=['primer_seq_fwd'])
 
         # TODO (gdingle): create dir per download, as in seqbot
         obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records())

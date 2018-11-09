@@ -30,9 +30,14 @@
 <ul>
 {% for analysis in analyses %}
   <li>
-    <a href="/main/analysis/{{ analysis.id }}/results/">
-      {{ analysis }}
-    </a>
+    {% if analysis.is_complete %}
+      <a href="/main/analysis/{{ analysis.id }}/results/">
+        {{ analysis }}
+      </a>
+    {% else %}
+      {# TODO (gdingle): do something better with incomplete analyses #}
+      [incomplete] {{ analysis }}
+    {% endif %}
     <form class="d-inline" action="/main/analysis/{{ analysis.id }}/delete" method="post">
       {% csrf_token %}
       <button class="text-muted small text-uppercase btn btn-link" role="link" type="submit" value="Submit">
