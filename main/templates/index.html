@@ -1,5 +1,9 @@
 {% extends 'base.html' %}
 
+{% block h1 %}
+{{ request.user|title }}'s account
+{% endblock h1 %}
+
 {% block content %}
 
 {# TODO (gdingle): make specific to logged in user #}
@@ -10,6 +14,8 @@
   <li><a href="/main/experiment/{{ experiment.id }}/summary/">
     {{ experiment }}
   </a></li>
+{% empty %}
+  None yet
 {% endfor %}
 </ul>
 
@@ -19,7 +25,18 @@
   <li><a href="/main/analysis/{{ analysis.id }}/results/">
     {{ analysis }}
   </a></li>
+{% empty %}
+  None yet
 {% endfor %}
+</ul>
+
+<h2>Account</h2>
+<ul>
+  <li><a href="/accounts/password_change/">Change password</a></li>
+  {# TODO (gdingle): change email address to maintainer email var in settings #}
+  <li>
+    <a href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch%20Delete%20Account">Delete account</a>
+  </li>
 </ul>
 
 {% endblock %}

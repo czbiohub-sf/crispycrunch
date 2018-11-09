@@ -1,45 +1,88 @@
+from django.contrib.auth.decorators import login_required
 from django.urls import path
 
 from main import views
 
 
 urlpatterns = [
-    path('', views.IndexView.as_view(), name='CrispyCrunch'),
+    path('',
+         login_required(views.IndexView.as_view()),
+         name='Index'
+         ),
 
-    path('experiment/', views.ExperimentView.as_view(), name='Experiment'),
+    path('experiment/',
+         login_required(views.ExperimentView.as_view()),
+         name='Experiment'
+         ),
+
+    path('user/', views.CreateUserView.as_view(), name='User'),
 
     # Urls here are structured as:
     # The parent object followed by the type of the object to-be-created.
-    path('experiment/<int:id>/guide-design/', views.GuideDesignView.as_view(), name='Guide Design'),
+    path('experiment/<int:id>/guide-design/',
+         login_required(views.GuideDesignView.as_view()),
+         name='Guide Design'
+         ),
     path('guide-design/<int:id>/progress/',
-         views.GuideDesignProgressView.as_view(), name='Guide Design Progress'),
+         login_required(views.GuideDesignProgressView.as_view()),
+         name='Guide Design Progress'
+         ),
     path('guide-design/<int:id>/guide-selection/',
-         views.GuideSelectionView.as_view(), name='Guide Selection'),
+         login_required(views.GuideSelectionView.as_view()),
+         name='Guide Selection'
+         ),
     path('guide-selection/<int:id>/primer-design/',
-         views.PrimerDesignView.as_view(), name='Primer Design'),
+         login_required(views.PrimerDesignView.as_view()),
+         name='Primer Design'
+         ),
     path('primer-design/<int:id>/progress/',
-         views.PrimerDesignProgressView.as_view(), name='Primer Design Progress'),
+         login_required(views.PrimerDesignProgressView.as_view()),
+         name='Primer Design Progress'
+         ),
     path('primer-design/<int:id>/primer-selection/',
-         views.PrimerSelectionView.as_view(), name='Primer Selection'),
+         login_required(views.PrimerSelectionView.as_view()),
+         name='Primer Selection'
+         ),
 
     path('primer-selection/<int:primer_selection_id>/experiment-summary/',
-         views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
+         login_required(views.ExperimentSummaryView.as_view()),
+         name='Experiment Summary'
+         ),
     # Alternate path to summary
     path('experiment/<int:experiment_id>/summary/',
-         views.ExperimentSummaryView.as_view(), name='Experiment Summary'),
+         login_required(
+             views.ExperimentSummaryView.as_view()),
+         name='Experiment Summary'
+         ),
 
-    path('analysis/', views.AnalysisView.as_view(), name='Analysis'),
-    path('analysis/<int:id>/progress/', views.AnalysisProgressView.as_view(), name='Analysis Progress'),
-    path('analysis/<int:id>/results/', views.ResultsView.as_view(), name='Results'),
-    path('analysis/<int:id>/custom/', views.CustomAnalysisView.as_view(), name='Custom Analysis'),
+    path(
+        'analysis/',
+        login_required(views.AnalysisView.as_view()),
+        name='Analysis'
+    ),
+    path(
+        'analysis/<int:id>/progress/',
+        login_required(views.AnalysisProgressView.as_view()),
+        name='Analysis Progress'
+    ),
+    path(
+        'analysis/<int:id>/results/',
+        login_required(views.ResultsView.as_view()),
+        name='Results'
+    ),
+    path(
+        'analysis/<int:id>/custom/',
+        login_required(views.CustomAnalysisView.as_view()),
+        name='Custom Analysis'
+    ),
 
     # Downloads
     path('guide-selection/<int:id>/order-form',
-         views.GuideOrderFormView.as_view()),
+         login_required(views.GuideOrderFormView.as_view())),
     path('primer-selection/<int:id>/order-form',
-         views.PrimerOrderFormView.as_view()),
+         login_required(views.PrimerOrderFormView.as_view())),
     path('primer-selection/<int:id>/illumina-sheet',
-         views.IlluminaSheetView.as_view()),
+         login_required(views.IlluminaSheetView.as_view())),
     path('primer-selection/<int:id>/hdr-order-form',
-         views.UltramerOrderFormView.as_view()),
+         login_required(views.UltramerOrderFormView.as_view())),
 ]

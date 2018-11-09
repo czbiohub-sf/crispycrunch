@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-  <title>{% block title %}{{request.resolver_match.url_name}}{% endblock %}</title>
+  <title>{% block title %}{{request.resolver_match.url_name|title}}{% endblock %}</title>
   <link rel="shortcut icon" href="/static/biohub-icon.png" />
   {# Override global base font size. See https://stackoverflow.com/questions/28678542/how-to-change-bootstraps-global-default-font-size. #}
   <style type="text/css">
@@ -20,13 +20,24 @@
 </head>
 
 <body style="padding: 2em;">
-  {# TODO: remove unnused logos #}
+
+  {# TODO (gdingle): style better #}
+  <div class="float-right m-3">
+    {% if request.user.is_authenticated %}
+    <a href="/accounts/logout/" class="btn btn-primary btn-sm">Logout</a>
+    {% else %}
+    <a href="/main/user/" class="btn btn-outline-primary btn-sm">Signup</a>
+    <a href="/accounts/login/" class="btn btn-outline-primary btn-sm">Login</a>
+    {% endif %}
+    <br />
+  </div>
+
   <a href="https://www.czbiohub.org/">
     <img src="/static/biohub-logo-2.jpg" class="float-right col-sm-2" />
   </a>
 
   <h1>
-    {% block h1 %}{{request.resolver_match.url_name}}{% endblock %}
+    {% block h1 %}{{request.resolver_match.url_name|title}}{% endblock %}
   </h1>
 
   <hr />
@@ -48,7 +59,9 @@
     {% bootstrap_form form %}
     {% buttons %}
       <button type="submit" class="btn btn-primary">
+        {% block button_label %}
         Save & Continue
+        {% endblock button_label %}
       </button>
       {# TODO (gdingle): "continue to {next step}" #}
       {# TODO (gdingle): "back to {prev step}" #}
@@ -62,7 +75,7 @@
   <hr />
   <footer class="text-center">
     <a class="col-sm-2" href="/">Home</a>
-    <a class="col-sm-2" href="/main/">Index</a>
+    <a class="col-sm-2" href="/main/">Account</a>
     <a class="col-sm-2" href="/main/experiment">Experiment</a>
     <a class="col-sm-2" href="/main/analysis">Analysis</a>
     <a class="col-sm-2" href="mailto:gdingle@chanzuckerberg.com?subject=CrispyCrunch">Contact</a>

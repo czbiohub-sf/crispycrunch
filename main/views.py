@@ -21,6 +21,7 @@ from typing import Any
 import openpyxl  # type: ignore
 import sample_sheet as illumina  # type: ignore
 
+from django.contrib.auth.forms import UserCreationForm
 from django.http import Http404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
@@ -50,10 +51,19 @@ class IndexView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['analyses'] = (a for a in Analysis.objects.all() if a.is_complete)
+        # TODO (gdingle): owner of experiments
+        # context['experiments'] = (e for e in Experiment.objects.all() if e.is_owner)
         return context
 
 
-# TODO (gdingle): make CreateUpdateView? see https://stackoverflow.com/a/48116803
+# TODO (gdingle): login automatically on first try?
+# TODO (gdingle): email confirmation?
+class CreateUserView(CreateView):
+    template_name = 'base.html'
+    form_class = UserCreationForm
+    success_url = '/main/'
+
+
 class CreatePlusView(CreateView):
     """
     Simplifies adding foreign keys and other pre-determined data to a ModelForm

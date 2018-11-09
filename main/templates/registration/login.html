@@ -1,11 +1,9 @@
 {% extends 'base.html' %}
 
-{% block content %}
-{# TODO (gdingle): modify title #}
-  <h2>Login</h2>
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Login</button>
-  </form>
+{% block button_label %}
+Login
+{% endblock button_label %}
+
+{% block optional_content %}
+<a class="small ml-3" href="/accounts/password_reset/">Reset password</a>
 {% endblock %}
