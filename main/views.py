@@ -22,7 +22,7 @@ import openpyxl  # type: ignore
 import sample_sheet as illumina  # type: ignore
 
 from django.http import Http404
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect, HttpResponseForbidden
 from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView, ListView
@@ -105,6 +105,8 @@ class BaseDeleteView(SingleObjectMixin, View):
 
     def post(self, *args, **kwargs):
         self.object = self.get_object()
+        if self.object.owner.id != self.request.user.id:
+            return HttpResponseForbidden()
         self.object.delete()
         return HttpResponseRedirect('/main/')
 
