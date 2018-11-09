@@ -43,13 +43,6 @@ class NewlineArrayField(SimpleArrayField):
         return super().clean(value.strip())
 
 
-class ResearcherForm(ModelForm):
-    class Meta:
-        model = Researcher
-        fields = '__all__'
-        exclude = ['owner', ]
-
-
 class ExperimentForm(ModelForm):
     class Meta:
         model = Experiment

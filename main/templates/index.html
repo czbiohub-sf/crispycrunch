@@ -11,7 +11,7 @@
 <h2>Experiments</h2>
 <ul>
 {% for experiment in experiments %}
-  <li><a href="/main/experiment/{{ experiment.id }}/summary/">
+  <li><a href="{{ experiment.get_current_step }}">
     {{ experiment }}
   </a></li>
 {% empty %}
@@ -36,6 +36,9 @@
   {# TODO (gdingle): change email address to maintainer email var in settings #}
   <li>
     <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch%20Delete%20Account">Delete account</a>
+  </li>
+  <li>
+    <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch%20Delete%20Object">Delete experiment or analysis</a>
   </li>
 </ul>
 

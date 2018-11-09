@@ -3,7 +3,8 @@ from django.contrib import admin
 from .forms import *
 from .models import *
 
-admin.site.register(Researcher)
+# TODO (gdingle): still needed?
+# admin.site.register(Researcher)
 admin.site.register(Experiment)
 admin.site.register(GuideSelection)
 admin.site.register(PrimerDesign)

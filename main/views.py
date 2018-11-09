@@ -51,7 +51,7 @@ class IndexView(ListView):
         context = super().get_context_data(**kwargs)
         context['analyses'] = (a for a in Analysis.objects.filter(
             owner=self.request.user) if a.is_complete)
-        context['experiments'] = (e for e in Experiment.objects.filter(owner=self.request.user))
+        context['experiments'] = Experiment.objects.filter(owner=self.request.user)
         return context
 
 

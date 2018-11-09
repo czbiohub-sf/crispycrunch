@@ -368,20 +368,20 @@ class ChrLocField(models.CharField):
         return ChrLoc(item)
 
 
-# TODO (gdingle): join with user accounts, one to one
-class Researcher(BaseModel):
-    first_name = models.CharField(max_length=40)
-    last_name = models.CharField(max_length=40)
+# TODO (gdingle): join with user accounts, one to one, or remove
+# class Researcher(BaseModel):
+#     first_name = models.CharField(max_length=40)
+#     last_name = models.CharField(max_length=40)
 
-    class Meta:
-        unique_together = ('first_name', 'last_name')
+#     class Meta:
+#         unique_together = ('first_name', 'last_name')
 
-    @property
-    def full_name(self):
-        return self.first_name + ' ' + self.last_name
+#     @property
+#     def full_name(self):
+#         return self.first_name + ' ' + self.last_name
 
-    def __str__(self):
-        return self.full_name
+#     def __str__(self):
+#         return self.full_name
 
 
 class Experiment(BaseModel):
@@ -399,6 +399,33 @@ class Experiment(BaseModel):
     @property
     def short_name(self):
         return slugify(self.name)
+
+    def get_current_step(self):
+        """
+        Return the rel URL to the current step to be completed.
+        """
+        try:
+            # TODO (gdingle): DRY and extract paths somewhere with success_url
+            obj = self
+            view = '/main/experiment/{id}/guide-design/'
+
+            obj = GuideDesign.objects.filter(experiment=self.id)[0]
+            view = '/main/guide-design/{id}/guide-selection/'
+
+            obj = GuideSelection.objects.filter(
+                guide_design__experiment=self.id)[0]
+            view = '/main/guide-selection/{id}/primer-design/'
+
+            obj = PrimerDesign.objects.filter(
+                guide_selection__guide_design__experiment=self.id)[0]
+            view = '/main/primer-design/{id}/primer-selection/'
+
+            obj = PrimerSelection.objects.filter(
+                primer_design__guide_selection__guide_design__experiment=self.id)[0]
+            view = '/main/primer-selection/{id}/experiment-summary/'
+        except (IndexError):
+            pass
+        return view.format(id=obj.id)
 
 
 class GuideDesign(BaseModel):
