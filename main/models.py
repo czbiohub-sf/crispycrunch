@@ -540,7 +540,7 @@ class GuideDesign(BaseModel):
         choices=HDR_TAG_TERMINUSES,
         max_length=40,
         verbose_name='Insert tag by HDR',
-        help_text='Insert green protein by HDR (Homology Directed Repair). Requires ENST transcript IDs.',
+        help_text='Insert a sequence by HDR (Homology Directed Repair). Requires ENST transcript IDs.',
         blank=True,
     )
     hdr_start_codon_tag_seq = models.CharField(
