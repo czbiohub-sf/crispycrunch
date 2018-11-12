@@ -16,14 +16,9 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '*^$12x0l$h3qw-j!vml49=8=1*y2v9oyre5bfx()r7p6mb9au4'
-
 if 'RDS_DB_NAME' in os.environ:  # prod
     DEBUG = False
+    SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -59,7 +54,10 @@ if 'RDS_DB_NAME' in os.environ:  # prod
         },
     }
 else:  # dev
+    # Quick-start development settings - unsuitable for production
+    # See https://docs.djangoproject.com/en/2.0/howto/deployment/checklist/
     DEBUG = True
+    SECRET_KEY = 'dev'
     # See https://www.caktusgroup.com/blog/2015/01/27/Django-Logging-Configuration-logging_config-default-settings-logger/
     LOGGING_CONFIG = None
     LOGGING = {
