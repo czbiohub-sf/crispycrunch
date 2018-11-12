@@ -17,10 +17,16 @@
   <dt class="col-sm-3">PAM</dt>
   <dd class="col-sm-9">{{ guide_design.pam }}</dd>
   {% if guide_design.hdr_tag %}
-  <dt class="col-sm-3">HDR Tag</dt>
+  <dt class="col-sm-3">HDR Tag Terminus</dt>
   <dd class="col-sm-9">{{ guide_design.hdr_tag_verbose }}</dd>
+  <dt class="col-sm-3">HDR Sequence Name</dt>
+  <dd class="col-sm-9">
+    {{ guide_design.hdr_seq_name }}
+  </dd>
   <dt class="col-sm-3">HDR Sequence</dt>
-  <dd class="col-sm-9">{{ guide_design.hdr_seq|truncatechars:show }}</dd>
+  <dd class="col-sm-9">
+    {{ guide_design.hdr_seq|truncatechars:show }}
+  </dd>
   {% endif %}
   <dt class="col-sm-12">&nbsp;</dt>
   <dt class="col-sm-3">Primer Temp</dt>

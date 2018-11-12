@@ -446,10 +446,32 @@ class GuideDesign(BaseModel):
         ('per_target', 'As specified per target ("N" or "C")'),
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
-        'start_codon': 'ACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATGGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
-        'stop_codon': 'GGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGTACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATG',
-        # TODO (gdingle): also offer GFP?
-        # CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGAttggaagttttgtttcaaggtccaggaagtggt
+        'start_codon': [
+            # TODO (gdingle): what is first called?
+            ('ACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATGGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
+             'Neon Green - ACCGAGCTCAA...'),
+            ('GACTACAAAGACGATGACGACAAG', 'FLAG - GACTACAAAGA...'),
+            ('GACTACAAGGACCACGACGGTGACTACAAGGACCACGACATCGACTACAAGGACGACGACGACAAG', 'XFLAG - GACTACAAGGA...'),
+            ('GGTAAGCCTATCCCTAACCCTCTCCTCGGTCTCGATTCTACG', 'V5 - GGTAAGCCTAT...'),
+            ('TACCCATACGATGTTCCAGATTACGCT', 'HA - TACCCATACGA...'),
+            ('GAACAAAAACTCATCTCAGAAGAGGATCTG', 'MYC - GAACAAAAACT...'),
+            ('CGTGACCACATGGTCCTTCATGAGTATGTAAATGCTGCTGGGATTACAGGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGT',
+             'GFP11 - CGTGACCACAT...'),
+        ],
+        'stop_codon': [
+            # TODO (gdingle): what is first called?
+            ('GGTGGCGGATTGGAAGTTTTGTTTCAAGGTCCAGGAAGTGGTACCGAGCTCAACTTCAAGGAGTGGCAAAAGGCCTTTACCGATATGATG',
+             'Neon Green - GGTGGCGGATT...'),
+            # TODO (gdingle): these are just reverse complement of above. Should that always be true?
+            # See https://github.com/czbiohub/Tagin_web/blob/9fb6fe4ee86f0b99db60545472d0d884bd174071/CRISPRtag/CRISPRtag/CRISPRtag_py3.py#L960
+            ('CTTGTCGTCATCGTCTTTGTAGTC', 'FLAG - CTTGTCGTCAT...'),
+            ('CTTGTCGTCGTCGTCCTTGTAGTCGATGTCGTGGTCCTTGTAGTCACCGTCGTGGTCCTTGTAGTC', 'XFLAG - CTTGTCGTCGT...'),
+            ('CGTAGAATCGAGACCGAGGAGAGGGTTAGGGATAGGCTTACC', 'V5 - CGTAGAATCGA...'),
+            ('AGCGTAATCTGGAACATCGTATGGGTA', 'HA - AGCGTAATCTG...'),
+            ('CAGATCCTCTTCTGAGATGAGTTTTTGTTC', 'MYC - CAGATCCTCTT...'),
+            ('ACCACTTCCTGGACCTTGAAACAAAACTTCCAATCCGCCACCTGTAATCCCAGCAGCATTTACATACTCATGAAGGACCATGTGGTCACG',
+             'GFP11 - ACCACTTCCTG...'),
+        ],
     }
     TERMINUS_TO_TAG = {
         'N': 'start_codon',
@@ -513,11 +535,31 @@ class GuideDesign(BaseModel):
         verbose_name='Target HDR tags',
         blank=True,
     )
+    # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
         max_length=40,
         verbose_name='Insert tag by HDR',
         help_text='Insert green protein by HDR (Homology Directed Repair). Requires ENST transcript IDs.',
+        blank=True,
+    )
+    hdr_start_codon_tag_seq = models.CharField(
+        choices=HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'],
+        default=HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'][0],
+        max_length=65536,
+        validators=[validate_seq],
+        verbose_name='Tag sequence for start codon',
+        help_text='Sequence of tag to insert just after start codon',
+        blank=True,
+    )
+    # TODO (gdingle): is it actually needed to show this? can we determine by hdr_start_codon_tag_seq?
+    hdr_stop_codon_tag_seq = models.CharField(
+        choices=HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'],
+        default=HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'][0],
+        max_length=65536,
+        validators=[validate_seq],
+        verbose_name='Tag sequence for stop codon',
+        help_text='Sequence of tag to insert just before stop codon',
         blank=True,
     )
 
@@ -561,7 +603,8 @@ class GuideDesign(BaseModel):
             # Below depends on per_target
             'target_tag': target_tags or self.hdr_tag,
             'cds_index': [self.HDR_TAG_TO_CDS_INDEX[t] for t in target_tags] or self.cds_index,
-            'hdr_seq': [self.HDR_TAG_TERMINUS_TO_HDR_SEQ[t] for t in target_tags] or self.hdr_seq,
+            'hdr_seq': [self.hdr_start_codon_tag_seq if t == 'start_codon' else self.hdr_stop_codon_tag_seq
+                        for t in target_tags] or self.hdr_seq,
             'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
         })
         df_guides = DataFrame()
@@ -602,9 +645,30 @@ class GuideDesign(BaseModel):
         if not self.hdr_tag:
             return None
         elif self.hdr_tag == 'per_target':
-            return tuple(self.HDR_TAG_TERMINUS_TO_HDR_SEQ.values())
+            return (self.hdr_start_codon_tag_seq, self.hdr_stop_codon_tag_seq)
         else:
-            return self.HDR_TAG_TERMINUS_TO_HDR_SEQ[self.hdr_tag]
+            return self.hdr_start_codon_tag_seq if self.hdr_tag == 'start_codon' else self.hdr_stop_codon_tag_seq
+
+    @cached_property
+    def hdr_seq_name(self):
+        """
+        For friendly display.
+        """
+        start_codon_choices = dict(self.HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'])
+        stop_codon_choices = dict(self.HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'])
+        if not self.hdr_tag:
+            return None
+        else:
+            choices = set([
+                start_codon_choices.get(self.hdr_start_codon_tag_seq, 'UNKNOWN')
+                .split('-')[0].strip(),
+                stop_codon_choices.get(self.hdr_stop_codon_tag_seq, 'UNKNOWN')
+                .split('-')[0].strip(),
+            ])
+            if len(choices) > 1:
+                return tuple(choices)
+            else:
+                return choices.pop()
 
     @cached_property
     def wells_per_target(self):
