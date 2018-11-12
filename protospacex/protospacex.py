@@ -27,6 +27,13 @@ _cached_session = requests_cache.CachedSession(
     allowable_methods=('GET', 'POST'),
 )
 
+# TODO (gdingle): refactor with conversions.py
+# Avoid too many connections error. See:
+# https://stackoverflow.com/questions/23632794/
+adapter = requests.adapters.HTTPAdapter(pool_connections=96 * 4, pool_maxsize=96 * 4)
+_cached_session.mount('http://', adapter)
+_cached_session.mount('https://', adapter)
+
 
 def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     """Fetch the requested Ensembl transcript.
