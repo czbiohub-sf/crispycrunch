@@ -13,6 +13,7 @@ from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.functional import cached_property
 from django.utils.text import slugify
 
 from utils.chrloc import ChrLoc
@@ -376,7 +377,7 @@ class ChrLocField(models.CharField):
 #     class Meta:
 #         unique_together = ('first_name', 'last_name')
 
-#     @property
+#     @cached_property
 #     def full_name(self):
 #         return self.first_name + ' ' + self.last_name
 
@@ -391,12 +392,12 @@ class Experiment(BaseModel):
     def __str__(self):
         return self.name.title()
 
-    @property
+    @cached_property
     def is_custom_analysis(self):
         # TODO (gdingle): change to special id=1 value when ready
         return self.name == 'No experiment -- Custom analysis'
 
-    @property
+    @cached_property
     def short_name(self):
         return slugify(self.name)
 
@@ -593,7 +594,7 @@ class GuideDesign(BaseModel):
         return 'GuideDesign({}, {}, {}, ...)'.format(
             self.genome, self.pam, self.target_locs)
 
-    @property
+    @cached_property
     def hdr_seq(self):
         """
         This funky property will either return a scalar or a tuple.
@@ -605,7 +606,7 @@ class GuideDesign(BaseModel):
         else:
             return self.HDR_TAG_TERMINUS_TO_HDR_SEQ[self.hdr_tag]
 
-    @property
+    @cached_property
     def wells_per_target(self):
         """
         Should be target size of plate times number of expected drop-outs.
@@ -620,7 +621,7 @@ class GuideDesign(BaseModel):
         'stop_codon': -1,
     }
 
-    @property
+    @cached_property
     def pre_filter(self):
         """
         The number of guides to check for primer existance *before* saving in guide_data.
@@ -632,7 +633,7 @@ class GuideDesign(BaseModel):
             # 5 based on safe-harbor experiment
             return self.wells_per_target * 5
 
-    @property
+    @cached_property
     def cds_index(self):
         if not self.hdr_tag:
             return None
@@ -647,7 +648,7 @@ class GuideDesign(BaseModel):
         'stop_codon': 72,
     }
 
-    @property
+    @cached_property
     def cds_length(self):
         if not self.hdr_tag:
             return None
@@ -655,13 +656,13 @@ class GuideDesign(BaseModel):
             return tuple(self.HDR_TAG_TO_CDS_LENGTH[tag] for tag in self.target_tags)
         return self.HDR_TAG_TO_CDS_LENGTH[self.hdr_tag]
 
-    @property
+    @cached_property
     def hdr_tag_verbose(self):
         if not self.hdr_tag:
             return None
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
 
-    @property
+    @cached_property
     def crispor_urls(self):
         return dict((gd['target'], gd['url'])
                     for gd in self.guide_data
@@ -687,13 +688,13 @@ class GuideSelection(BaseModel):
     def __str__(self):
         return 'GuideSelection({}, ...)'.format(self.selected_guides)
 
-    @property
+    @cached_property
     def samplesheet(self):
         # Import here to avoid circular import
         from main.samplesheet import from_guide_selection
         return from_guide_selection(self)
 
-    @property
+    @cached_property
     def order_form_url(self):
         return '/main/guide-selection/{}/order-form'.format(self.id)
 
@@ -740,7 +741,7 @@ class PrimerDesign(BaseModel):
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
 
-    @property
+    @cached_property
     def amplicon_length(self):
         """
         Knocks down size a notch to make space for hdr_seq in primer
@@ -754,7 +755,7 @@ class PrimerDesign(BaseModel):
         else:
             return self.max_amplicon_length
 
-    @property
+    @cached_property
     def crispor_urls(self):
         return dict(
             (p['target'], p['url'] + '#ontargetPcr')
@@ -783,21 +784,21 @@ class PrimerSelection(BaseModel):
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)
 
-    @property
+    @cached_property
     def samplesheet(self):
         # Import here to avoid circular import
         from main.samplesheet import from_primer_selection
         return from_primer_selection(self)
 
-    @property
+    @cached_property
     def order_form_url(self):
         return '/main/primer-selection/{}/order-form'.format(self.id)
 
-    @property
+    @cached_property
     def illumina_sheet_url(self):
         return '/main/primer-selection/{}/illumina-sheet'.format(self.id)
 
-    @property
+    @cached_property
     def hdr_order_form_url(self):
         return '/main/primer-selection/{}/hdr-order-form'.format(self.id)
 
@@ -844,19 +845,19 @@ class Analysis(BaseModel):
         return '{} samples of {}'.format(
             len(self.results_data), self.experiment)
 
-    @property
+    @cached_property
     def is_custom(self):
         return self.experiment.is_custom_analysis
 
-    @property
+    @cached_property
     def is_complete(self):
         return len(self.results_data) > 0
 
-    @property
+    @cached_property
     def s3_url(self):
         return 'https://console.aws.amazon.com/s3/buckets/{}/{}/'.format(
             self.s3_bucket, self.s3_prefix)
 
-    @property
+    @cached_property
     def s3_address(self):
         return f's3://{self.s3_bucket}/{self.s3_prefix}'
