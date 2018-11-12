@@ -244,7 +244,10 @@ SETTINGS_EXPORT = [
     'ADMIN_EMAIL',
 ]
 
-if not DEBUG:
+# TODO (gdingle): need to deal with progress.html templates and cache...
+# maybe enable cache per view instead of site-wide?
+CACHE_ENABLED = False
+if not DEBUG and CACHE_ENABLED:
     # See https://docs.djangoproject.com/en/2.1/topics/cache/
     # The cache alias to use for storage.
     CACHE_MIDDLEWARE_ALIAS = 'default'
