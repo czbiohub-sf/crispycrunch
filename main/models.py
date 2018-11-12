@@ -432,8 +432,8 @@ class Experiment(BaseModel):
 class GuideDesign(BaseModel):
     GENOMES = [
         ('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38)'),
-        ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19)'),
-        ('todo', 'TODO: more genomes'),
+        # ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19)'),
+        # ('todo', 'TODO: more genomes'),
     ]
     GENOME_TO_ORGANISM = {
         'hg38': 'Human',
