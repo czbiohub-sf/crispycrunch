@@ -95,21 +95,28 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     # Start apps crispycrunch
+    'debug_toolbar',
     'main.apps.MainConfig',
     'bootstrap4',
     # End crispycrunch apps
 ]
 
+# See https://docs.djangoproject.com/en/2.1/ref/middleware/#middleware-ordering
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.cache.UpdateCacheMiddleware',
+    'django.middleware.gzip.GZipMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.http.ConditionalGetMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Start crispycrunch
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    # ENd crispycrunch
 ]
 
 ROOT_URLCONF = 'crispycrunch.urls'
@@ -245,5 +252,12 @@ CACHE_MIDDLEWARE_SECONDS = 3600 * 24 * 14  # two weeks, same as requests_cache c
 # If the cache is shared across multiple sites using the same Django installation, set this to the name of the site, or some other string that is unique to this Django instance, to prevent key collisions. Use an empty string if you don’t care.
 CACHE_MIDDLEWARE_KEY_PREFIX = ''
 
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
+INTERNAL_IPS = [
+    '127.0.0.1',
+    'localhost',
+    # Biohub HUBwifi
+    '64.71.0.146',
+]
 
 # END ADDED BY GDINGLE

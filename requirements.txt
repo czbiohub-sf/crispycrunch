@@ -2,6 +2,7 @@ beautifulsoup4
 biopython
 boto3
 django-bootstrap4
+django-debug-toolbar
 django-ses
 django-settings-export
 Django>=2
