@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import never_cache
 from django.urls import path
 
 from main import views
@@ -26,7 +27,7 @@ urlpatterns = [
          name='Guide Design'
          ),
     path('guide-design/<int:id>/progress/',
-         login_required(views.GuideDesignProgressView.as_view()),
+         never_cache(login_required(views.GuideDesignProgressView.as_view())),
          name='Guide Design Progress'
          ),
     path('guide-design/<int:id>/guide-selection/',
@@ -38,7 +39,7 @@ urlpatterns = [
          name='Primer Design'
          ),
     path('primer-design/<int:id>/progress/',
-         login_required(views.PrimerDesignProgressView.as_view()),
+         never_cache(login_required(views.PrimerDesignProgressView.as_view())),
          name='Primer Design Progress'
          ),
     path('primer-design/<int:id>/primer-selection/',
@@ -64,7 +65,7 @@ urlpatterns = [
     ),
     path(
         'analysis/<int:id>/progress/',
-        login_required(views.AnalysisProgressView.as_view()),
+        never_cache(login_required(views.AnalysisProgressView.as_view())),
         name='Analysis Progress'
     ),
     path(
