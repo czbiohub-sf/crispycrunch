@@ -112,3 +112,10 @@ psql -h aa798nzxm9ji03.cpmmq0ugoybf.us-west-2.rds.amazonaws.com -U ebroot ebdb
 ```
 
 Hint: Look in `/opt/python/current/env` for secrets.
+
+# Monitoring
+
+There should be at least one downtime alert setup here:
+https://console.aws.amazon.com/cloudwatch/home?region=us-west-2#s=Alarms&alarm=awseb-e-vnvbedub4n-stack-Severe-KUZS17WH3VE9
+
+And you should receive emails of Django errors if you are the owner of `ADMIN_EMAIL`.
