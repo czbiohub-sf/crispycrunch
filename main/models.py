@@ -403,9 +403,9 @@ class GuideDesign(BaseModel):
         # default=JASON_LI_EXAMPLE,
         # default=RYAN_LEENAY_EXAMPLE,
         # default=ENST_EXAMPLE,
-        # default=VAR_TERMINUS_EXAMPLES,
+        default=VAR_TERMINUS_EXAMPLES,
         # default=N_TERMINUS_EXAMPLES,
-        default=C_TERMINUS_EXAMPLES,
+        # default=C_TERMINUS_EXAMPLES,
     )
 
     target_locs = fields.ArrayField(
@@ -434,6 +434,7 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
+        default='per_target',
         max_length=40,
         verbose_name='Insert tag by HDR',
         help_text='Insert a sequence by HDR (Homology Directed Repair). Requires ENST transcript IDs.',
