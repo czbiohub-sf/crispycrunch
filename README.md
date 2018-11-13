@@ -89,7 +89,11 @@ See https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-soft
 
 # Admin
 
-To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/.
+To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/ or http://crispycrunch.ds.czbiohub.org/admin/.
+
+A default `admin` user is created on first installation. **Change the password** of that first superuser on first deployment.
+
+You can give any other user admin or superuser status here: http://crispycrunch.ds.czbiohub.org/admin/auth/user/ .
 
 To inspect the source of fastq files, open https://console.aws.amazon.com/s3/buckets/czb-seqbot/.
 
