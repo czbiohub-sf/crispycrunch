@@ -79,6 +79,7 @@ else:  # dev
 
 ALLOWED_HOSTS = [
     'localhost',
+    '127.0.0.1',
     'crispycrunch.us-west-2.elasticbeanstalk.com',
     'crispycrunch.ds.czbiohub.org',
     # TODO (gdingle): this might need to change
@@ -121,7 +122,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
+    # TODO (gdingle): turn this on when cache bugs all fixed
+    # 'django.middleware.cache.FetchFromCacheMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Start crispycrunch
     'debug_toolbar.middleware.DebugToolbarMiddleware',
@@ -254,12 +256,13 @@ SETTINGS_EXPORT = [
 ]
 
 # See https://docs.djangoproject.com/en/2.1/topics/cache/
-# The cache alias to use for storage.
-CACHE_MIDDLEWARE_ALIAS = 'default'
-# The number of seconds each page should be cached.
-CACHE_MIDDLEWARE_SECONDS = 3600 * 24 * 14  # two weeks, same as requests_cache currently
-# If the cache is shared across multiple sites using the same Django installation, set this to the name of the site, or some other string that is unique to this Django instance, to prevent key collisions. Use an empty string if you don’t care.
-CACHE_MIDDLEWARE_KEY_PREFIX = ''
+# TODO (gdingle): turn this on when cache bugs all fixed#
+# # The cache alias to use for storage.
+# CACHE_MIDDLEWARE_ALIAS = 'default'
+# # The number of seconds each page should be cached.
+# CACHE_MIDDLEWARE_SECONDS = 3600 * 24 * 14  # two weeks, same as requests_cache currently
+# # If the cache is shared across multiple sites using the same Django installation, set this to the name of the site, or some other string that is unique to this Django instance, to prevent key collisions. Use an empty string if you don’t care.
+# CACHE_MIDDLEWARE_KEY_PREFIX = ''
 
 # https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
 INTERNAL_IPS = [

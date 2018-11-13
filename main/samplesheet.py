@@ -292,7 +292,6 @@ def _transform_primer_product(row) -> str:
     """
 
     if not isinstance(row['primer_product'], str):
-        # TODO (gdingle):  also 'not found' for fwd and rev
         return 'not found'
 
     # Only look up product from chr loc if crispor returns mysterious Ns
@@ -547,8 +546,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # HACK ALERT! Get the ultramer from the ENST.
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
-        # TODO (gdingle): some _hdr_ultramer are mangled... because of false positive
-        # stop codons outside of cds? see for example ENST00000299300
         try:
             ultramer_length = 110
             ultramer_seq = get_ultramer_seq(

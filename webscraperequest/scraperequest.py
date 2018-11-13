@@ -392,13 +392,11 @@ class CrisporGuideRequest(AbstractScrapeRequest):
 
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
-            # TODO (gdingle): convert these to exceptions to be handled on progress page?
             if 'Found no possible guide sequence' in soup.get_text():
                 return dict(
                     target=self.target,
                     guide_seqs={
                         'not found': 'not found',
-                        # TODO (gdingle): make url on error work somehow
                     },
                     url=url,
                 )
@@ -411,7 +409,6 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                     guide_seqs={
                         'invalid chromosome range': 'invalid chromosome range',
                     },
-                    # TODO (gdingle): make url on error work somehow
                     url=url,
                 )
             if 'An error occured during processing' in soup.get_text():
@@ -583,17 +580,6 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             pam_id=self.pam_id,
             target=self.target,
             url=self.endpoint,
-            # TODO (gdingle): this is broken sometimes
-            # amplicon_length=soup
-            # .find('select', {'name': 'ampLen'})
-            # .find('option', {'selected': 'selected'})['value'],
-            # TODO (gdingle): this is broken sometimes
-            # primer_temp=soup
-            # .find('select', {'name': 'tm'})
-            # .find('option', {'selected': 'selected'})['value'],
-            # TODO (gdingle): may not need primer_seqs
-            # primer_tables=primer_tables,
-            # primer_seqs=primer_seqs,
             ontarget_primers=self._extract_ontarget_primers(soup),
         )
 

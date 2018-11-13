@@ -28,7 +28,6 @@ def load_tests(loader, tests, ignore):
 class SampleSheetTestCase(TestCase):
     """
     # TODO (gdingle): write more specific tests
-    # TODO (gdingle): run tests again!
     """
 
     @property
