@@ -81,7 +81,15 @@ ALLOWED_HOSTS = [
     'localhost',
     'crispycrunch.us-west-2.elasticbeanstalk.com',
     'crispycrunch.ds.czbiohub.org',
+    # TODO (gdingle): this might need to change
+    'ec2-35-161-78-39.us-west-2.compute.amazonaws.com',
 ]
+
+# See https://github.com/dabapps/django-enforce-host
+if DEBUG:
+    ENFORCE_HOST = 'localhost:8000'
+else:
+    ENFORCE_HOST = 'crispycrunch.ds.czbiohub.org'
 
 
 # Application definition
@@ -103,6 +111,7 @@ INSTALLED_APPS = [
 
 # See https://docs.djangoproject.com/en/2.1/ref/middleware/#middleware-ordering
 MIDDLEWARE = [
+    'enforce_host.EnforceHostMiddleware',  # redirects to ENFORCE_HOST
     'django.middleware.security.SecurityMiddleware',
     'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.gzip.GZipMiddleware',

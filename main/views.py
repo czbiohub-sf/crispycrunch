@@ -289,6 +289,7 @@ class GuideSelectionView(CreatePlusView):
 
     # TODO (gdingle): see https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
     # for optimal min_score
+    # TODO (gdingle): consider min Doench score of 10, like Benchling
     def _get_top_guides(self, guide_design, min_score=20) -> dict:
         """
         Filters all guides returned by Crispor down to those that have a score
@@ -349,6 +350,7 @@ class GuideSelectionView(CreatePlusView):
     def get_context_data(self, **kwargs):
         guide_design = GuideDesign.objects.get(
             owner=self.request.user, id=self.kwargs['id'])
+        # TODO (gdingle): try to order these in the same way as _get_top_guides
         kwargs['crispor_urls'] = guide_design.crispor_urls
         return super().get_context_data(**kwargs)
 
