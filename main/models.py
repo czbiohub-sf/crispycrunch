@@ -431,6 +431,25 @@ class GuideDesign(BaseModel):
         verbose_name='Target HDR tags',
         blank=True,
     )
+
+    # TODO (gdingle): changme
+    @cached_property
+    def wells_per_target(self):
+        """
+        Should be target size of plate times number of expected drop-outs.
+        For example, if have a 96 well plate and expect to choose 1 in 3 guides,
+        then the wells should be 96 * 3.
+        """
+        return max(1, 96 * 2 // len(self.target_locs))
+
+    guides_per_target = models.IntegerField(
+        help_text='The top N number of guides per target to select',
+        default=60,
+        validators=[
+            MinValueValidator(1),
+            MaxValueValidator(96),
+        ])
+
     # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
@@ -566,15 +585,6 @@ class GuideDesign(BaseModel):
                 return tuple(choices)
             else:
                 return choices.pop()
-
-    @cached_property
-    def wells_per_target(self):
-        """
-        Should be target size of plate times number of expected drop-outs.
-        For example, if have a 96 well plate and expect to choose 1 in 3 guides,
-        then the wells should be 96 * 3.
-        """
-        return max(1, 96 * 2 // len(self.target_locs))
 
     HDR_TAG_TO_CDS_INDEX = {
         'per_target': None,

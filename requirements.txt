@@ -3,7 +3,6 @@ biopython
 boto3
 django-bootstrap4
 django-debug-toolbar
-django-enforce-host
 django-ses
 django-settings-export
 Django>=2
