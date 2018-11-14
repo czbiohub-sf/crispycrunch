@@ -97,8 +97,19 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_gene'] = list(guides['target_gene'])
 
     # Add original target string only if different
-    sheet['target_input'] = [(g['target_input'] if g['target_input'] != str(g['target_loc']) else None)
-                             for g in guides.to_records()]
+    target_inputs = [
+        (g['target_input'] if g['target_input'] != str(g['target_loc']) else None)
+        for g in guides.to_records()
+    ]
+
+    if any(target_inputs):
+        # Preserve original order in category for later sorting
+        sheet['target_input'] = pandas.Categorical(
+            target_inputs,
+            categories=pandas.Series(target_inputs).unique(),
+            ordered=True)
+    else:
+        sheet['target_input'] = None
 
     sheet = _set_guide_cols(sheet, guides)
 
