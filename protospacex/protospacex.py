@@ -7,6 +7,10 @@ Protospacex: automated guide design for Cas9 knock-in experiments.
 The code here returns different regions of interest for HDR from a ENST transcript.
 """
 import logging
+
+from functools import lru_cache
+# lru_cache appears to reduce page time by 10s for 96 well plate!
+
 import requests
 import requests_cache  # type: ignore
 
@@ -35,6 +39,7 @@ _cached_session.mount('http://', adapter)
 _cached_session.mount('https://', adapter)
 
 
+@lru_cache(maxsize=1024)
 def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     """Fetch the requested Ensembl transcript.
 
@@ -584,14 +589,13 @@ def _gene_to_enst(gene: str, genome: str = 'hg38') -> str:
     assert transcript.startswith('ENS')
     return transcript
 
-# TODO (gdingle): refactor with conversions.chr_loc_to_seq?
-
 
 def _fetch_seq(species: str, chr_num: str, start: int, end: int) -> str:
     """
     >>> _fetch_seq('human', 'X', 1000000, 1000100)
     'CTGTAGAAACATTAGCCTGGCTAACAAGGTGAAACCCCATCTCTACTAACAATACAAAATATTGGTTGGGCGTGGTGGCGGGTGCTTGTAATCCCAGCTAC'
     """
+    # TODO (gdingle): refactor with conversions.chr_loc_to_seq?
     if species.startswith(('GRCh', 'human')):
         species = 'human'
     elif species.startswith(('GRCm', 'mouse')):
