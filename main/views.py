@@ -490,6 +490,7 @@ class ExperimentSummaryView(View):
         sheet.insert(0, 'well_pos', sheet.index)
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
         sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
+        sheet = sheet.fillna('')
         return sheet
 
 

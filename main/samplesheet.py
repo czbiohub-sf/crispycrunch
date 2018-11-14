@@ -313,6 +313,8 @@ def _transform_primer_product(row) -> str:
     repeats, which is at least something to reduce the amount of
     nonspecific binding. "
     """
+    if not row['guide_seq']:
+        return ' '  # one space as "warning"
 
     if not isinstance(row['primer_product'], str):
         return NOT_FOUND
