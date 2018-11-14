@@ -46,11 +46,11 @@ def _new_samplesheet() -> DataFrame:
             'target_gene',
             'target_loc',
             'target_seq',
-            'guide_offset',
             'guide_loc',
             '_guide_strand_same',
             'guide_seq',
             'guide_pam',
+            'guide_offset',
             'guide_score',
             '_crispor_batch_id',
             '_crispor_pam_id',
@@ -100,7 +100,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_input'] = [(g['target_input'] if g['target_input'] != str(g['target_loc']) else None)
                              for g in guides.to_records()]
 
-    sheet = _get_guide_cols(sheet, guides)
+    sheet = _set_guide_cols(sheet, guides)
 
     if guide_design.hdr_tag:
         sheet = _set_hdr_cols(sheet, guide_design, guides)
@@ -108,38 +108,52 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     return sheet
 
 
-def _get_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
+def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
 
     sheet['_crispor_batch_id'] = list(guides['_crispor_batch_id'])
     sheet['_crispor_pam_id'] = list(guides['_crispor_pam_id'])
     sheet['_crispor_guide_id'] = list(guides.index)  # guide_id
 
+    sheet = sheet.set_index('_crispor_guide_id', drop=False)
+
     # TTCCGGCGCGCCGAGTCCTT AGG
-    assert all(' ' in g['guide_seq'] for g in guides.to_records()), 'Expecting trailing PAM'
-    assert all(len(g['guide_seq']) == 24 for g in guides.to_records()), 'Expecting 20bp guide'
-    sheet['guide_seq'] = [g['guide_seq'].split(' ')[0] for g in guides.to_records()]
-    sheet['guide_pam'] = [g['guide_seq'].split(' ')[1] for g in guides.to_records()]
+    assert all(' ' in g['guide_seq'] for g in guides.to_records()
+               if pandas.notna(g['guide_seq'])), 'Expecting trailing PAM'
+    assert all(len(g['guide_seq']) == 24 for g in guides.to_records()
+               if pandas.notna(g['guide_seq'])), 'Expecting 20bp guide'
+
+    def _apply(l):
+        """Set empty string for all missing guide cols for friendly display"""
+        return guides.apply(
+            lambda g: l(g) if pandas.notna(g['guide_seq']) else '',
+            axis=1)
+
+    sheet['guide_seq'] = _apply(lambda g: g['guide_seq'].split(' ')[0])  # type: ignore
+
+    sheet['guide_pam'] = _apply(lambda g: g['guide_seq'].split(' ')[1])  # type: ignore
 
     # Taken direct from Crispor. Example: "s207-" and "s76+".
     # See http://crispor.tefor.net/manual/.
     # DEFINITION: number of chars before the first char of NGG PAM
-    sheet['guide_offset'] = [int(g['_crispor_pam_id'][1:-1]) for g in guides.to_records()]
+    sheet['guide_offset'] = _apply(lambda g: int(g['_crispor_pam_id'][1:-1]))  # type: ignore
 
     # Crispor returns guide strand relative to target, NOT genome.
-    sheet['_guide_strand_same'] = [g['_crispor_pam_id'][-1] == '+'
-                                   for g in guides.to_records()]
+    sheet['_guide_strand_same'] = _apply(  # type: ignore
+        lambda g: g['_crispor_pam_id'][-1] == '+')
+
+    # Take the MIT score
+    sheet['guide_score'] = _apply(lambda g: int(g['scores'][0]))  # type: ignore
 
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
             row['target_loc'],
             row['guide_offset'],
             len(row['guide_seq']),
-            row['_guide_strand_same']),
+            row['_guide_strand_same'])
+        if row['guide_seq'] else '',
         axis=1,
     )
 
-    # Take the MIT score
-    sheet['guide_score'] = [int(g['scores'][0]) for g in guides.to_records()]
     return sheet
 
 
@@ -478,15 +492,23 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['target_loc'],
             row['guide_loc'],
             row['_hdr_tag'],
-        ),
+        ) if row['guide_seq'] else '',
         axis=1,
     )
+    # Set a abs value for sorting
+    sheet['_hdr_dist'] = sheet.apply(
+        lambda row: abs(row['hdr_dist'])
+        if row['guide_seq'] else 0,
+        axis=1)
+
     sheet['_hdr_insert_at'] = sheet.apply(
         lambda row: get_insert(row['target_loc'], row['_hdr_tag']),
         axis=1,
     )
     sheet['hdr_inserted'] = sheet.apply(
-        lambda row: hdr.HDR(
+        lambda row:
+        '' if not row['guide_seq'] else
+        hdr.HDR(
             row['target_seq'],
             row['_hdr_seq'],
             row['_hdr_tag'],
@@ -511,6 +533,9 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         The best response is not clear, so we return a warning. In future,
         we may filter guides further upstream, and-or mutate around junction.
         """
+        if not row['guide_seq']:
+            return ''
+
         row_hdr = hdr.HDR(
             row['target_seq'],
             row['_hdr_seq'],
@@ -537,6 +562,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
 
     def check_hdr_guide_match(row):
+        if not row['guide_seq']:
+            return
         ghdr = hdr.HDR(
             row['target_seq'],
             row['_hdr_seq'],
@@ -552,6 +579,9 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
     sheet.apply(check_hdr_guide_match, axis=1)
 
     def set_ultramer(row):
+        if not row['guide_seq']:
+            return ''
+
         # HACK ALERT! Get the ultramer from the ENST.
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout

@@ -317,7 +317,6 @@ class GuideSelectionView(CreatePlusView):
             raise ValueError('No good guides found for any targets')
 
         if guide_design.hdr_tag:
-            sheet['_hdr_dist'] = sheet.apply(lambda row: abs(row['hdr_dist']), axis=1)
             sheet.sort_values('_hdr_dist', inplace=True)
         else:
             sheet.sort_values('guide_score', inplace=True, ascending=False)
@@ -376,7 +375,8 @@ class PrimerDesignView(CreatePlusView):
             # CrispyCrunch hdr_dist is relative to strand of gene.
             # Crispor hdr_dist is relative to positive genome strand.
             1 if row['target_loc'].strand == '+' else -1)]
-            for row in sheet.to_records()]
+            for row in sheet.to_records()
+            if row['guide_seq']]
         batch.start(largs, [-2])
 
         # TODO (gdingle): run crispr-primer if HDR experiment

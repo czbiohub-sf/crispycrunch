@@ -536,7 +536,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             hdr_dist: int = None) -> None:
 
         self.pam_id = pam_id
-        quoted_pam_id = urllib.parse.quote(pam_id)  # percent encode the '+' symbol
+        # percent encode the '+' symbol
+        quoted_pam_id = urllib.parse.quote(pam_id)
 
         self.endpoint = CRISPOR_BASE_URL
         self.endpoint += f'?ampLen={amp_len}&tm={tm}&batchId={batch_id}&pamId={quoted_pam_id}&pam={pam}'
