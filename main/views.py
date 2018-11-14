@@ -375,7 +375,7 @@ class PrimerDesignView(CreatePlusView):
             # CrispyCrunch hdr_dist is relative to strand of gene.
             # Crispor hdr_dist is relative to positive genome strand.
             1 if row['target_loc'].strand == '+' else -1)]
-            for row in sheet.to_records()
+            for row in sheet.to_records(index=False)
             if row['guide_seq']]
         batch.start(largs, [-2])
 
