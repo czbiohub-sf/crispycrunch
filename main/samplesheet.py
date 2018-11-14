@@ -100,6 +100,20 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_input'] = [(g['target_input'] if g['target_input'] != str(g['target_loc']) else None)
                              for g in guides.to_records()]
 
+    sheet = _get_guide_cols(sheet, guides)
+
+    if guide_design.hdr_tag:
+        sheet = _set_hdr_cols(sheet, guide_design, guides)
+
+    return sheet
+
+
+def _get_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
+
+    sheet['_crispor_batch_id'] = list(guides['_crispor_batch_id'])
+    sheet['_crispor_pam_id'] = list(guides['_crispor_pam_id'])
+    sheet['_crispor_guide_id'] = list(guides.index)  # guide_id
+
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g['guide_seq'] for g in guides.to_records()), 'Expecting trailing PAM'
     assert all(len(g['guide_seq']) == 24 for g in guides.to_records()), 'Expecting 20bp guide'
@@ -126,13 +140,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # Take the MIT score
     sheet['guide_score'] = [int(g['scores'][0]) for g in guides.to_records()]
-
-    if guide_design.hdr_tag:
-        sheet = _set_hdr_cols(sheet, guide_design, guides)
-
-    sheet['_crispor_batch_id'] = list(guides['_crispor_batch_id'])
-    sheet['_crispor_pam_id'] = list(guides['_crispor_pam_id'])
-    sheet['_crispor_guide_id'] = list(guides.index)  # guide_id
     return sheet
 
 
