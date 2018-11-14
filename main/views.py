@@ -27,7 +27,7 @@ from django.shortcuts import render
 from django.views import View
 from django.views.generic import DetailView, ListView
 from django.views.generic.detail import SingleObjectMixin
-from django.views.generic.edit import CreateView, DeleteView
+from django.views.generic.edit import CreateView
 
 
 import webscraperequest
@@ -299,12 +299,11 @@ class GuideSelectionView(CreatePlusView):
         selected_guides = dict(
             (g['target'], g['guide_seqs'])
             for g in guide_design.guide_data
-            # TODO (gdingle): what best to do with not founds?
-            if 'not found' not in g['guide_seqs'])
+            if webscraperequest.NOT_FOUND not in g['guide_seqs'])
         not_founds = dict(
             (g['target'], g['guide_seqs'])
             for g in guide_design.guide_data
-            if 'not found' in g['guide_seqs'])
+            if webscraperequest.NOT_FOUND in g['guide_seqs'])
 
         # Make temp obj for samplesheet
         guide_selection = GuideSelection(
@@ -416,7 +415,7 @@ class PrimerSelectionView(CreatePlusView):
         def get_fwd_and_rev_primers(ontarget_primers: dict):
             values = list(ontarget_primers.values())
             if not values:
-                return 'not found'
+                return webscraperequest.NOT_FOUND
             return values[0], values[1]
 
         sprimers = dict(
@@ -426,8 +425,10 @@ class PrimerSelectionView(CreatePlusView):
         return {
             'selected_primers': {
                 # Put "not found" on top for readability
-                **dict((t, p) for t, p in sprimers.items() if p == 'not found'),
-                **dict((t, p) for t, p in sprimers.items() if p != 'not found')
+                **dict((t, p) for t, p in sprimers.items()
+                       if p == webscraperequest.NOT_FOUND),
+                **dict((t, p) for t, p in sprimers.items()
+                       if p != webscraperequest.NOT_FOUND)
             }
         }
 

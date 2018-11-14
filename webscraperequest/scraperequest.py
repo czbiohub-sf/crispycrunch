@@ -27,6 +27,8 @@ import urllib3
 
 from bs4 import BeautifulSoup
 
+NOT_FOUND = 'not found'
+
 logger = logging.getLogger(__name__)
 _cached_session = requests_cache.CachedSession(
     cache_name=__name__ + '_cache',
@@ -396,7 +398,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 return dict(
                     target=self.target,
                     guide_seqs={
-                        'not found': 'not found',
+                        NOT_FOUND: NOT_FOUND,
                     },
                     url=url,
                 )
@@ -446,7 +448,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if not rows:
                 return dict(
                     target=self.target,
-                    guide_seqs={'not found': 'not found'},
+                    guide_seqs={NOT_FOUND: NOT_FOUND},
                 )
 
         # TODO (gdingle): refactor to simple lists... see GuideDesign.to_df
@@ -588,7 +590,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
         table = ontargetPcr.find_next(class_='primerTable')
         message = ontargetPcr.find_next('strong')
         if message and 'Warning' in message.get_text():
-            return {}  # will be interpreted as 'not found'
+            return {}  # will be interpreted as NOT_FOUND
 
         if table is None:
             # TODO (gdingle): catch crispor execptions here?

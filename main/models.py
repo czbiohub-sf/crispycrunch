@@ -19,6 +19,8 @@ from django.utils.text import slugify
 from utils.chrloc import ChrLoc
 from utils.validators import *
 
+# TODO (gdingle): refactor constant out of scraperequest
+NOT_FOUND = 'not found'
 
 # TODO (gdingle): ArrayField is not showing full error messages, only first part
 # "Item 1 in the array did not validate:". See:
@@ -515,22 +517,26 @@ class GuideDesign(BaseModel):
         })
         df_guides = DataFrame()
         for gd in self.guide_data:
-            if 'not found' in gd['guide_seqs']:
-                # TODO (gdingle): how and when to deal with "not found"?
-                continue
-            df_guides = df_guides.append(DataFrame(data={
-                # scalars
-                'target_loc': gd['target'],
-                'url': gd['url'],
-                '_crispor_batch_id': gd['batch_id'],
-                # collections
-                '_crispor_pam_id': list(gd['guide_seqs'].keys()),
-                'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
-                             _crispor_pam_id in gd['guide_seqs']],
-                'guide_seq': list(gd['guide_seqs'].values()),
-                'scores': list(gd['scores'].values()),  # list of lists
-                'primer_url': list(gd['primer_urls'].values()),
-            }))
+            if NOT_FOUND in gd['guide_seqs']:
+                df_guides = df_guides.append(DataFrame(data={
+                    'target_loc': gd['target'],
+                    'url': gd['url'],
+                    'guide_id': gd['target'] + ' ' + NOT_FOUND,
+                }, index=[gd['target']]), sort=False)
+            else:
+                df_guides = df_guides.append(DataFrame(data={
+                    # scalars
+                    'target_loc': gd['target'],
+                    'url': gd['url'],
+                    '_crispor_batch_id': gd['batch_id'],
+                    # collections
+                    '_crispor_pam_id': list(gd['guide_seqs'].keys()),
+                    'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
+                                 _crispor_pam_id in gd['guide_seqs']],
+                    'guide_seq': list(gd['guide_seqs'].values()),
+                    'scores': list(gd['scores'].values()),  # list of lists
+                    'primer_url': list(gd['primer_urls'].values()),
+                }))
 
         if not len(df_guides):  # Edge case
             # TODO (gdingle): handle zero guides case better
@@ -636,7 +642,9 @@ class GuideSelection(BaseModel):
     def _validate_selected_guides(val):
         return [validate_seq(seq)  # type: ignore
                 for seqs in val.values()
-                for seq in seqs.values()]
+                for seq in seqs.values()
+                # Allow special string through
+                if seq != NOT_FOUND]
 
     selected_guides = JSONField(
         default=dict,

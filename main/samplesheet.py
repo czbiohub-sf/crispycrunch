@@ -27,6 +27,8 @@ from crispresso.fastqs import reverse_complement
 
 logger = logging.getLogger(__name__)
 
+NOT_FOUND = 'not found'
+
 
 def from_experiment(experiment: Experiment) -> DataFrame:
     # TODO (gdingle): how to assign metadata? nothing seems to work... see stackoverflow
@@ -292,7 +294,7 @@ def _transform_primer_product(row) -> str:
     """
 
     if not isinstance(row['primer_product'], str):
-        return 'not found'
+        return NOT_FOUND
 
     # Only look up product from chr loc if crispor returns mysterious Ns
     if 'N' not in row['primer_product']:
@@ -554,7 +556,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
                 ultramer_length
             )
         except ValueError:
-            return 'not found'
+            return NOT_FOUND
 
         # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
         # in frame but outside the CCDS, the insert is misidentified. We set a
