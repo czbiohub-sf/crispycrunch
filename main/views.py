@@ -325,7 +325,7 @@ class GuideSelectionView(CreatePlusView):
 
         grouped = sheet.groupby(['target_loc'])
         # Take top then regroup for iteration by group
-        top = guide_design.wells_per_target
+        top = guide_design.guides_per_target
         grouped = grouped.head(top).groupby(['target_loc'])
         top_guides = dict((
             str(target_loc),

@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
+# TODO (gdingle): add cache decorators for others?
 from django.urls import path
 
 from main import views
@@ -7,7 +8,7 @@ from main import views
 
 urlpatterns = [
     path('',
-         login_required(views.IndexView.as_view()),
+         never_cache(login_required(views.IndexView.as_view())),
          name='Index'
          ),
 

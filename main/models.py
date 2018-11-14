@@ -432,19 +432,9 @@ class GuideDesign(BaseModel):
         blank=True,
     )
 
-    # TODO (gdingle): changme
-    @cached_property
-    def wells_per_target(self):
-        """
-        Should be target size of plate times number of expected drop-outs.
-        For example, if have a 96 well plate and expect to choose 1 in 3 guides,
-        then the wells should be 96 * 3.
-        """
-        return max(1, 96 * 2 // len(self.target_locs))
-
     guides_per_target = models.IntegerField(
-        help_text='The top N number of guides per target to select',
-        default=60,
+        help_text='The top N number of guides per target to select.',
+        default=1,
         validators=[
             MinValueValidator(1),
             MaxValueValidator(96),
@@ -602,7 +592,7 @@ class GuideDesign(BaseModel):
             return 0
         else:
             # 5 based on safe-harbor experiment
-            return self.wells_per_target * 5
+            return self.guides_per_target * 5
 
     @cached_property
     def cds_index(self):
@@ -651,7 +641,7 @@ class GuideSelection(BaseModel):
     selected_guides = JSONField(
         default=dict,
         validators=[
-            # See wells_per_target
+            # See guides_per_target
             functools.partial(validate_num_wells, max=96 * 3),
             _validate_selected_guides],
         help_text='Guides returned by Crispor. Filtered and ranked.')
@@ -699,6 +689,8 @@ class PrimerDesign(BaseModel):
 
     # TODO (gdingle): crispor has a preset list of values... mirror?
     max_amplicon_length = models.IntegerField(
+        # TODO (gdingle): this value is ignored in HDR experiments because of
+        # Crispor customizaitons... how to show in UI?
         verbose_name='Maximum amplicon length',
         help_text='amplicon = primer product',
         default=400,
