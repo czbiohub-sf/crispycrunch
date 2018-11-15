@@ -19,6 +19,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if 'RDS_DB_NAME' in os.environ:  # prod
     DEBUG = False
     SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
+    SECURE_SSL_REDIRECT = True
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
