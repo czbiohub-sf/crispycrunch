@@ -20,6 +20,7 @@ if 'RDS_DB_NAME' in os.environ:  # prod
     DEBUG = False
     SECRET_KEY = os.environ['DJANGO_SECRET_KEY']
     # TODO (gdingle): how to get this working with AWS load balancer?
+    # see https://www.vincit.fi/en/blog/deploying-django-elastic-beanstalk-https-redirects-functional-health-checks/
     # SECURE_SSL_REDIRECT = True
     LOGGING = {
         'version': 1,
@@ -79,6 +80,8 @@ else:  # dev
     logging.config.dictConfig(LOGGING)
 
 
+# TODO (gdingle): fetch load balancer IP dynamically with
+# https://gist.github.com/dryan/8271687
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',

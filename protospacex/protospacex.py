@@ -80,7 +80,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     log.debug('Request cached: {}'.format(getattr(response, 'from_cache', False)))
     try:
         response.raise_for_status()
-    except requests.HTTPError:
+    except requests.exceptions.HTTPError:
         log.error("Ensembl sequence REST query returned error "
                   "{}".format(response.text))
         raise ValueError(response.text)
@@ -136,7 +136,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
                                                 "content-type": "application/json"})
     try:
         response.raise_for_status()
-    except _cached_session.HTTPError:
+    except requests.exceptions.HTTPError:
         log.error("Ensembl sequence REST query returned error "
                   "{}".format(response.text))
         raise ValueError(response.text)
