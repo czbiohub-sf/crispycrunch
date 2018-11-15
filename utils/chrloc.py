@@ -252,18 +252,23 @@ def get_insert(
     # TODO (gdingle): we shouldn't need to recompute this... refactor with protospacex
 
     >>> get_insert(ChrLoc('chr5:1-30'))
-    4
+    16
     >>> get_insert(ChrLoc('chr5:1-60'))
-    4
+    31
     >>> get_insert(ChrLoc('chr5:1-30'), 'stop_codon')
     13
     >>> get_insert(ChrLoc('chr5:1-60'), 'stop_codon')
     28
     """
     # Insert happens to the left of the integer position.
+    # if hdr_tag == 'start_codon':
+    #     # Insert position is assumed to be always one codon in.
+    #     return target_loc.start + 3
+    # TODO (gdingle): need both start_codon and start_codon2?
     if hdr_tag == 'start_codon':
-        # Insert position is assumed to be always one codon in.
-        return target_loc.start + 3
+        assert len(target_loc) % 2 == 0, len(target_loc)
+        mid = len(target_loc) // 2
+        return target_loc.start + mid + 3
     elif hdr_tag == 'stop_codon':
         assert len(target_loc) % 2 == 0, len(target_loc)
         mid = len(target_loc) // 2
@@ -281,11 +286,11 @@ def get_guide_cut_to_insert(
 
     >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40:+'),
     ... GuideChrLoc('chr5:1-20:+'))
-    14
+    -3
 
     >>> get_guide_cut_to_insert(ChrLoc('chr5:1-40:+'),
     ... GuideChrLoc('chr5:2-21:-'))
-    1
+    -16
 
     # 30bp target, stop codon ends at 16, insert at 13
     # 20bp guide, end of cut is at 18

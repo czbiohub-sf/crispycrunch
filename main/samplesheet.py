@@ -102,6 +102,8 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
         for g in guides.to_records()
     ]
 
+    # TODO (gdingle): a side effect of this is the chr locs inputted by user
+    # *will* be sorted alphabetical... is that desired?
     if any(target_inputs):
         # Preserve original order in category for later sorting
         sheet['target_input'] = pandas.Categorical(

@@ -218,10 +218,10 @@ def get_cds_seq(
     Start codon.
 
     >>> get_cds_seq('ENST00000398844')
-    'ATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCC'
+    'CCTTCCAACCCAGTCATCATGTCCCAGCCGGGAATA'
 
     >>> get_cds_seq('ENST00000411809')
-    'ATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGAC'
+    'CGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAG'
 
     Stop codon.
 
@@ -309,15 +309,15 @@ def get_cds_chr_loc(
     See https://www.ncbi.nlm.nih.gov/CCDS/CcdsBrowse.cgi?REQUEST=CCDS&DATA=CCDS43363
 
     >>> get_cds_chr_loc('ENST00000398844', length=990)
-    'chr5:134649077-134650066:+'
+    'chr5:134648582-134649571:+'
 
     >>> get_cds_chr_loc('ENST00000411809', length=990)
-    'chr5:157857981-157858970:-'
+    'chr5:157858476-157859465:-'
 
     Length.
 
     >>> get_cds_chr_loc('ENST00000221801', length=990)
-    'chr19:39845311-39846300:-'
+    'chr19:39845806-39846795:-'
 
     >>> get_cds_chr_loc('ENST00000398844', -1, 90)
     'chr5:134725050-134725139:+'
@@ -342,7 +342,7 @@ def get_cds_chr_loc(
     Length.
 
     >>> get_cds_chr_loc('ENST00000398844')
-    'chr5:134649077-134649112:+'
+    'chr5:134649059-134649094:+'
 
     >>> get_cds_chr_loc('ENST00000398844', -1)
     'chr5:134725077-134725112:+'
@@ -358,9 +358,9 @@ def get_cds_chr_loc(
 
     Across splice boundaries.
     >>> get_cds_chr_loc('ENST00000262033', length=36)
-    'chr12:56687964-56687999:-'
+    'chr12:56687982-56688017:-'
     >>> get_cds_chr_loc('ENST00000054666', length=36)
-    'chr1:7771384-7771419:+'
+    'chr1:7771366-7771401:+'
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
@@ -526,13 +526,19 @@ def _get_start_end(
 
     assert length > 0
 
-    if cds_index == -1:  # stop codon
+    if cds_index == -1:  # stop_codon
         start = end - length // 2
         codon_at = end - 3
         end = end + length // 2
-    elif cds_index == 0:  # start codon
-        end = start + length
+    elif cds_index == 0:  # start_codon2
         codon_at = start
+        start = start - length // 2
+        end = codon_at + length // 2
+    # TODO (gdingle): need both start_codon and start_codon2?
+    # elif cds_index == 0:  # legacy start_codon
+    #     end = start + length
+    #     codon_at = start
+
     assert end - start == length
     return start, end, codon_at - start
 

@@ -339,9 +339,11 @@ class GuideDesign(BaseModel):
     }
     HDR_TAG_TERMINUSES = [
         # See cds_length below
-        ('start_codon', 'Within 36bp after start codon (N-terminus)'),
+        # TODO (gdingle): need both start_codon and start_codon2?
+        # ('start_codon', 'Within 36bp after start codon (N-terminus)'),
+        ('start_codon', 'Within 36bp before or after start codon (N-terminus)'),
         ('stop_codon', 'Within 36bp before or after stop codon (C-terminus)'),
-        ('per_target', 'As specified per target ("N" or "C")'),
+        ('per_target', 'As specified per target ("N" or "C"), +/- 36bp'),
     ]
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
         'start_codon': [
@@ -611,7 +613,7 @@ class GuideDesign(BaseModel):
 
     HDR_TAG_TO_CDS_LENGTH = {
         'per_target': None,
-        'start_codon': 36,
+        'start_codon': 72,
         'stop_codon': 72,
     }
 
