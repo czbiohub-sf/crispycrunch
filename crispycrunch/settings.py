@@ -84,6 +84,8 @@ ALLOWED_HOSTS = [
     'crispycrunch.ds.czbiohub.org',
     # TODO (gdingle): this might need to change
     'ec2-35-161-78-39.us-west-2.compute.amazonaws.com',
+    # load balancer?
+    '172.31.7.124',
 ]
 
 # Application definition
