@@ -87,6 +87,7 @@ ALLOWED_HOSTS = [
     'ec2-35-161-78-39.us-west-2.compute.amazonaws.com',
     # load balancer?
     '172.31.7.124',
+    '54.218.30.243',
 ]
 
 # Application definition
