@@ -103,6 +103,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_gene'] = list(guides['target_gene'])
 
     # Preserve original order in category for later sorting
+    # TODO (gdingle): still not working 100%!!! fixme!
     target_inputs = list(guides['target_input'])
     sheet['target_input'] = pandas.Categorical(
         target_inputs,
@@ -571,6 +572,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
 
             return row_hdr.inserted_mutated
         except AssertionError:
+            # TODO (gdingle): figure out why!
             return 'error in mutation'
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
@@ -591,6 +593,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
                 guide_seq = reverse_complement(ghdr.guide_seq)
             assert guide_seq == row['guide_seq'] + row['guide_pam']
         except AssertionError:
+            # TODO (gdingle): figure out why!
             return 'error in guide'
 
 
@@ -623,9 +626,11 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         try:
             ultramer_mutated = uhdr.inserted_mutated
         except Exception:
+            # TODO (gdingle): figure out why!
             return 'error in ultramer: please contact ' + settings.ADMIN_EMAIL
 
-        assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
+        # TODO (gdingle): non-IDT ultramers?
+        # assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
         assert len(ultramer_mutated) >= 150, '150bp is min for IDT ultramer'
 
         if not row['_guide_strand_same']:

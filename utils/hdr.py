@@ -734,7 +734,12 @@ def mit_hit_score(seq1: str, seq2: str, guide_strand_same=True) -> float:
     """
     # aka Matrix "M"
     hit_score_m = [0, 0, 0.014, 0, 0, 0.395, 0.317, 0, 0.389, 0.079, 0.445, 0.508,
-                   0.613, 0.851, 0.732, 0.828, 0.615, 0.804, 0.685, 0.583]
+                   0.613, 0.851, 0.732, 0.828, 0.615, 0.804, 0.685, 0.583,
+                # TODO (gdingle): add for PAM
+                # 0, 0.8, 0.8
+
+
+                   ]
 
     # Go towards PAM
     if guide_strand_same == False:

@@ -304,7 +304,7 @@ class GuideSelectionView(CreatePlusView):
         greater than min_score, then takes top guides by cut-to-insert distance
         if HDR, else by score.
         """
-        # TODO (gdingle): figure out why guide_seqs not always there
+        # TODO (gdingle): figure out why guide_seqs not always there!
         selected_guides = dict(
             (g['target'], g.get('guide_seqs'))
             for g in guide_design.guide_data

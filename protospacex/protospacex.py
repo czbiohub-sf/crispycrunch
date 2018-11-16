@@ -74,10 +74,10 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     # First, fetch the transcript sequence
     url = base_url + f"/sequence/id/{ensembl_transcript_id}"
 
-    log.debug(f"Querying Ensembl for sequence of {ensembl_transcript_id}")
+    log.info(f"Querying Ensembl for sequence of {ensembl_transcript_id}")
     response = _cached_session.get(url, params={"type": "genomic",
                                                 "content-type": "application/json"})
-    log.debug('Request cached: {}'.format(getattr(response, 'from_cache', False)))
+    log.info('Request cached: {}'.format(getattr(response, 'from_cache', False)))
     try:
         response.raise_for_status()
     except requests.exceptions.HTTPError:
@@ -104,9 +104,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
         seq_str = response_data['seq']
 
-        log.debug(f"Retrieved sequence {response_data['desc']} of length "
-                  f"{sequence_right - sequence_left} for species {species} on "
-                  f"strand {transcript_strand}")
+        log.info(f"Retrieved sequence {response_data['desc']} of length "
+                 f"{sequence_right - sequence_left} for species {species} on "
+                 f"strand {transcript_strand}")
     except (KeyError, ValueError) as e:
         log.error(e)
         log.error('Error parsing sequence metadata from Ensembl REST response - '
@@ -131,7 +131,7 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
     url = base_url + f"/overlap/id/{ensembl_transcript_id}"
 
-    log.debug(f"Querying Ensembl for overlaps of {ensembl_transcript_id}")
+    log.info(f"Querying Ensembl for overlaps of {ensembl_transcript_id}")
     response = _cached_session.get(url, params={"feature": ["cds", "exon"],
                                                 "content-type": "application/json"})
     try:
@@ -170,9 +170,9 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
         num_cds_boundaries = len([f for f in record.features
                                   if f.type == 'cds'])
 
-        log.debug(f"Retrieved {num_exon_boundaries} exons and "
-                  f"{num_cds_boundaries} coding regions for transcript "
-                  f"{ensembl_transcript_id}")
+        log.info(f"Retrieved {num_exon_boundaries} exons and "
+                 f"{num_cds_boundaries} coding regions for transcript "
+                 f"{ensembl_transcript_id}")
     except (KeyError, ValueError) as e:
         log.error(e)
         log.error('Error parsing overlap metadata from Ensembl REST response - '
@@ -275,7 +275,7 @@ def get_cds_seq(
             # stop codon
             assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
     except AssertionError:
-        log.warning('Transcript {} has target codon across splice boundary in CCDS "{}"'.format(
+        log.warning('Transcript {} does not have codon in expected location in CCDS "{}"'.format(
             ensembl_transcript_id, cds_seq))
 
     if len(cds_seq) < 3:
@@ -376,7 +376,7 @@ def get_cds_chr_loc(
             # stop codon
             assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
     except AssertionError:
-        log.warning('Transcript {} has target codon across splice boundary in CCDS "{}"'.format(
+        log.warning('Transcript {} does not have codon in expected location in CCDS "{}"'.format(
             ensembl_transcript_id, cds_seq))
 
     species = record.annotations['reference_species']
