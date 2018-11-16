@@ -87,6 +87,9 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     guides = _join_guide_data(guide_selection)
 
+    # Important to keep input order: sort before assigning to new sheet
+    guides = guides.sort_values('target_input')
+
     assert len(sheet) >= len(guides), (len(sheet), len(guides))
     # Trim sheet to available guides
     sheet = sheet[0:len(guides)]
@@ -104,11 +107,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     # Preserve original order in category for later sorting
     # TODO (gdingle): still not working 100%!!! fixme!
-    target_inputs = list(guides['target_input'])
-    sheet['target_input'] = pandas.Categorical(
-        target_inputs,
-        categories=pandas.Series(target_inputs).unique(),
-        ordered=True)
+    sheet['target_input'] = list(guides['target_input'])
 
     sheet = _set_guide_cols(sheet, guides)
 

@@ -6,7 +6,7 @@ See SampleSheetTestCase for example data.
 
 import functools
 
-from pandas import DataFrame
+from pandas import Categorical, DataFrame, Series
 
 from django.conf import settings
 from django.contrib.postgres import fields
@@ -544,6 +544,13 @@ class GuideDesign(BaseModel):
         """
         target_inputs, target_tags = self.parse_targets_raw()
         tag_to_terminus = dict((v, k) for k, v in self.TERMINUS_TO_TAG.items())
+
+        # Keep original import order
+        target_inputs = Categorical(
+            target_inputs,
+            categories=Series(target_inputs).unique(),
+            ordered=True)
+
         df_targets = DataFrame(data={
             'target_input': target_inputs,
             'target_loc': self.target_locs,
@@ -556,6 +563,7 @@ class GuideDesign(BaseModel):
                         for t in target_tags] or self.hdr_seq,
             'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
         })
+
         df_guides = DataFrame()
         for gd in self.guide_data:
             if NOT_FOUND in gd['guide_seqs']:

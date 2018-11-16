@@ -505,17 +505,15 @@ class ExperimentSummaryView(View):
             sheet['target_gene'] = None
 
         # Remove redundant info in case of chr
-        if all(sheet['target_loc'] == sheet['target_input']):
+        if all((is_chr(t) for t in sheet['target_input'])) \
+                and all(sheet['target_loc'] == sheet['target_input']):
             sheet['target_loc'] = None
 
         sheet = sheet.dropna(axis=1, how='all')
         sheet.insert(0, 'well_pos', sheet.index)
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
 
-        # Avoid error "fill value must be in categories"
-        sheet['target_input'].cat.add_categories([''], inplace=True)
         sheet = sheet.fillna('')
-        sheet = sheet.sort_values('target_input', ascending=False)
 
         sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
         return sheet
