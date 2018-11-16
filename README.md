@@ -1,6 +1,8 @@
 # CrispyCrunch
 Web app for CRISPR experiment setup and analysis. Fill in a 96-well plate and analyze it as a whole.
 
+See it live at https://crispycrunch.ds.czbiohub.org.
+
 ## Background
 
 This app was developed by Greg Dingle starting in July 2018 for the genome engineering group in the CZ Biohub. The intention was to streamline the CRISPR experimentation process of researchers in the Biohub and provide a permanent record of experiments and results.
@@ -93,7 +95,7 @@ To inspect the state of the app, use the built-in Django admin interface at http
 
 A default `admin` user is created on first installation. **Change the password** of that first superuser on first deployment.
 
-You can give any other user admin or superuser status here: http://crispycrunch.ds.czbiohub.org/admin/auth/user/ .
+You can give any other user admin or superuser status here: https://crispycrunch.ds.czbiohub.org/admin/auth/user/ .
 
 To inspect the source of fastq files, open https://console.aws.amazon.com/s3/buckets/czb-seqbot/.
 
@@ -118,4 +120,7 @@ Hint: Look in `/opt/python/current/env` for secrets.
 There should be at least one downtime alert setup here:
 https://console.aws.amazon.com/cloudwatch/home?region=us-west-2#s=Alarms&alarm=awseb-e-vnvbedub4n-stack-Severe-KUZS17WH3VE9
 
-And you should receive emails of Django errors if you are the owner of `ADMIN_EMAIL`.
+And you should receive emails of Django errors if you are the owner of `ADMIN_EMAIL`. They are throttled with https://github.com/krisys/django-error-email-throttle .
+
+You can see a table of error counts at https://crispycrunch.ds.czbiohub.org/admin/error_email_throttle/
+
