@@ -35,7 +35,7 @@ if 'RDS_DB_NAME' in os.environ:  # prod
             },
             'mail_admins': {
                 'level': 'ERROR',
-                'class': 'django.utils.log.AdminEmailHandler',
+                'class': 'error_email_throttle.handler.AdminEmailThrottler',
                 'include_html': True,
             },
         },
@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'main.apps.MainConfig',
     'bootstrap4',
+    'error_email_throttle',
     # End crispycrunch apps
 ]
 
