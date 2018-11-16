@@ -11,7 +11,7 @@ from pandas import DataFrame
 from django.conf import settings
 from django.contrib.postgres import fields
 from django.contrib.postgres.fields import JSONField
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxLengthValidator, MaxValueValidator, MinLengthValidator, MinValueValidator
 from django.db import models
 from django.utils.functional import cached_property
 from django.utils.text import slugify
@@ -284,8 +284,20 @@ class ChrLocField(models.CharField):
 
 
 class Experiment(BaseModel):
-    name = models.CharField(max_length=40, unique=True)
-    description = models.CharField(max_length=65536, blank=True)
+    name = models.CharField(
+        max_length=40,
+        help_text='Identifying name of the experiment'
+    )
+    description = models.CharField(
+        max_length=65536,
+        blank=True,
+        help_text='Friendly description for other people',
+    )
+    is_hdr = models.BooleanField(
+        default=True,
+        verbose_name='HDR experiment?',
+        help_text='Insert a sequence by HDR (Homology Directed Repair)',
+    )
 
     def __str__(self):
         return self.name.title()
@@ -343,8 +355,9 @@ class GuideDesign(BaseModel):
         # ('start_codon', 'Within 36bp after start codon (N-terminus)'),
         ('start_codon', 'Within 36bp before or after start codon (N-terminus)'),
         ('stop_codon', 'Within 36bp before or after stop codon (C-terminus)'),
-        ('per_target', 'As specified per target ("N" or "C"), +/- 36bp'),
+        ('per_target', 'Within 36bp before or after, terminus specified per target ("N" or "C")'),
     ]
+    # TODO (gdingle): need to verify when each of these are appropriate
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
         'start_codon': [
             # TODO (gdingle): what is first called?
@@ -444,33 +457,57 @@ class GuideDesign(BaseModel):
             MaxValueValidator(96),
         ])
 
+    @property
+    def is_hdr(self):
+        # TODO (gdingle): simplify when legacy data gone
+        return self.hdr_tag is not None or self.experiment.is_hdr
+
     # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
-        default='per_target',
+        # Should be blank to avoid confusion in non-HDR experiments
+        default=None,
         max_length=40,
-        verbose_name='Insert tag by HDR',
-        help_text='Insert a sequence by HDR (Homology Directed Repair). Requires ENST transcript IDs.',
+        verbose_name='HDR tag terminus',
+        help_text='Where to insert the tag in each gene',
+        # TODO (gdingle): how to remove this in case of GuideDesignForm2?
         blank=True,
+        null=True,
     )
     hdr_start_codon_tag_seq = models.CharField(
-        choices=HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'],
-        default=HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'][0],
+        # TODO (gdingle): need to verify when each of these are appropriate
+        # choices=HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'],
+        default=HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'][0][0],
         max_length=65536,
-        validators=[validate_seq],
+        validators=[
+            validate_seq,
+            # TODO (gdingle): come up with more appropriate values
+            MinLengthValidator(3),
+            MaxLengthValidator(90),
+        ],
         verbose_name='Tag sequence for start codon',
         help_text='Sequence of tag to insert just after start codon',
+        # TODO (gdingle): how to remove this in case of GuideDesignForm2?
         blank=True,
+        null=True,
     )
     # TODO (gdingle): is it actually needed to show this? can we determine by hdr_start_codon_tag_seq?
     hdr_stop_codon_tag_seq = models.CharField(
-        choices=HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'],
-        default=HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'][0],
+        # TODO (gdingle): need to verify when each of these are appropriate
+        # choices=HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'],
+        default=HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'][0][0],
         max_length=65536,
-        validators=[validate_seq],
+        validators=[
+            validate_seq,
+            # TODO (gdingle): come up with more appropriate values
+            MinLengthValidator(3),
+            MaxLengthValidator(90),
+        ],
         verbose_name='Tag sequence for stop codon',
         help_text='Sequence of tag to insert just before stop codon',
+        # TODO (gdingle): how to remove this in case of GuideDesignForm2?
         blank=True,
+        null=True,
     )
 
     # TODO (gdingle): custom encoder/decoder for custom dict wrapper object

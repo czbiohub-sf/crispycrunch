@@ -81,7 +81,7 @@ else:  # dev
 
 
 # TODO (gdingle): fetch load balancer IP dynamically with
-# https://gist.github.com/dryan/8271687
+#
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
@@ -222,6 +222,7 @@ TIME_ZONE = 'America/Los_Angeles'
 BOOTSTRAP4 = {
     # Set placeholder attributes to label if no placeholder is provided
     'set_placeholder': False,
+    'required_css_class': 'required',
 }
 
 LOGIN_REDIRECT_URL = '/main/'

@@ -117,7 +117,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     sheet = _set_guide_cols(sheet, guides)
 
-    if guide_design.hdr_tag:
+    if guide_design.is_hdr:
         sheet = _set_hdr_cols(sheet, guide_design, guides)
 
     return sheet
@@ -186,7 +186,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     sheet['primer_product'] = sheet.apply(_warn_primer_self_bind, axis=1)
 
-    if guide_selection.guide_design.hdr_tag:
+    if guide_selection.guide_design.is_hdr:
         sheet = _set_hdr_primer(
             sheet,
             guide_selection.guide_design,

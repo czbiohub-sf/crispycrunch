@@ -122,8 +122,17 @@ class ExperimentDeleteView(BaseDeleteView):
 
 class GuideDesignView(CreatePlusView):
     template_name = 'guide-design.html'
-    form_class = GuideDesignForm
+    # form_class = GuideDesignForm
     success_url = '/main/guide-design/{id}/progress/'
+
+    def get_form_class(self):
+        experiment = Experiment.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
+        # Filter irrelevant fields depending on is_hdr
+        if experiment.is_hdr:
+            return GuideDesignForm
+        else:
+            return GuideDesignForm2
 
     def _normalize_targets(self, targets, guide_design):
         genome = guide_design.genome
@@ -133,7 +142,7 @@ class GuideDesignView(CreatePlusView):
             raise ValidationError(
                 'Targeting fasta sequences is not currently implemented: {}'.format(targets))
 
-        if guide_design.hdr_tag:
+        if guide_design.is_hdr:
             if not all(is_ensemble_transcript(t) or is_gene(t) for t in targets):
                 raise ValidationError(
                     'Targets must all be ENST transcripts or gene symbols for HDR')
@@ -175,7 +184,7 @@ class GuideDesignView(CreatePlusView):
 
         genome = guide_design.genome
 
-        if guide_design.hdr_tag:
+        if guide_design.is_hdr:
             if genome != 'hg38':
                 raise ValidationError(
                     'ENST transcripts are only currently implemented for the hg38 genome')
@@ -199,7 +208,7 @@ class GuideDesignView(CreatePlusView):
 
         elif all(is_gene(t) for t in targets):
             raise ValidationError(
-                'Targeting genes by name is not currently implemented')
+                'Targeting genes by name is only currently implemented for HDR')
 
         else:
             func = functools.partial(
@@ -316,7 +325,7 @@ class GuideSelectionView(CreatePlusView):
             # TODO (gdingle): handle zero guides case better
             raise ValueError('No good guides found for any targets')
 
-        if guide_design.hdr_tag:
+        if guide_design.is_hdr:
             sheet.sort_values('_hdr_dist', inplace=True)
         else:
             sheet.sort_values('guide_score', inplace=True, ascending=False)

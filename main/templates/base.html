@@ -13,6 +13,12 @@
     html {
       font-size: 18px;
     }
+
+    {# https://stackoverflow.com/questions/23141854/adding-asterisk-to-required-fields-in-bootstrap-3 #}
+    .form-group.required label:after {
+      content:" *";
+      color:red;
+    }
   </style>
   {% bootstrap_css %}
   {% bootstrap_javascript jquery='slim' %}
