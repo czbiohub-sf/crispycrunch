@@ -80,18 +80,17 @@ else:  # dev
     logging.config.dictConfig(LOGGING)
 
 
-# TODO (gdingle): fetch load balancer IP dynamically with
-# https://serverfault.com/questions/640809/aws-ec2-and-django-allowed-hosts
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
-    'crispycrunch.us-west-2.elasticbeanstalk.com',
-    'crispycrunch.ds.czbiohub.org',
-    'ec2-35-161-78-39.us-west-2.compute.amazonaws.com',
-    '172.31.7.124',
-    '172.31.19.45',
-    '54.218.30.243',
-    'ec2-54-218-30-243.us-west-2.compute.amazonaws.com',
+    '*',
+    # TODO (gdingle): fetch load balancer IP dynamically with
+    # https://serverfault.com/questions/640809/aws-ec2-and-django-allowed-hosts
+    # TODO (gdingle): will this work with both string host and IPs?
+    # 'crispycrunch.us-west-2.elasticbeanstalk.com',
+    # 'crispycrunch.ds.czbiohub.org',
+    # '54.218.30.243',
+    # 'ec2-54-218-30-243.us-west-2.compute.amazonaws.com',
 ]
 
 # Application definition
