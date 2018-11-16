@@ -736,10 +736,10 @@ class PrimerDesign(BaseModel):
 
     # TODO (gdingle): crispor has a preset list of values... mirror?
     max_amplicon_length = models.IntegerField(
-        # TODO (gdingle): this value is ignored in HDR experiments because of
-        # Crispor customizaitons... how to show in UI?
+        # TODO (gdingle): this value is always set to 400 in HDR experiments because of
+        # Crispor customizaitons... how to show that in UI?
         verbose_name='Maximum amplicon length',
-        help_text='amplicon = primer product',
+        help_text='Amplicon = primer product. Length after HDR insertion.',
         default=400,
         validators=[
             # Constrain range to Biohub plausible experiments
