@@ -122,7 +122,6 @@ class ExperimentDeleteView(BaseDeleteView):
 
 class GuideDesignView(CreatePlusView):
     template_name = 'guide-design.html'
-    # form_class = GuideDesignForm
     success_url = '/main/guide-design/{id}/progress/'
 
     def get_form_class(self):

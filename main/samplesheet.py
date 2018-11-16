@@ -14,6 +14,7 @@ import pandas
 
 from pandas import DataFrame
 
+from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
 from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
@@ -184,8 +185,6 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
-    sheet['primer_product'] = sheet.apply(_warn_primer_self_bind, axis=1)
-
     if guide_selection.guide_design.is_hdr:
         sheet = _set_hdr_primer(
             sheet,
@@ -193,22 +192,6 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
             primer_selection.primer_design.max_amplicon_length)
 
     return sheet
-
-
-def _warn_primer_self_bind(row) -> DataFrame:
-    primer_product = row['primer_product']
-
-    if ' ' in primer_product:
-        # previous warning
-        return primer_product
-
-    if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
-        return 'self binding: ' + primer_product
-
-    if primerchecks.is_self_binding_with_adapters(row['primer_seq_fwd'], row['primer_seq_rev']):
-        return 'binds to adapters: ' + primer_product
-
-    return primer_product
 
 
 def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
@@ -291,8 +274,24 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         return primer_product
 
+    def warn_primer_self_bind(row) -> DataFrame:
+        primer_product = row['primer_product']
+
+        if ' ' in primer_product:
+            # previous warning
+            return primer_product
+
+        if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
+            return 'self binding: ' + primer_product
+
+        if primerchecks.is_self_binding_with_adapters(row['primer_seq_fwd'], row['primer_seq_rev']):
+            return 'binds to adapters: ' + primer_product
+
+        return primer_product
+
     sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
+    sheet['primer_product'] = sheet.apply(warn_primer_self_bind, axis=1)
 
     return sheet
 
@@ -603,47 +602,34 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         # It's another instance of IO, but should be cached always.
         # TODO (gdingle): return more info from protospacex, and store throughout
         try:
-            ultramer_length = 110
-            ultramer_seq = get_ultramer_seq(
+            ultramer_seq, codon_at = get_ultramer_seq(
                 row['target_input'],
                 row['_cds_index'],
-                ultramer_length
+                110,
             )
         except ValueError:
             return NOT_FOUND
 
-        # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
-        # in frame but outside the CCDS, the insert is misidentified. We set a
-        # buffer here to avoid the worst. See primer product above as well.
-        start = 51
-
-        left_bit, codon_aligned, right_bit = (
-            ultramer_seq[:1 + start],
-            ultramer_seq[1 + start:-1],
-            ultramer_seq[-1:]
-        )
-        assert len(codon_aligned) % 3 == 0
-
         uhdr = hdr.HDR(
-            codon_aligned,
+            ultramer_seq,
             row['_hdr_seq'],
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same'],
-            row['_cds_seq'])
+            row['_cds_seq'],
+            codon_at)
         try:
-            # TODO (gdingle): figure out why some guides are not found in HDR
-            recombined = left_bit + uhdr.inserted_mutated + right_bit
+            ultramer_mutated = uhdr.inserted_mutated
         except Exception:
-            return 'error in ultramer: codon false positive?'
+            return 'error in ultramer: please contact ' + settings.ADMIN_EMAIL
 
-        assert len(recombined) <= 200, '200bp is max for IDT ultramer'
-        assert len(recombined) >= 150, '150bp is min for IDT ultramer'
+        assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
+        assert len(ultramer_mutated) >= 150, '150bp is min for IDT ultramer'
 
         if not row['_guide_strand_same']:
-            return reverse_complement(recombined)
+            return reverse_complement(ultramer_mutated)
         else:
-            return recombined
+            return ultramer_mutated
 
     sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
 

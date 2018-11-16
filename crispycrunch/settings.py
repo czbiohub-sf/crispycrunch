@@ -81,17 +81,16 @@ else:  # dev
 
 
 # TODO (gdingle): fetch load balancer IP dynamically with
-#
+# https://serverfault.com/questions/640809/aws-ec2-and-django-allowed-hosts
 ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'crispycrunch.us-west-2.elasticbeanstalk.com',
     'crispycrunch.ds.czbiohub.org',
-    # TODO (gdingle): this might need to change
     'ec2-35-161-78-39.us-west-2.compute.amazonaws.com',
-    # load balancer?
     '172.31.7.124',
     '54.218.30.243',
+    'ec2-54-218-30-243.us-west-2.compute.amazonaws.com',
 ]
 
 # Application definition

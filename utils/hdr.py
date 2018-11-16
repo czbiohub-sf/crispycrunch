@@ -36,6 +36,7 @@ class HDR:
             hdr_dist: int = 0,
             guide_strand_same: bool = None,
             cds_seq: str = '',
+            codon_at: int = -1,
             # Default based on analysis of
             # https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
             target_mutation_score: float = 0.1) -> None:
@@ -56,6 +57,8 @@ class HDR:
         assert target_mutation_score < 100 and target_mutation_score > 0
         self.target_mutation_score = target_mutation_score
 
+        # TODO (gdingle): refactor _target_codon_at
+        self._codon_at = codon_at
         if hdr_tag == 'start_codon':
             self.boundary_codons = set(['ATG'])
             # just after start codon
@@ -112,6 +115,8 @@ class HDR:
         return True if is_for else False
 
     def _target_codon_at(self) -> int:
+        if self._codon_at != -1:
+            return self._codon_at
         # TODO (gdingle): sometimes there is an extra stop codon that is picked up first
         # ... outside CDS? how to fix?
         for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
@@ -123,7 +128,7 @@ class HDR:
     @property
     def cut_at(self):
         cut_at = self.insert_at + self.hdr_dist
-        assert cut_at >= 0
+        assert cut_at >= 0, (self.insert_at, self.hdr_dist)
         return cut_at
 
     @property

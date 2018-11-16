@@ -419,7 +419,7 @@ def get_cds_chr_loc(
 def get_ultramer_seq(
         ensembl_transcript_id: str,
         cds_index: int = 0,
-        length: int = 110) -> str:
+        length: int = 110) -> tuple:
     """
     Function to get the precise sequence centered around the target codon
     needed for IDT ultramer ordering (donor DNA template).
@@ -427,28 +427,28 @@ def get_ultramer_seq(
     Length default of 110 is determined by need for max donor length of 200 bp.
     See https://www.idtdna.com/pages/education/decoded/article/crispr-cas9-mediated-hdr-tips-for-successful-experimental-design .
 
-    >>> get_ultramer_seq('ENST00000398844')
+    >>> get_ultramer_seq('ENST00000398844')[0]
     'CTCTCTTCTTGTGCGCTGTTGTCGACCCCGACCAGCCCCTTCCAACCCAGTCATCATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCC'
 
-    >>> get_ultramer_seq('ENST00000411809')
+    >>> get_ultramer_seq('ENST00000411809')[0]
     'CGGGGTCCGTGGGGAGCAGGAGAGGGAGGCGGCGGACCGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGCGTGAGTATCGGGGG'
 
     Stop codon.
 
-    >>> get_ultramer_seq('ENST00000398844', -1)
+    >>> get_ultramer_seq('ENST00000398844', -1)[0]
     'TGCATTATCATATTATGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGAATGAATGAAGAAATTTGACTTATTTTTAAGGAATGTCACGATAGTGCAGAATACC'
 
-    >>> get_ultramer_seq('ENST00000411809', -1)
+    >>> get_ultramer_seq('ENST00000411809', -1)[0]
     'AACTGTGCAACCCAAGCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAAGCAGATTGAATGAAGAATTTTTAGCTGTGCAGATAGGTGA'
 
-    >>> get_ultramer_seq('ENST00000221801', -1)
+    >>> get_ultramer_seq('ENST00000221801', -1)[0]
     'CCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTGTGT'
 
     Not enough in the transcript for the ultramer.
-    >>> get_ultramer_seq('ENST00000258648')
+    >>> get_ultramer_seq('ENST00000258648')[0]
     'ACGCACCTGCGTCAGCTCGCTCTGCGCGTGCGCCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGG'
 
-    >>> get_ultramer_seq('ENST00000267113')
+    >>> get_ultramer_seq('ENST00000267113')[0]
     'CTAGGCAACCTCCAGCCAGTCCCTGGGTCGGGCGGATCCTCCCAGAGGTGGCACAATGGAGCGATCTCCAGGAGAGGGCCCCAGCCCCAGCCCCATGGACCAGCCCTCTG'
     """
 
@@ -484,7 +484,7 @@ def get_ultramer_seq(
     elif cds_index == -1:
         assert ult_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
 
-    return str(ult_seq)
+    return str(ult_seq), codon_at
 
 
 def _get_seq_from_surrounding(record, start: int, end: int) -> str:
