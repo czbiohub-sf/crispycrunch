@@ -250,6 +250,8 @@ def get_cds_seq(
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
 
+    cds_seq = _get_cds_seq(record, cds, cds_index)
+
     # enforce length
     _validate_length(length)
     start, end, codon_at = _get_start_end(
@@ -263,20 +265,16 @@ def get_cds_seq(
     else:
         cds_seq = record.seq[start:end]
 
+    if cds_index == 0:
+        target_codons = ['ATG']
+    elif cds_index == -1:
+        target_codons = ['TAG', 'TGA', 'TAA']
+    assert cds_seq[codon_at:codon_at + 3] in target_codons, (
+        str(cds_seq), codon_at, cds_seq[codon_at - 3:codon_at])
+
     if length != -1:
         assert len(cds_seq) == length, (len(cds_seq), start, end, length)
         assert len(cds_seq) % 3 == 0, 'must be codon aligned'
-
-    try:
-        if cds_index == 0:
-            # start codon
-            assert cds_seq[0:3] == 'ATG', cds_seq
-        elif cds_index == -1:
-            # stop codon
-            assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
-    except AssertionError:
-        log.warning('Transcript {} does not have codon in expected location in CCDS "{}"'.format(
-            ensembl_transcript_id, cds_seq))
 
     if len(cds_seq) < 3:
         log.warning('CCDS of {} is too short "{}", so returning empty string'.format(
@@ -366,18 +364,6 @@ def get_cds_chr_loc(
     cds = [f for f in record.features if f.type == 'cds']
     assert len(cds)
     cds_location = cds[cds_index].location
-    cds_seq = cds[cds_index].location.extract(record).seq
-
-    try:
-        if cds_index == 0:
-            # start codon
-            assert cds_seq[0:3] == 'ATG', cds_seq
-        elif cds_index == -1:
-            # stop codon
-            assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
-    except AssertionError:
-        log.warning('Transcript {} does not have codon in expected location in CCDS "{}"'.format(
-            ensembl_transcript_id, cds_seq))
 
     species = record.annotations['reference_species']
     chromosome_number = record.annotations['reference_chromosome_number']
@@ -618,6 +604,20 @@ def _fetch_seq(species: str, chr_num: str, start: int, end: int) -> str:
         raise ValueError(json['error'])
     response.raise_for_status()
     return json['seq']
+
+
+def _get_cds_seq(record, cds: list, cds_index: int) -> str:
+    cds_seq = cds[cds_index].location.extract(record).seq
+    try:
+        if cds_index == 0:
+            # start codon
+            assert cds_seq[0:3] == 'ATG', cds_seq
+        elif cds_index == -1:
+            # stop codon
+            assert cds_seq[-3:] in ('TAG', 'TGA', 'TAA'), cds_seq
+    except AssertionError:
+        log.warning('Transcript does not have codon in expected location in CCDS "{}"'.format(cds_seq))
+    return cds_seq
 
 
 if __name__ == '__main__':
