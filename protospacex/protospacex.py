@@ -621,5 +621,6 @@ def _fetch_seq(species: str, chr_num: str, start: int, end: int) -> str:
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
+    # import doctest
+    # doctest.testmod()
+    fetch_ensembl_transcript('ENST00000398844').description

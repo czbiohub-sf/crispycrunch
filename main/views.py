@@ -304,14 +304,15 @@ class GuideSelectionView(CreatePlusView):
         greater than min_score, then takes top guides by cut-to-insert distance
         if HDR, else by score.
         """
+        # TODO (gdingle): figure out why guide_seqs not always there
         selected_guides = dict(
-            (g['target'], g['guide_seqs'])
+            (g['target'], g.get('guide_seqs'))
             for g in guide_design.guide_data
-            if webscraperequest.NOT_FOUND not in g['guide_seqs'])
+            if webscraperequest.NOT_FOUND not in g.get('guide_seqs'))
         not_founds = dict(
-            (g['target'], g['guide_seqs'])
+            (g['target'], g.get('guide_seqs'))
             for g in guide_design.guide_data
-            if webscraperequest.NOT_FOUND in g['guide_seqs'])
+            if webscraperequest.NOT_FOUND in g.get('guide_seqs'))
 
         # Make temp obj for samplesheet
         guide_selection = GuideSelection(
