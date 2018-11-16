@@ -494,6 +494,11 @@ class ExperimentSummaryView(View):
         """Modify sheet for optimal rendering"""
         sheet = sheet.loc[:, 'target_input':]  # type: ignore
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
+
+        # Remove redundant info in case of genes
+        if all(sheet['target_gene'] == sheet['target_input']):
+            sheet['target_gene'] = None
+
         sheet = sheet.dropna(axis=1, how='all')
         sheet.insert(0, 'well_pos', sheet.index)
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))

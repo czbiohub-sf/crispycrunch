@@ -98,8 +98,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet['target_gene'] = list(guides['target_gene'])
 
     # Add original target string only if different
-    # TODO (gdingle): compare to target_gene as well... but then what about ordering...
-    # need to remove col later
     target_inputs = [
         (g['target_input'] if g['target_input'] != str(g['target_loc']) else None)
         for g in guides.to_records()
