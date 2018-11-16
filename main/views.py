@@ -499,6 +499,10 @@ class ExperimentSummaryView(View):
         if all(sheet['target_gene'] == sheet['target_input']):
             sheet['target_gene'] = None
 
+        # Remove redundant info in case of chr
+        if all(sheet['target_loc'] == sheet['target_input']):
+            sheet['target_loc'] = None
+
         sheet = sheet.dropna(axis=1, how='all')
         sheet.insert(0, 'well_pos', sheet.index)
         sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
