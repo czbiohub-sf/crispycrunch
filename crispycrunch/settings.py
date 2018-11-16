@@ -89,6 +89,7 @@ ALLOWED_HOSTS = [
     'crispycrunch.ds.czbiohub.org',
     'ec2-35-161-78-39.us-west-2.compute.amazonaws.com',
     '172.31.7.124',
+    '172.31.19.45',
     '54.218.30.243',
     'ec2-54-218-30-243.us-west-2.compute.amazonaws.com',
 ]
