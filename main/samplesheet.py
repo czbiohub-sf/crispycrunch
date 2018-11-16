@@ -87,15 +87,18 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
     guides = _join_guide_data(guide_selection)
 
+    assert len(sheet) >= len(guides), (len(sheet), len(guides))
     # Trim sheet to available guides
     sheet = sheet[0:len(guides)]
 
     sheet['target_genome'] = guide_design.genome
     sheet['target_pam'] = guide_design.pam
 
-    sheet['target_loc'] = [
-        g['target_loc'] if isinstance(g['target_loc'], ChrLoc) else ChrLoc(g['target_loc'])
-        for g in guides.to_records()]
+    sheet['target_loc'] = [g['target_loc']
+                           if isinstance(g['target_loc'], ChrLoc)
+                           else ChrLoc(g['target_loc'])
+                           for g in guides.to_records()
+                           ]
     sheet['target_seq'] = list(guides['target_seq'])
     sheet['target_gene'] = list(guides['target_gene'])
 
@@ -430,8 +433,10 @@ def to_excel(sheet: DataFrame) -> BytesIO:
     return excel_file
 
 
-def _new_index(size=96 * 6,
-               end_char='z',
+# TODO (gdingle): this indexing by wells is stupid now that we use the sheets
+# before the final plate summary... should use guide_id until last display
+def _new_index(size=96 * 12,
+               end_char='ÿ',
                end_int=12) -> list:
     """
     end_char and end_int determine the shape of the plate together.
@@ -542,45 +547,52 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         if not row['guide_seq']:
             return ''
 
-        row_hdr = hdr.HDR(
-            row['target_seq'],
-            row['_hdr_seq'],
-            row['_hdr_tag'],
-            row['hdr_dist'],
-            row['_guide_strand_same'],
-            row['_cds_seq'])
+        try:
+            row_hdr = hdr.HDR(
+                row['target_seq'],
+                row['_hdr_seq'],
+                row['_hdr_tag'],
+                row['hdr_dist'],
+                row['_guide_strand_same'],
+                row['_cds_seq'])
 
-        if not row_hdr.should_mutate:
-            return 'not needed'
+            if not row_hdr.should_mutate:
+                return 'not needed'
 
-        if not row_hdr.junction:
+            if not row_hdr.junction:
+                return row_hdr.inserted_mutated
+
+            if row_hdr.cut_in_junction:
+                return 'cut in intron/exon junction: ' + row_hdr.inserted_mutated
+
+            # Lowercase means mutated
+            if row_hdr.mutation_in_junction:
+                return 'mutation in intron/exon junction: ' + row_hdr.inserted_mutated
+
             return row_hdr.inserted_mutated
-
-        if row_hdr.cut_in_junction:
-            return 'cut in intron/exon junction: ' + row_hdr.inserted_mutated
-
-        # Lowercase means mutated
-        if row_hdr.mutation_in_junction:
-            return 'mutation in intron/exon junction: ' + row_hdr.inserted_mutated
-
-        return row_hdr.inserted_mutated
+        except AssertionError:
+            return 'error in mutation'
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
 
     def check_hdr_guide_match(row):
         if not row['guide_seq']:
             return
-        ghdr = hdr.HDR(
-            row['target_seq'],
-            row['_hdr_seq'],
-            row['_hdr_tag'],
-            row['hdr_dist'],
-            row['_guide_strand_same'])
-        if row['_guide_strand_same']:
-            guide_seq = ghdr.guide_seq
-        else:
-            guide_seq = reverse_complement(ghdr.guide_seq)
-        assert guide_seq == row['guide_seq'] + row['guide_pam']
+        try:
+            ghdr = hdr.HDR(
+                row['target_seq'],
+                row['_hdr_seq'],
+                row['_hdr_tag'],
+                row['hdr_dist'],
+                row['_guide_strand_same'])
+            if row['_guide_strand_same']:
+                guide_seq = ghdr.guide_seq
+            else:
+                guide_seq = reverse_complement(ghdr.guide_seq)
+            assert guide_seq == row['guide_seq'] + row['guide_pam']
+        except AssertionError:
+            return 'error in guide'
+
 
     sheet.apply(check_hdr_guide_match, axis=1)
 

@@ -779,7 +779,9 @@ class PrimerSelection(BaseModel):
     def _validate_selected_primers(val):
         return [validate_seq(seq[0])  # type: ignore
                 for seqs in val.values()
-                for seq in seqs]
+                for seq in seqs
+                # TODO (gdingle): not working 100%
+                if seqs != NOT_FOUND]
 
     selected_primers = JSONField(
         default=dict,
@@ -820,9 +822,9 @@ class PrimerSelection(BaseModel):
         df = DataFrame()
         for guide_id, primer_pair in self.selected_primers.items():
             df = df.append(DataFrame({
-                'primer_seq_fwd': primer_pair[0][0],
-                'primer_seq_rev': primer_pair[1][0],
-                'primer_product': primer_pair[0][1],
+                'primer_seq_fwd': primer_pair[0][0] if primer_pair != NOT_FOUND else NOT_FOUND,
+                'primer_seq_rev': primer_pair[1][0] if primer_pair != NOT_FOUND else NOT_FOUND,
+                'primer_product': primer_pair[0][1] if primer_pair != NOT_FOUND else NOT_FOUND,
             }, index=[guide_id]))
         return df
 
