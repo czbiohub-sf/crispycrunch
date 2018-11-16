@@ -95,7 +95,7 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     return match[0]
 
 
-def enst_to_gene(enst: str, genome: str = 'hg38') -> str:
+def enst_to_gene(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
     """
     Gets NCBI gene associated with with an ENST transcript ID.
 
@@ -107,14 +107,14 @@ def enst_to_gene(enst: str, genome: str = 'hg38') -> str:
     requests.exceptions.HTTPError: 404 Client Error: Not Found for url: http://togows.org/search/ncbi-gene/ENST00000617316/1,50.json
     """
     url = 'http://togows.org/search/ncbi-gene/{}/1,50.json'.format(enst)
-    response = _cached_session.get(url)
+    response = _cached_session.get(url, timeout=timeout / 2)
     response.raise_for_status()
     res = response.json()
     assert len(res) == 1
     ncbi_id = res[0]
 
     url = 'http://togows.org/entry/ncbi-gene/{}/official_symbol.json'.format(ncbi_id)
-    response = _cached_session.get(url)
+    response = _cached_session.get(url, timeout=timeout / 2)
     response.raise_for_status()
     res = response.json()
     assert len(res) == 1
@@ -128,7 +128,9 @@ def enst_to_gene_or_unknown(enst: str, genome: str = 'hg38') ->str:
     'UNKNOWN'
     """
     try:
-        return enst_to_gene(enst, genome)
+        return enst_to_gene(enst, genome, timeout=4)
+    except requests.exceptions.Timeout:
+        return 'TIMEOUT'
     except IOError:
         return 'UNKNOWN'
 
@@ -178,5 +180,6 @@ def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -
 if __name__ == '__main__':
     doctest.testmod()
 
+    # print(enst_to_gene_or_unknown('ENST00000278840'))
     # print(chr_loc_to_seq('chr7:2251813-2251848'))
     # print(chr_loc_to_seq('chr7:2251848-2251813'))

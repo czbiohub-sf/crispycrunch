@@ -243,14 +243,17 @@ class GuideDesignView(CreatePlusView):
         targets_cleaned, target_tags = obj.parse_targets_raw()
         obj.target_tags = target_tags
 
+        logger.info('Normalizing targets...')
         obj.target_locs = self._normalize_targets(
             targets_cleaned,
             obj
         )
+        logger.info('Getting target sequences...')
         obj.target_seqs = self._get_target_seqs(
             targets_cleaned,
             obj
         )
+        logger.info('Getting target genes...')
         obj.target_genes = self._get_target_genes(
             targets_cleaned,
             obj
@@ -266,6 +269,7 @@ class GuideDesignView(CreatePlusView):
             target,
             obj.pre_filter]
             for target, target_seq in zip(obj.target_locs, obj.target_seqs)]
+        logger.info('Getting guides from Crispor...')
         batch.start(largs, [-2])
 
         return obj
