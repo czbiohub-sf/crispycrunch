@@ -1,6 +1,8 @@
 """
-This represents the contents of an experiment on a per sample, per well basis,
-whereas the Django models represent contents per plate.
+This represents all the contents of an experiment on a per sample, per well
+basis, whereas the Django models represent contents per plate.
+
+Most of the code simply transforms values to useful representations for display.
 
 For tests, see main/tests.py.
 """
