@@ -77,21 +77,12 @@ class GuideDesignForm2(ModelForm):
     class Meta:
         model = GuideDesign
         fields = '__all__'
-        exclude = ['owner',
-                   'experiment',
-                   'guide_data',
-                   'target_locs',
-                   'target_seqs',
-                   'target_genes',
-                   'target_tags',
-                   'hdr_tag',
-                   'hdr_start_codon_tag_seq',
-                   'hdr_stop_codon_tag_seq',
-                   ]
-        field_classes = {
-            'targets_raw': NewlineArrayField,
-            'target_fastas': NewlineArrayField,
-        }
+        exclude = GuideDesignForm.Meta.exclude + [
+            'hdr_tag',
+            'hdr_start_codon_tag_seq',
+            'hdr_stop_codon_tag_seq',
+        ]
+        field_classes = GuideDesignForm.Meta.field_classes
 
 
 class GuideSelectionForm(ModelForm):
