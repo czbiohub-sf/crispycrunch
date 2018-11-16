@@ -3,7 +3,7 @@ biopython
 boto3
 django-bootstrap4
 django-debug-toolbar
-django-error-email-throttle
+git+https://github.com/krisys/django-error-email-throttle.git@master
 django-ses
 django-settings-export
 Django>=2
