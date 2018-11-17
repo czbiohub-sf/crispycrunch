@@ -790,15 +790,13 @@ class PrimerSelection(BaseModel):
         return [validate_seq(seq[0])  # type: ignore
                 for seqs in val.values()
                 for seq in seqs
-                # TODO (gdingle): not working 100%
                 if seqs != NOT_FOUND]
 
     selected_primers = JSONField(
         default=dict,
         validators=[
-            # TODO (gdingle): check explicitly for "not found" or else different user instructions
-            # TODO (gdingle): temporary up to 384 for comparison with other method
-            functools.partial(validate_num_wells, max=96 * 4),
+            # TODO (gdingle): temporary up for comparison with other method
+            functools.partial(validate_num_wells, max=96 * 12),
             _validate_selected_primers,
         ],
         help_text='Primers returned by Crispor, grouped by guide, forward primer then reverse primer')
