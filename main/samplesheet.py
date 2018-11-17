@@ -198,16 +198,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             # previous warning
             return primer_product
 
-        try:
-            guide_seq_aligned = hdr.HDR(
-                row['target_seq'],
-                row['_hdr_seq'],
-                row['_hdr_tag'],
-                row['hdr_dist'],
-                row['_guide_strand_same'],
-            ).guide_seq_aligned
-        except AssertionError:
-            return 'error finding guide in primer product'
+        guide_seq_aligned = _get_hdr_row(row).guide_seq_aligned
 
         # Crispor returns primer products by strand. Normalize to positive strand.
         if row['target_loc'].strand == '-':
@@ -240,16 +231,18 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same'],
-            row['_seq_cds'])
+            row['_seq_cds'],
+            # TODO (gdingle): make this work with more thought
+            # row['_seq_codon_at']
+        )
 
         try:
             hdr_primer_product = phdr.inserted_mutated if phdr.should_mutate else phdr.inserted
         except AssertionError:
-            return 'error in HDR in primer product'
+            return 'error in HDR, no insert: ' + primer_product
+
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
-
-        # TODO: Normalize back to direction of Crispor return? what strand to show primer product?
         return before + hdr_primer_product
 
     def warn_hdr_primer(row) -> str:
@@ -262,9 +255,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             # previous warning
             return primer_product
 
-        if row['hdr_mutated'] not in primer_product and \
-                row['hdr_inserted'] not in primer_product:
-            return 'inconsistent HDR insertion: ' + primer_product
+        if row['_hdr_seq'] not in primer_product.upper():
+            return 'no HDR insertion: ' + primer_product
 
         plen = len(primer_product)
         if plen > max_amplicon_length:
@@ -358,7 +350,7 @@ def _transform_primer_product(row) -> str:
         row['primer_product'],
         guide_seq,
         row['guide_loc'])
-    # TODO (gdingle): this does not take into account strand! VERY BAD!
+    # TODO (gdingle): this does not take into account strand!
     converted = conversions.chr_loc_to_seq(
         str(primer_loc),
         row['target_genome'])
@@ -517,29 +509,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         axis=1,
     )
 
-    sheet['_hdr_insert_at'] = sheet.apply(
-        lambda row: get_insert(row['target_loc'], row['_hdr_tag']),
-        axis=1,
-    )
-    sheet['hdr_inserted'] = sheet.apply(
-        lambda row:
-        '' if not row['guide_seq'] else
-        hdr.HDR(
-            row['target_seq'],
-            row['_hdr_seq'],
-            row['_hdr_tag'],
-            row['hdr_dist'],
-            row['_guide_strand_same']).inserted,
-        axis=1,
-    )
-
-    sheet['hdr_score'] = sheet.apply(
-        lambda row:
-        '' if not row['guide_seq'] else
-        round(hdr.manu_score(row['guide_score'], row['hdr_dist']) * 100),
-        axis=1,
-    )
-
     # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
     # It's another instance of IO, but should be cached always, first in sqlite
     # then in local mem.
@@ -555,6 +524,24 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         ),
         axis=1)
 
+    sheet['_hdr_insert_at'] = sheet.apply(
+        lambda row: get_insert(row['target_loc'], row['_hdr_tag']),
+        axis=1,
+    )
+    sheet['hdr_inserted'] = sheet.apply(
+        lambda row:
+        '' if not row['guide_seq'] else
+        _get_hdr_row(row).inserted,
+        axis=1,
+    )
+
+    sheet['hdr_score'] = sheet.apply(
+        lambda row:
+        '' if not row['guide_seq'] else
+        round(hdr.manu_score(row['guide_score'], row['hdr_dist']) * 100),
+        axis=1,
+    )
+
     # TODO (gdingle): override hdr_inserted when good enough
     def mutate(row):
         """
@@ -567,56 +554,34 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         if not row['guide_seq']:
             return ''
 
-        try:
-            row_hdr = hdr.HDR(
-                row['target_seq'],
-                row['_hdr_seq'],
-                row['_hdr_tag'],
-                row['hdr_dist'],
-                row['_guide_strand_same'],
-                row['_seq_cds'],
-                # TODO (gdingle): make this work!
-                row['_seq_codon_at']
-            )
+        row_hdr = _get_hdr_row(row)
 
-            if not row_hdr.should_mutate:
-                return 'not needed'
+        if not row_hdr.should_mutate:
+            return 'not needed'
 
-            if not row_hdr.junction:
-                return row_hdr.inserted_mutated
-
-            if row_hdr.cut_in_junction:
-                return 'cut in intron/exon junction: ' + row_hdr.inserted_mutated
-
-            # Lowercase means mutated
-            if row_hdr.mutation_in_junction:
-                return 'mutation in intron/exon junction: ' + row_hdr.inserted_mutated
-
+        if not row_hdr.junction:
             return row_hdr.inserted_mutated
-        except AssertionError:
-            # TODO (gdingle): figure out why!
-            return 'error in mutation:' + str(row['_seq_codon_at'])
+
+        if row_hdr.cut_in_junction:
+            return 'cut in intron/exon junction: ' + row_hdr.inserted_mutated
+
+        # Lowercase means mutated
+        if row_hdr.mutation_in_junction:
+            return 'mutation in intron/exon junction: ' + row_hdr.inserted_mutated
+
+        return row_hdr.inserted_mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
 
     def check_hdr_guide_match(row):
         if not row['guide_seq']:
             return
-        try:
-            ghdr = hdr.HDR(
-                row['target_seq'],
-                row['_hdr_seq'],
-                row['_hdr_tag'],
-                row['hdr_dist'],
-                row['_guide_strand_same'])
-            if row['_guide_strand_same']:
-                guide_seq = ghdr.guide_seq
-            else:
-                guide_seq = reverse_complement(ghdr.guide_seq)
-            assert guide_seq == row['guide_seq'] + row['guide_pam']
-        except AssertionError:
-            # TODO (gdingle): figure out why!
-            return 'error in guide'
+        row_hdr = _get_hdr_row(row)
+        if row['_guide_strand_same']:
+            guide_seq = row_hdr.guide_seq
+        else:
+            guide_seq = reverse_complement(row_hdr.guide_seq)
+        assert guide_seq == row['guide_seq'] + row['guide_pam']
 
     sheet.apply(check_hdr_guide_match, axis=1)
 
@@ -662,3 +627,15 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
     sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
 
     return sheet
+
+
+def _get_hdr_row(row) -> hdr.HDR:
+    return hdr.HDR(
+        row['target_seq'],
+        row['_hdr_seq'],
+        row['_hdr_tag'],
+        row['hdr_dist'],
+        row['_guide_strand_same'],
+        row['_seq_cds'],
+        row['_seq_codon_at']
+    )
