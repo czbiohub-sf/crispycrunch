@@ -63,6 +63,7 @@ def _new_samplesheet() -> DataFrame:
             '_hdr_insert_at',
             '_cds_seq',
             'hdr_dist',
+            'hdr_score',
             'hdr_inserted',
             'hdr_mutated',
             '_hdr_ultramer',
@@ -506,11 +507,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         ) if row['guide_seq'] else '',
         axis=1,
     )
-    # Set a abs value for sorting
-    sheet['_hdr_dist'] = sheet.apply(
-        lambda row: abs(row['hdr_dist'])
-        if row['guide_seq'] else 0,
-        axis=1)
 
     sheet['_hdr_insert_at'] = sheet.apply(
         lambda row: get_insert(row['target_loc'], row['_hdr_tag']),
@@ -525,6 +521,13 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same']).inserted,
+        axis=1,
+    )
+
+    sheet['hdr_score'] = sheet.apply(
+        lambda row:
+        '' if not row['guide_seq'] else
+        round(hdr.manu_score(row['guide_score'], row['hdr_dist']) * 100),
         axis=1,
     )
 
@@ -594,7 +597,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         except AssertionError:
             # TODO (gdingle): figure out why!
             return 'error in guide'
-
 
     sheet.apply(check_hdr_guide_match, axis=1)
 

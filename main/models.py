@@ -296,7 +296,7 @@ class Experiment(BaseModel):
     is_hdr = models.BooleanField(
         default=True,
         verbose_name='HDR experiment?',
-        help_text='Insert a sequence by HDR (Homology Directed Repair)',
+        help_text='Will guides be used with HDR (Homology Directed Repair)?',
     )
 
     def __str__(self):

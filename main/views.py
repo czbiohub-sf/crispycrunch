@@ -330,7 +330,7 @@ class GuideSelectionView(CreatePlusView):
             raise ValueError('No good guides found for any targets')
 
         if guide_design.is_hdr:
-            sheet.sort_values('_hdr_dist', inplace=True)
+            sheet.sort_values('hdr_score', inplace=True, ascending=False)
         else:
             sheet.sort_values('guide_score', inplace=True, ascending=False)
 
