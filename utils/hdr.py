@@ -685,8 +685,13 @@ def _validate_seq(seq: str):
         assert len(seq) >= 3, seq
 
 
-def mit_hit_score(seq1: str, seq2: str, guide_strand_same=True) -> float:
-    """Compute MIT mismatch score between two 20-mers
+def mit_hit_score(
+    seq1: str,
+    seq2: str,
+    guide_strand_same=True,
+    include_pam=False
+) -> float:
+    """Compute MIT mismatch score between two 20-mers or 23-mers.
 
     See 'Scores of single hits' on http://crispr.mit.edu/about
     See calcHitScore in
@@ -698,6 +703,8 @@ def mit_hit_score(seq1: str, seq2: str, guide_strand_same=True) -> float:
         two 20-mers to compare
 
     guide_strand_same : optional direction for starting with PAM
+
+    include_pam : optional include extra 3bp for PAM.
 
     Returns
     -------
@@ -731,29 +738,42 @@ def mit_hit_score(seq1: str, seq2: str, guide_strand_same=True) -> float:
     >>> seq2 = list(reversed('ctgAGAGCATTTACACAATACA'))
     >>> mit_hit_score(seq1, seq2)
     0.05972723076923077
+
+    Include PAM.
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAAGGG', 'AAAAAAAAAAAAAAAAAAAATGG', include_pam=True)
+    100.0
+    >>> mit_hit_score('AAAAAAAAAAAAAAAAAAAAAGG', 'AAAAAAAAAAAAAAAAAAAAATT', include_pam=True)
+    0.20754716981132063
     """
     # aka Matrix "M"
     hit_score_m = [0, 0, 0.014, 0, 0, 0.395, 0.317, 0, 0.389, 0.079, 0.445, 0.508,
-                   0.613, 0.851, 0.732, 0.828, 0.615, 0.804, 0.685, 0.583,
-                # TODO (gdingle): add for PAM
-                # 0, 0.8, 0.8
-
-
-                   ]
+                   0.613, 0.851, 0.732, 0.828, 0.615, 0.804, 0.685, 0.583]
+    if include_pam:
+        # Add some high values, determined intuitively.
+        hit_score_m += [0, 0.8, 0.8]
 
     # Go towards PAM
-    if guide_strand_same == False:
+    if guide_strand_same is False:
         seq1 = seq1[::-1]
         seq2 = seq2[::-1]
 
     assert(len(seq1) == len(seq2)), (seq1, seq2)
 
     # Use most important 20bp only
-    seq1 = seq1[-20:]
-    seq2 = seq2[-20:]
-
-    assert(len(seq1) == 20)
-    max_dist = 19
+    if include_pam:
+        seq1 = seq1[-23:]
+        seq2 = seq2[-23:]
+        assert (
+            seq1[-3:].endswith(('GG', 'CC')) or
+            seq2[-3:].endswith(('GG', 'CC'))
+        ), (seq1[-3:], seq2[-3:])
+        assert len(seq1) == 23
+        max_dist = 22
+    else:
+        seq1 = seq1[-20:]
+        seq2 = seq2[-20:]
+        assert(len(seq1) == 20)
+        max_dist = 19
 
     dists = []  # distances between mismatches, for part 2
     mm_count = 0  # number of mismatches, for part 3
