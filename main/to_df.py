@@ -47,7 +47,7 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
             df_guides = df_guides.append(DataFrame(data={
                 'target_loc': gd['target'],
                 '_url': gd['url'],
-                'guide_id': gd['target'] + ' ' + NOT_FOUND,
+                '_guide_id': gd['target'] + ' ' + NOT_FOUND,
             }, index=[gd['target']]), sort=False)
         else:
             df_guides = df_guides.append(DataFrame(data={
@@ -57,7 +57,7 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
                 '_crispor_batch_id': gd['batch_id'],
                 # collections
                 '_crispor_pam_id': list(gd['guide_seqs'].keys()),
-                'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
+                '_guide_id': [gd['target'] + ' ' + _crispor_pam_id for
                              _crispor_pam_id in gd['guide_seqs']],
                 'guide_seq': list(gd['guide_seqs'].values()),
                 '_scores': list(gd['scores'].values()),  # list of lists
@@ -80,7 +80,7 @@ def sg_to_df(gs: 'models.GuideSelection') -> DataFrame:
     for target_loc, sgs in gs.selected_guides.items():
         df = df.append(DataFrame({
             # All we need here is an ID for filtering GuideDesign to_df
-            'guide_id': [target_loc + ' ' + _crispor_pam_id for
+            '_guide_id': [target_loc + ' ' + _crispor_pam_id for
                          _crispor_pam_id in sgs],
             # TODO (gdingle): do we want to allow manual override of guide seq?
             # 'guide_seq_selected': list(sgs.values()),

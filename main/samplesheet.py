@@ -58,10 +58,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
 
 def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
 
-    # TODO (gdingle): this should be not needed!!!
-    sheet['_crispor_guide_id'] = list(guides.index)  # guide_id
-    sheet = sheet.set_index('_crispor_guide_id', drop=False)
-
     # TTCCGGCGCGCCGAGTCCTT AGG
     assert all(' ' in g['guide_seq'] for g in guides.to_records()
                if pandas.notna(g['guide_seq'])), 'Expecting trailing PAM'
@@ -74,9 +70,8 @@ def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
             lambda g: l(g) if pandas.notna(g['guide_seq']) else '',
             axis=1)
 
-    sheet['guide_seq'] = _apply(lambda g: g['guide_seq'].split(' ')[0])  # type: ignore
-
     sheet['guide_pam'] = _apply(lambda g: g['guide_seq'].split(' ')[1])  # type: ignore
+    sheet['guide_seq'] = _apply(lambda g: g['guide_seq'].split(' ')[0])  # type: ignore
 
     # Taken direct from Crispor. Example: "s207-" and "s76+".
     # See http://crispor.tefor.net/manual/.
@@ -107,15 +102,15 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     gd_df = guide_selection.guide_design.to_df()
     if not len(gd_df):
         return gd_df
-    dupes = gd_df['guide_id'][gd_df['guide_id'].duplicated()]
+    dupes = gd_df['_guide_id'][gd_df['_guide_id'].duplicated()]
     assert not len(dupes), dupes
 
     gs_df = guide_selection.to_df()
-    dupes = gs_df['guide_id'][gs_df['guide_id'].duplicated()]
+    dupes = gs_df['_guide_id'][gs_df['_guide_id'].duplicated()]
     assert not len(dupes), dupes
 
-    guides_df = gd_df.set_index('guide_id').join(
-        gs_df.set_index('guide_id'), how='inner')
+    guides_df = gd_df.set_index('_guide_id').join(
+        gs_df.set_index('_guide_id'), how='inner')
     assert len(guides_df) >= len(gs_df), (len(guides_df), len(gs_df))
 
     return guides_df
@@ -285,7 +280,7 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet = from_guide_selection(guide_selection)
 
     ps_df = primer_selection.to_df()
-    sheet = sheet.set_index('_crispor_guide_id', drop=False).join(ps_df, how='left')
+    sheet = sheet.join(ps_df, how='left')
     assert len(sheet) >= len(ps_df)
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)

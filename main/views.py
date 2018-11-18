@@ -383,12 +383,12 @@ class PrimerDesignView(CreatePlusView):
                   obj.amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
-                  row['_crispor_guide_id'],
+                  row['_guide_id'],
                   int(row['hdr_dist']) * (
             # CrispyCrunch hdr_dist is relative to strand of gene.
             # Crispor hdr_dist is relative to positive genome strand.
             1 if row['target_loc'].strand == '+' else -1)]
-            for row in sheet.to_records(index=False)
+            for row in sheet.to_records()
             if row['guide_seq']]
         batch.start(largs, [-2])
 
@@ -685,7 +685,7 @@ class OrderFormView(DetailView):
                 # TODO (gdingle): is this a good name for each sequence?
                 row = sheet.loc[well_pos]
                 ws['B' + index] = '{} {}'.format(
-                    row['_crispor_guide_id'], seq_key,
+                    row['_guide_id'], seq_key,
                 )
                 ws['C' + index] = row[seq_key]
 
