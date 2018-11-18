@@ -10,7 +10,7 @@ import logging
 import os
 
 from io import BytesIO
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable
 
 import pandas
 
@@ -48,7 +48,7 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
                            ]
 
     # TODO (gdingle): remove extra
-    sheet = _set_guide_cols(sheet, sheet)
+    sheet = _set_guide_cols(sheet)
 
     if guide_design.is_hdr:
         sheet = _set_hdr_cols(sheet, guide_design, sheet)
@@ -56,30 +56,30 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     return sheet
 
 
-def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
+def _set_guide_cols(sheet: DataFrame) -> DataFrame:
 
     # TTCCGGCGCGCCGAGTCCTT AGG
-    assert all(' ' in g['guide_seq'] for g in guides.to_records()
+    assert all(' ' in g['guide_seq'] for g in sheet.to_records()
                if pandas.notna(g['guide_seq'])), 'Expecting trailing PAM'
-    assert all(len(g['guide_seq']) == 24 for g in guides.to_records()
+    assert all(len(g['guide_seq']) == 24 for g in sheet.to_records()
                if pandas.notna(g['guide_seq'])), 'Expecting 20bp guide'
 
-    def _apply(l):
+    def _apply(l: Callable):
         """Set empty string for all missing guide cols for friendly display"""
-        return guides.apply(
+        return sheet.apply(
             lambda g: l(g) if pandas.notna(g['guide_seq']) else '',
             axis=1)
 
-    sheet['guide_pam'] = _apply(lambda g: g['guide_seq'].split(' ')[1])  # type: ignore
-    sheet['guide_seq'] = _apply(lambda g: g['guide_seq'].split(' ')[0])  # type: ignore
+    sheet['guide_pam'] = _apply(lambda g: g['guide_seq'].split(' ')[1])
+    sheet['guide_seq'] = _apply(lambda g: g['guide_seq'].split(' ')[0])
 
     # Taken direct from Crispor. Example: "s207-" and "s76+".
     # See http://crispor.tefor.net/manual/.
     # DEFINITION: number of chars before the first char of NGG PAM
-    sheet['guide_offset'] = _apply(lambda g: int(g['_crispor_pam_id'][1:-1]))  # type: ignore
+    sheet['guide_offset'] = _apply(lambda g: int(g['_crispor_pam_id'][1:-1]))
 
     # Crispor returns guide strand relative to target, NOT genome.
-    sheet['_guide_strand_same'] = _apply(  # type: ignore
+    sheet['_guide_strand_same'] = _apply(
         lambda g: g['_crispor_pam_id'][-1] == '+')
 
     sheet['guide_loc'] = sheet.apply(
@@ -93,7 +93,7 @@ def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
     )
 
     # Take the MIT score
-    sheet['guide_score'] = _apply(lambda g: int(g['_scores'][0]))  # type: ignore
+    sheet['guide_score'] = _apply(lambda g: int(g['_scores'][0]))
 
     return sheet
 
