@@ -47,7 +47,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
                            for g in sheet.to_records()
                            ]
 
-    # TODO (gdingle): remove extra
     sheet = _set_guide_cols(sheet)
 
     if guide_design.is_hdr:
