@@ -6,7 +6,7 @@ See SampleSheetTestCase for example data.
 
 import functools
 
-from pandas import Categorical, DataFrame, Series
+from pandas import DataFrame
 
 from django.conf import settings
 from django.contrib.postgres import fields
@@ -16,6 +16,7 @@ from django.db import models
 from django.utils.functional import cached_property
 from django.utils.text import slugify
 
+from main import to_df
 from utils.chrloc import ChrLoc
 from utils.validators import *
 
@@ -537,62 +538,7 @@ class GuideDesign(BaseModel):
         return targets_raw, target_tags
 
     def to_df(self) -> DataFrame:
-        """
-        Returns a flattened representation of the instance data. In particular,
-        the JSON-stored data in guide_data is joined row-by-row with the array-
-        stored targets data.
-        """
-        target_inputs, target_tags = self.parse_targets_raw()
-        tag_to_terminus = dict((v, k) for k, v in self.TERMINUS_TO_TAG.items())
-
-        # Keep original import order
-        target_inputs = Categorical(
-            target_inputs,
-            categories=Series(target_inputs).unique(),
-            ordered=True)
-
-        df_targets = DataFrame(data={
-            'target_input': target_inputs,
-            'target_loc': self.target_locs,
-            'target_seq': self.target_seqs,
-            'target_gene': self.target_genes,
-            # Below depends on per_target
-            'target_tag': target_tags or self.hdr_tag,
-            'cds_index': [self.HDR_TAG_TO_CDS_INDEX[t] for t in target_tags] or self.cds_index,
-            'hdr_seq': [self.hdr_start_codon_tag_seq if t == 'start_codon' else self.hdr_stop_codon_tag_seq
-                        for t in target_tags] or self.hdr_seq,
-            'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
-        })
-
-        df_guides = DataFrame()
-        for gd in self.guide_data:
-            if NOT_FOUND in gd['guide_seqs']:
-                df_guides = df_guides.append(DataFrame(data={
-                    'target_loc': gd['target'],
-                    'url': gd['url'],
-                    'guide_id': gd['target'] + ' ' + NOT_FOUND,
-                }, index=[gd['target']]), sort=False)
-            else:
-                df_guides = df_guides.append(DataFrame(data={
-                    # scalars
-                    'target_loc': gd['target'],
-                    'url': gd['url'],
-                    '_crispor_batch_id': gd['batch_id'],
-                    # collections
-                    '_crispor_pam_id': list(gd['guide_seqs'].keys()),
-                    'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
-                                 _crispor_pam_id in gd['guide_seqs']],
-                    'guide_seq': list(gd['guide_seqs'].values()),
-                    'scores': list(gd['scores'].values()),  # list of lists
-                    'primer_url': list(gd['primer_urls'].values()),
-                }))
-
-        if not len(df_guides):  # Edge case
-            # TODO (gdingle): handle zero guides case better
-            raise ValueError('No guides found for any targets')
-
-        return df_targets.set_index('target_loc', drop=False).join(
-            df_guides.set_index('target_loc'), how='inner')
+        return to_df.gd_to_df(self)
 
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
@@ -717,20 +663,7 @@ class GuideSelection(BaseModel):
         return '/main/guide-selection/{}/order-form'.format(self.id)
 
     def to_df(self) -> DataFrame:
-        """
-        Returns a dataframe representation of selected_guides that can be joined
-        easily with to_df of GuideDesign.
-        """
-        df = DataFrame()
-        for target_loc, sgs in self.selected_guides.items():
-            df = df.append(DataFrame({
-                # All we need here is an ID for filtering GuideDesign to_df
-                'guide_id': [target_loc + ' ' + _crispor_pam_id for
-                             _crispor_pam_id in sgs],
-                # TODO (gdingle): do we want to allow manual override of guide seq?
-                # 'guide_seq_selected': list(sgs.values()),
-            }))
-        return df
+        return to_df.sg_to_df(self)
 
 
 class PrimerDesign(BaseModel):
@@ -823,19 +756,7 @@ class PrimerSelection(BaseModel):
         return '/main/primer-selection/{}/hdr-order-form'.format(self.id)
 
     def to_df(self) -> DataFrame:
-        """
-        Returns a dataframe representation of selected_primers that can be joined
-        easily with to_df of GuideDesign.
-        """
-        df = DataFrame()
-        for guide_id, primer_pair in self.selected_primers.items():
-            df = df.append(DataFrame({
-                # TODO (gdingle): clean up
-                'primer_seq_fwd': primer_pair[0][0] if primer_pair != NOT_FOUND else NOT_FOUND,
-                'primer_seq_rev': primer_pair[1][0] if primer_pair != NOT_FOUND else NOT_FOUND,
-                'primer_product': primer_pair[0][1] if primer_pair != NOT_FOUND else NOT_FOUND,
-            }, index=[guide_id]))
-        return df
+        return to_df.ps_to_df(self)
 
 
 class Analysis(BaseModel):
