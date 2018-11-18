@@ -19,7 +19,7 @@ from pandas import DataFrame
 from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
-from main.models import Analysis, Experiment, GuideDesign, GuideSelection, PrimerSelection
+from main.models import Analysis, GuideDesign, GuideSelection, PrimerSelection
 from protospacex import get_cds_codon_at, get_cds_seq, get_ultramer_seq
 from utils import conversions
 from utils import hdr
@@ -33,98 +33,33 @@ logger = logging.getLogger(__name__)
 NOT_FOUND = 'not found'
 
 
-def from_experiment(experiment: Experiment) -> DataFrame:
-    # TODO (gdingle): how to assign metadata? nothing seems to work... see stackoverflow
-    return _new_samplesheet()
-
-
-def _new_samplesheet() -> DataFrame:
-    return DataFrame(
-        index=_new_index(),
-        columns=[
-            'target_genome',
-            'target_pam',
-            'target_input',
-            'target_terminus',
-            'target_gene',
-            'target_loc',
-            'target_seq',
-            'guide_loc',
-            '_guide_strand_same',
-            'guide_seq',
-            'guide_pam',
-            'guide_offset',
-            'guide_score',
-            '_crispor_batch_id',
-            '_crispor_pam_id',
-            '_crispor_guide_id',
-            '_hdr_tag',
-            '_hdr_seq',
-            '_hdr_insert_at',
-            '_seq_cds',
-            '_seq_codon_at',
-            'hdr_dist',
-            'hdr_score',
-            'hdr_inserted',
-            'hdr_mutated',
-            '_hdr_ultramer',
-            # TODO (gdingle): we can't have these and join with ps_df
-            # We only need this here for ordering... is it okay because those are last?
-            # 'primer_seq_fwd',
-            # 'primer_seq_rev',
-            # 'primer_product',
-            's3_bucket',
-            's3_prefix',
-            'fastq_fwd',
-            'fastq_rev',
-            'report_url',
-            'report_zip',
-            'report_stats',
-        ])
-
-
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     guide_design = guide_selection.guide_design
-    sheet = from_experiment(guide_design.experiment)
 
-    guides = _join_guide_data(guide_selection)
+    sheet = _join_guide_data(guide_selection)
 
-    # Important to keep input order: sort before assigning to new sheet
-    guides = guides.sort_values('target_input')
-
-    assert len(sheet) >= len(guides), (len(sheet), len(guides))
-    # Trim sheet to available guides
-    sheet = sheet[0:len(guides)]
-
-    sheet['target_genome'] = guide_design.genome
-    sheet['target_pam'] = guide_design.pam
+    sheet['_target_genome'] = guide_design.genome
+    sheet['_target_pam'] = guide_design.pam
 
     sheet['target_loc'] = [g['target_loc']
                            if isinstance(g['target_loc'], ChrLoc)
                            else ChrLoc(g['target_loc'])
-                           for g in guides.to_records()
+                           for g in sheet.to_records()
                            ]
-    sheet['target_seq'] = list(guides['target_seq'])
-    sheet['target_gene'] = list(guides['target_gene'])
 
-    # Preserve original order in category for later sorting
-    # TODO (gdingle): still not working 100%!!! fixme!
-    sheet['target_input'] = list(guides['target_input'])
-
-    sheet = _set_guide_cols(sheet, guides)
+    # TODO (gdingle): remove extra
+    sheet = _set_guide_cols(sheet, sheet)
 
     if guide_design.is_hdr:
-        sheet = _set_hdr_cols(sheet, guide_design, guides)
+        sheet = _set_hdr_cols(sheet, guide_design, sheet)
 
     return sheet
 
 
 def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
 
-    sheet['_crispor_batch_id'] = list(guides['_crispor_batch_id'])
-    sheet['_crispor_pam_id'] = list(guides['_crispor_pam_id'])
+    # TODO (gdingle): this should be not needed!!!
     sheet['_crispor_guide_id'] = list(guides.index)  # guide_id
-
     sheet = sheet.set_index('_crispor_guide_id', drop=False)
 
     # TTCCGGCGCGCCGAGTCCTT AGG
@@ -152,9 +87,6 @@ def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
     sheet['_guide_strand_same'] = _apply(  # type: ignore
         lambda g: g['_crispor_pam_id'][-1] == '+')
 
-    # Take the MIT score
-    sheet['guide_score'] = _apply(lambda g: int(g['scores'][0]))  # type: ignore
-
     sheet['guide_loc'] = sheet.apply(
         lambda row: get_guide_loc(
             row['target_loc'],
@@ -165,128 +97,8 @@ def _set_guide_cols(sheet: DataFrame, guides: DataFrame) -> DataFrame:
         axis=1,
     )
 
-    return sheet
-
-
-def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
-    guide_selection = primer_selection.primer_design.guide_selection
-    sheet = from_guide_selection(guide_selection)
-
-    ps_df = primer_selection.to_df()
-    sheet = sheet.set_index('_crispor_guide_id', drop=False).join(ps_df, how='left')
-    assert len(sheet) >= len(ps_df)
-
-    sheet.index = _new_index(size=len(sheet))
-
-    sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
-
-    if guide_selection.guide_design.is_hdr:
-        sheet = _set_hdr_primer(
-            sheet,
-            guide_selection.guide_design,
-            primer_selection.primer_design.max_amplicon_length)
-
-    return sheet
-
-
-def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
-
-    def get_primer_product(row):
-        primer_product = row['primer_product']
-
-        if ' ' in primer_product:
-            # previous warning
-            return primer_product
-
-        guide_seq_aligned = _get_hdr_row(row).guide_seq_aligned
-
-        # Crispor returns primer products by strand. Normalize to positive strand.
-        if row['target_loc'].strand == '-':
-            primer_product = reverse_complement(primer_product)
-
-        guide_offset = primer_product.find(guide_seq_aligned)
-
-        if guide_offset == -1:
-            logger.warning('Could not find guide {} in primer {} for target {}'.format(
-                row['guide_seq'], primer_product, row['target_loc']))
-            return 'guide not found: ' + primer_product
-
-        start = guide_offset % 3
-
-        # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
-        # in frame but outside the CCDS, the insert is misidentified. We set a buffer here to avoid the worst.
-        # The buffer length is a multiple of 3 less than the min homology len,
-        # and larger than the largest observed misidentification.
-
-        # TODO (gdingle): offset by row['_seq_codon_at']
-        start += 90
-
-        before, primer_product_aligned = \
-            primer_product[:start], primer_product[start:]
-        assert before + primer_product_aligned == primer_product
-
-        phdr = hdr.HDR(
-            primer_product_aligned,
-            row['_hdr_seq'],
-            row['_hdr_tag'],
-            row['hdr_dist'],
-            row['_guide_strand_same'],
-            row['_seq_cds'],
-            # TODO (gdingle): make this work with more thought
-            # row['_seq_codon_at']
-        )
-
-        try:
-            hdr_primer_product = phdr.inserted_mutated if phdr.should_mutate else phdr.inserted
-        except AssertionError:
-            return 'error in HDR, no insert: ' + primer_product
-
-        assert len(before) + len(hdr_primer_product) == len(primer_product) + \
-            len(row['_hdr_seq'])
-        return before + hdr_primer_product
-
-    def warn_hdr_primer(row) -> str:
-        """
-        These should happen rarely when using Crispor modified for HDR.
-        """
-        primer_product = row['primer_product']
-
-        if ' ' in primer_product:
-            # previous warning
-            return primer_product
-
-        if row['_hdr_seq'] not in primer_product.upper():
-            return 'no HDR insertion: ' + primer_product
-
-        plen = len(primer_product)
-        if plen > max_amplicon_length:
-            return f'too long, {plen}bp: {primer_product}'
-
-        arms = primer_product.upper().split(row['_hdr_seq'])
-        larm, rarm = len(arms[0]), len(arms[1])
-        if min(larm, rarm) < 105:
-            return 'homology arm too short, {}bp: {}'.format(min(larm, rarm), primer_product)
-
-        return primer_product
-
-    def warn_primer_self_bind(row) -> DataFrame:
-        primer_product = row['primer_product']
-
-        if ' ' in primer_product:
-            # previous warning
-            return primer_product
-
-        if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
-            return 'self binding: ' + primer_product
-
-        if primerchecks.is_self_binding_with_adapters(row['primer_seq_fwd'], row['primer_seq_rev']):
-            return 'binds to adapters: ' + primer_product
-
-        return primer_product
-
-    sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
-    sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
-    sheet['primer_product'] = sheet.apply(warn_primer_self_bind, axis=1)
+    # Take the MIT score
+    sheet['guide_score'] = _apply(lambda g: int(g['_scores'][0]))  # type: ignore
 
     return sheet
 
@@ -309,137 +121,9 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     return guides_df
 
 
-# TODO (gdingle): should not be needed anymore after crispor mods
-def _transform_primer_product(row) -> str:
-    """
-    This is only necessary because Crispor returns NNNs in primer product.
-
-    Max says: "I am masking repeats to N when sending the sequence to
-    primer3. This was a major request by some labs, as they found that the
-    primer3 primers were sometimes not specific at all. What I SHOULD do
-    one day would be to run the primers through bwa to check their
-    uniqueness, but since i'm not doing that right now, I simply mask the
-    repeats, which is at least something to reduce the amount of
-    nonspecific binding. "
-    """
-    if not row['guide_seq']:
-        return ' '  # one space as "warning"
-
-    if not isinstance(row['primer_product'], str):
-        return NOT_FOUND
-
-    # Only look up product from chr loc if crispor returns mysterious Ns
-    if 'N' not in row['primer_product']:
-        return row['primer_product']
-
-    if row['_guide_strand_same']:
-        guide_seq = row['guide_seq']
-    else:
-        guide_seq = reverse_complement(row['guide_seq'])
-
-    if guide_seq not in row['primer_product']:
-        # TODO (gdingle): use yellow highlighting of crispor to determine
-        # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
-        return 'too many repeat Ns: ' + row['primer_product']
-
-    logger.warning('Replacing Ns in primer product for {} guide {}'.format(
-        row['target_loc'], row['guide_seq']))
-
-    # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
-    primer_loc = get_primer_loc(
-        row['primer_product'],
-        guide_seq,
-        row['guide_loc'])
-    # TODO (gdingle): this does not take into account strand!
-    converted = conversions.chr_loc_to_seq(
-        str(primer_loc),
-        row['target_genome'])
-
-    if row['target_loc'].strand == '+':
-        assert row['primer_product'].startswith(row['primer_seq_fwd'])
-        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_rev']))
-    else:
-        assert row['primer_product'].startswith(row['primer_seq_rev'])
-        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_fwd']))
-
-    return 'Ns converted: ' + converted
-
-
-def from_analysis(analysis: Analysis) -> DataFrame:
-    primer_selection = PrimerSelection.objects.filter(
-        primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
-    sheet = from_primer_selection(primer_selection)
-    return _from_analysis(analysis, sheet)
-
-
-def from_custom_analysis(analysis: Analysis) -> DataFrame:
-    sheet = from_experiment(analysis.experiment)[:len(analysis.fastq_data)]
-    return _from_analysis(analysis, sheet)
-
-
-def from_excel(file: UploadedFile) -> DataFrame:
-    if file.content_type in (
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-excel'):
-        sheet = pandas.read_excel(file, sheet_name=0)
-    else:
-        sheet = pandas.read_csv(file)
-    # TODO (gdingle): trim and validate all cells?
-    return sheet
-
-
-def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
-    # TODO (gdingle): does this do anything?
-    # sheet.analysis_id = analysis.id
-    # sheet.analysis_create_time = analysis.create_time
-    # sheet.analyst_name = analysis.owner.username
-
-    sheet['s3_bucket'] = analysis.s3_bucket
-    sheet['s3_prefix'] = analysis.s3_prefix
-
-    # TODO (gdingle): remove _insert_fastqs when new method proved
-    # sheet = _insert_fastqs(sheet, analysis.fastqs)
-    if not analysis.fastq_data:
-        return sheet
-
-    sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
-    sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
-
-    reports = [r for r in analysis.results_data]
-    if not any(reports):
-        return sheet
-
-    sheet['report_url'] = [r.get('report_url') for r in reports]
-    sheet['report_zip'] = [r.get('report_zip') for r in reports]
-
-    sheet['report_stats'] = _drop_empty_report_stats(reports)
-
-    # TODO (gdingle): strangely, we lose the order of headers as when compared to...
-    # sheet['report_stats'] = [r.get('report_stats') for r in reports]
-    # is it another instance of postgres json type ordered alphabetical?
-    # TODO (gdingle): reapply original ordering:
-    # ['Total', 'Unmodified', 'Modified', 'Discarded', 'Insertions', 'Deletions', 'Substitutions', 'Only Insertions', 'Only Deletions', 'Only Substitutions', 'Insertions and Deletions', 'Insertions and Substitutions', 'Deletions and Substitutions', 'Insertions Deletions and Substitutions']
-    # TODO (gdingle): use json pandas see https://stackoverflow.com/questions/43572359/keep-column-and-row-order-when-storing-pandas-dataframe-in-json
-
-    return sheet
-
-
-def to_excel(sheet: DataFrame) -> BytesIO:
-    # Workaround for saving in-memory. See:
-    # https://stackoverflow.com/questions/28058563/write-to-stringio-object-using-pandas-excelwriter
-    excel_file = BytesIO()
-    xlw = pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
-    sheet.to_excel(xlw)
-    xlw.book.save(excel_file)
-    excel_file.seek(0)
-    return excel_file
-
-
-# TODO (gdingle): this indexing by wells is stupid now that we use the sheets
-# before the final plate summary... should use guide_id until last display
-def _new_index(size=96 * 12,
-               end_char='ÿ',
-               end_int=12) -> list:
+def _well_positions(size=96 * 12,
+                    end_char='ÿ',
+                    end_int=12) -> list:
     """
     end_char and end_int determine the shape of the plate together.
 
@@ -452,52 +136,7 @@ def _new_index(size=96 * 12,
     return [c + str(i) for c in chars for i in ints][:size]
 
 
-# TODO (gdingle): _insert_fastqs is deprecated pending whether
-# illumina sequencer sample sheet will correctly communicate names
-# of fastq files.
-# TODO (gdingle): remove me when matching proven
-def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
-    """
-    Insert pairs of fastq sequence files into their corresponding rows.
-    NOTE: This assumes a naming convention of A1, A2, ...H12 in the filename,
-    separated by dashes (-), and Illumina "R1", "R2" for foward and reverse reads.
-
-    For example: "A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz".
-    """
-    for well_pos in sheet.index:
-        matches = sorted([
-            filename for filename in fastqs
-            if well_pos in os.path.basename(filename).split('-')
-        ])
-        if len(matches) == 0:
-            # TODO (gdingle): allow missing fastqs?
-            continue
-        assert len(matches) == 2, 'Exactly two fastq files expected per well'
-        sheet.loc[well_pos, 'fastq_fwd'] = matches[0]
-        sheet.loc[well_pos, 'fastq_rev'] = matches[1]
-
-    sheet = sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
-    assert len(sheet), 'Some fastqs must match rows'
-    return sheet
-
-
-def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
-    """
-    See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
-    """
-    report_stats = [r.get('report_stats', {}) for r in reports]
-    if not any(report_stats):
-        return None
-    temp_sheet = DataFrame.from_records(report_stats)
-    nonzero_cols = (temp_sheet != 0).any(axis='rows')
-    temp_sheet = temp_sheet.loc[:, nonzero_cols]
-    return temp_sheet.to_dict(orient='records')
-
-
 def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
-    sheet['_hdr_tag'] = list(guides['target_tag'])
-    sheet['_cds_index'] = list(guides['cds_index'])
-    sheet['_hdr_seq'] = list(guides['hdr_seq'])
     sheet['target_terminus'] = list(guides['target_terminus'])
 
     sheet['hdr_dist'] = sheet.apply(
@@ -639,3 +278,297 @@ def _get_hdr_row(row) -> hdr.HDR:
         row['_seq_cds'],
         row['_seq_codon_at']
     )
+
+
+def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
+    guide_selection = primer_selection.primer_design.guide_selection
+    sheet = from_guide_selection(guide_selection)
+
+    ps_df = primer_selection.to_df()
+    sheet = sheet.set_index('_crispor_guide_id', drop=False).join(ps_df, how='left')
+    assert len(sheet) >= len(ps_df)
+
+    sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
+
+    if guide_selection.guide_design.is_hdr:
+        sheet = _set_hdr_primer(
+            sheet,
+            guide_selection.guide_design,
+            primer_selection.primer_design.max_amplicon_length)
+
+    sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
+    # TODO (gdingle): is this wanted?
+    # sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
+
+    return sheet
+
+
+def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
+
+    def get_primer_product(row):
+        primer_product = row['primer_product']
+
+        if ' ' in primer_product:
+            # previous warning
+            return primer_product
+
+        guide_seq_aligned = _get_hdr_row(row).guide_seq_aligned
+
+        # Crispor returns primer products by strand. Normalize to positive strand.
+        if row['target_loc'].strand == '-':
+            primer_product = reverse_complement(primer_product)
+
+        guide_offset = primer_product.find(guide_seq_aligned)
+
+        if guide_offset == -1:
+            logger.warning('Could not find guide {} in primer {} for target {}'.format(
+                row['guide_seq'], primer_product, row['target_loc']))
+            return 'guide not found: ' + primer_product
+
+        start = guide_offset % 3
+
+        # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
+        # in frame but outside the CCDS, the insert is misidentified. We set a buffer here to avoid the worst.
+        # The buffer length is a multiple of 3 less than the min homology len,
+        # and larger than the largest observed misidentification.
+
+        # TODO (gdingle): offset by row['_seq_codon_at']
+        start += 90
+
+        before, primer_product_aligned = \
+            primer_product[:start], primer_product[start:]
+        assert before + primer_product_aligned == primer_product
+
+        phdr = hdr.HDR(
+            primer_product_aligned,
+            row['_hdr_seq'],
+            row['_hdr_tag'],
+            row['hdr_dist'],
+            row['_guide_strand_same'],
+            row['_seq_cds'],
+            # TODO (gdingle): make this work with more thought
+            # row['_seq_codon_at']
+        )
+
+        try:
+            hdr_primer_product = phdr.inserted_mutated if phdr.should_mutate else phdr.inserted
+        except AssertionError:
+            return 'error in HDR, no insert: ' + primer_product
+
+        assert len(before) + len(hdr_primer_product) == len(primer_product) + \
+            len(row['_hdr_seq'])
+        return before + hdr_primer_product
+
+    def warn_hdr_primer(row) -> str:
+        """
+        These should happen rarely when using Crispor modified for HDR.
+        """
+        primer_product = row['primer_product']
+
+        if ' ' in primer_product:
+            # previous warning
+            return primer_product
+
+        if row['_hdr_seq'] not in primer_product.upper():
+            return 'no HDR insertion: ' + primer_product
+
+        plen = len(primer_product)
+        if plen > max_amplicon_length:
+            return f'too long, {plen}bp: {primer_product}'
+
+        arms = primer_product.upper().split(row['_hdr_seq'])
+        larm, rarm = len(arms[0]), len(arms[1])
+        if min(larm, rarm) < 105:
+            return 'homology arm too short, {}bp: {}'.format(min(larm, rarm), primer_product)
+
+        return primer_product
+
+    def warn_primer_self_bind(row) -> DataFrame:
+        primer_product = row['primer_product']
+
+        if ' ' in primer_product:
+            # previous warning
+            return primer_product
+
+        if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
+            return 'self binding: ' + primer_product
+
+        if primerchecks.is_self_binding_with_adapters(row['primer_seq_fwd'], row['primer_seq_rev']):
+            return 'binds to adapters: ' + primer_product
+
+        return primer_product
+
+    sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
+    sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
+    sheet['primer_product'] = sheet.apply(warn_primer_self_bind, axis=1)
+
+    return sheet
+
+
+# TODO (gdingle): should not be needed anymore after crispor mods
+def _transform_primer_product(row) -> str:
+    """
+    This is only necessary because Crispor returns NNNs in primer product.
+
+    Max says: "I am masking repeats to N when sending the sequence to
+    primer3. This was a major request by some labs, as they found that the
+    primer3 primers were sometimes not specific at all. What I SHOULD do
+    one day would be to run the primers through bwa to check their
+    uniqueness, but since i'm not doing that right now, I simply mask the
+    repeats, which is at least something to reduce the amount of
+    nonspecific binding. "
+    """
+    if not row['guide_seq']:
+        return ' '  # one space as "warning"
+
+    if not isinstance(row['primer_product'], str):
+        return NOT_FOUND
+
+    # Only look up product from chr loc if crispor returns mysterious Ns
+    if 'N' not in row['primer_product']:
+        return row['primer_product']
+
+    if row['_guide_strand_same']:
+        guide_seq = row['guide_seq']
+    else:
+        guide_seq = reverse_complement(row['guide_seq'])
+
+    if guide_seq not in row['primer_product']:
+        # TODO (gdingle): use yellow highlighting of crispor to determine
+        # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
+        return 'too many repeat Ns: ' + row['primer_product']
+
+    logger.warning('Replacing Ns in primer product for {} guide {}'.format(
+        row['target_loc'], row['guide_seq']))
+
+    # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
+    primer_loc = get_primer_loc(
+        row['primer_product'],
+        guide_seq,
+        row['guide_loc'])
+    # TODO (gdingle): this does not take into account strand!
+    converted = conversions.chr_loc_to_seq(
+        str(primer_loc),
+        row['_target_genome'])
+
+    if row['target_loc'].strand == '+':
+        assert row['primer_product'].startswith(row['primer_seq_fwd'])
+        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_rev']))
+    else:
+        assert row['primer_product'].startswith(row['primer_seq_rev'])
+        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_fwd']))
+
+    return 'Ns converted: ' + converted
+
+
+def from_analysis(analysis: Analysis) -> DataFrame:
+    primer_selection = PrimerSelection.objects.filter(
+        primer_design__guide_selection__guide_design__experiment=analysis.experiment)[0]
+    sheet = from_primer_selection(primer_selection)
+    return _from_analysis(analysis, sheet)
+
+
+def from_custom_analysis(analysis: Analysis) -> DataFrame:
+    # TODO (gdingle): re-test me
+    sheet = DataFrame()
+    return _from_analysis(analysis, sheet)
+
+
+def from_excel(file: UploadedFile) -> DataFrame:
+    if file.content_type in (
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'):
+        sheet = pandas.read_excel(file, sheet_name=0)
+    else:
+        sheet = pandas.read_csv(file)
+    # TODO (gdingle): trim and validate all cells?
+    return sheet
+
+
+def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
+    # TODO (gdingle): does this do anything?
+    # sheet.analysis_id = analysis.id
+    # sheet.analysis_create_time = analysis.create_time
+    # sheet.analyst_name = analysis.owner.username
+
+    sheet['s3_bucket'] = analysis.s3_bucket
+    sheet['s3_prefix'] = analysis.s3_prefix
+
+    # TODO (gdingle): remove _insert_fastqs when new method proved
+    # sheet = _insert_fastqs(sheet, analysis.fastqs)
+    if not analysis.fastq_data:
+        return sheet
+
+    sheet['fastq_fwd'] = [pair[0] for pair in analysis.fastq_data]
+    sheet['fastq_rev'] = [pair[1] for pair in analysis.fastq_data]
+
+    reports = [r for r in analysis.results_data]
+    if not any(reports):
+        return sheet
+
+    sheet['report_url'] = [r.get('report_url') for r in reports]
+    sheet['report_zip'] = [r.get('report_zip') for r in reports]
+
+    sheet['report_stats'] = _drop_empty_report_stats(reports)
+
+    # TODO (gdingle): strangely, we lose the order of headers as when compared to...
+    # sheet['report_stats'] = [r.get('report_stats') for r in reports]
+    # is it another instance of postgres json type ordered alphabetical?
+    # TODO (gdingle): reapply original ordering:
+    # ['Total', 'Unmodified', 'Modified', 'Discarded', 'Insertions', 'Deletions', 'Substitutions', 'Only Insertions', 'Only Deletions', 'Only Substitutions', 'Insertions and Deletions', 'Insertions and Substitutions', 'Deletions and Substitutions', 'Insertions Deletions and Substitutions']
+    # TODO (gdingle): use json pandas see https://stackoverflow.com/questions/43572359/keep-column-and-row-order-when-storing-pandas-dataframe-in-json
+
+    return sheet
+
+
+def to_excel(sheet: DataFrame) -> BytesIO:
+    # Workaround for saving in-memory. See:
+    # https://stackoverflow.com/questions/28058563/write-to-stringio-object-using-pandas-excelwriter
+    excel_file = BytesIO()
+    xlw = pandas.ExcelWriter('temp.xlsx', engine='openpyxl')
+    sheet.to_excel(xlw)
+    xlw.book.save(excel_file)
+    excel_file.seek(0)
+    return excel_file
+
+
+# TODO (gdingle): _insert_fastqs is deprecated pending whether
+# illumina sequencer sample sheet will correctly communicate names
+# of fastq files.
+# TODO (gdingle): remove me when matching proven
+def _insert_fastqs(sheet: DataFrame, fastqs: list) -> DataFrame:
+    """
+    Insert pairs of fastq sequence files into their corresponding rows.
+    NOTE: This assumes a naming convention of A1, A2, ...H12 in the filename,
+    separated by dashes (-), and Illumina "R1", "R2" for foward and reverse reads.
+
+    For example: "A3-BCAP31-C-sorted-180212_S3_L001_R2_001.fastq.gz".
+    """
+    for well_pos in sheet.index:
+        matches = sorted([
+            filename for filename in fastqs
+            if well_pos in os.path.basename(filename).split('-')
+        ])
+        if len(matches) == 0:
+            # TODO (gdingle): allow missing fastqs?
+            continue
+        assert len(matches) == 2, 'Exactly two fastq files expected per well'
+        sheet.loc[well_pos, 'fastq_fwd'] = matches[0]
+        sheet.loc[well_pos, 'fastq_rev'] = matches[1]
+
+    sheet = sheet.dropna(subset=['fastq_fwd', 'fastq_rev'])
+    assert len(sheet), 'Some fastqs must match rows'
+    return sheet
+
+
+def _drop_empty_report_stats(reports: list) -> Optional[Dict[str, int]]:
+    """
+    See https://stackoverflow.com/questions/21164910/delete-column-in-pandas-if-it-is-all-zeros
+    """
+    report_stats = [r.get('report_stats', {}) for r in reports]
+    if not any(report_stats):
+        return None
+    temp_sheet = DataFrame.from_records(report_stats)
+    nonzero_cols = (temp_sheet != 0).any(axis='rows')
+    temp_sheet = temp_sheet.loc[:, nonzero_cols]
+    return temp_sheet.to_dict(orient='records')

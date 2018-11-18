@@ -497,8 +497,10 @@ class ExperimentSummaryView(View):
 
     def _prepare_sheet(self, sheet):
         """Modify sheet for optimal rendering"""
-        sheet = sheet.loc[:, 'target_input':]  # type: ignore
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
+
+        # As original input
+        sheet = sheet.sort_values('target_input')
 
         # Remove redundant info in case of genes
         if all(sheet['target_gene'] == sheet['target_input']):
@@ -509,13 +511,16 @@ class ExperimentSummaryView(View):
                 and all(sheet['target_loc'] == sheet['target_input']):
             sheet['target_loc'] = None
 
+        # Drop cols that are all na
         sheet = sheet.dropna(axis=1, how='all')
-        sheet.insert(0, 'well_pos', sheet.index)
-        sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
 
+        # Fill remaining cells that are na
+        sheet['target_input'] = list(sheet['target_input'])
         sheet = sheet.fillna('')
 
+        # Prettify col names
         sheet.columns = [c.replace('_', ' ').title() for c in sheet.columns]
+
         return sheet
 
 

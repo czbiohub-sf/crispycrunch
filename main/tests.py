@@ -126,10 +126,6 @@ class SampleSheetTestCase(TestCase):
         df = self._primer_selection.to_df()
         self.assertEqual(len(df), len(self._primer_selection.selected_primers))
 
-    def test_from_experiment(self):
-        sheet = from_experiment(self._experiment)
-        self.assertTrue(len(sheet))
-
     def test_from_guide_selection(self):
         sheet = from_guide_selection(self._guide_selection)
         self.assertTrue(len(sheet))

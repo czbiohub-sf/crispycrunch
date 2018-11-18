@@ -34,10 +34,10 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
         'target_seq': gd.target_seqs,
         'target_gene': gd.target_genes,
         # Below depends on per_target
-        'target_tag': target_tags or gd.hdr_tag,
-        'cds_index': [gd.HDR_TAG_TO_CDS_INDEX[t] for t in target_tags] or gd.cds_index,
-        'hdr_seq': [gd.hdr_start_codon_tag_seq if t == 'start_codon' else gd.hdr_stop_codon_tag_seq
-                    for t in target_tags] or gd.hdr_seq,
+        '_hdr_tag': target_tags or gd.hdr_tag,
+        '_cds_index': [gd.HDR_TAG_TO_CDS_INDEX[t] for t in target_tags] or gd.cds_index,
+        '_hdr_seq': [gd.hdr_start_codon_tag_seq if t == 'start_codon' else gd.hdr_stop_codon_tag_seq
+                     for t in target_tags] or gd.hdr_seq,
         'target_terminus': [tag_to_terminus[t] for t in target_tags] or None,
     })
 
@@ -46,22 +46,21 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
         if NOT_FOUND in gd['guide_seqs']:
             df_guides = df_guides.append(DataFrame(data={
                 'target_loc': gd['target'],
-                'url': gd['url'],
+                '_url': gd['url'],
                 'guide_id': gd['target'] + ' ' + NOT_FOUND,
             }, index=[gd['target']]), sort=False)
         else:
             df_guides = df_guides.append(DataFrame(data={
                 # scalars
                 'target_loc': gd['target'],
-                'url': gd['url'],
+                '_url': gd['url'],
                 '_crispor_batch_id': gd['batch_id'],
                 # collections
                 '_crispor_pam_id': list(gd['guide_seqs'].keys()),
                 'guide_id': [gd['target'] + ' ' + _crispor_pam_id for
                              _crispor_pam_id in gd['guide_seqs']],
                 'guide_seq': list(gd['guide_seqs'].values()),
-                'scores': list(gd['scores'].values()),  # list of lists
-                'primer_url': list(gd['primer_urls'].values()),
+                '_scores': list(gd['scores'].values()),  # list of lists
             }))
 
     if not len(df_guides):  # Edge case
