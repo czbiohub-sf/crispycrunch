@@ -315,16 +315,27 @@ def cfd_score(wt: str, sg: str, pam='NGG') -> float:
     >>> cfd_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAA')
     1.0
 
-# TODO (gdingle): is this result correct?
-    >>> cfd_score('AAAAAAAAAAAAAAAAAAAA', 'GAAAAAAAAAAAAAAAAAAA')
-    1.0
-
     >>> cfd_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAAAAAAG')
     0.764705882
 
-# TODO (gdingle): shouldn't this be lower?
     >>> cfd_score('GGGGGGGGGGGGGGGGGGGG', 'AAAAAAAAAAAAAAAAAAAA')
     0.0703372084129132
+
+    >>> cfd_score('TTTTTTTTTTTTTTTTTTTT', 'AAAAAAAAAAAAAAAAAAAA')
+    0.000537370080345105
+
+    >>> cfd_score('CCCCCCCCCCCCCCCCCCCC', 'AAAAAAAAAAAAAAAAAAAA')
+    8.801223840655041e-05
+
+    Not important switch.
+    'rG:dA,1': 1.0,
+    >>> cfd_score('AAAAAAAAAAAAAAAAAAAA', 'GAAAAAAAAAAAAAAAAAAA')
+    1.0
+
+    Super important switch.
+    'rA:dG,16': 1.0,
+    >>> cfd_score('AAAAAAAAAAAAAAAAAAAA', 'AAAAAAAAAAAAAAACAAAA')
+    0.0
 
     Realistic.
     >>> cfd_score('AAGGCCAACCGGCGCCGCGC', 'GCGCGGCGCCGGTTGGCCTT')
@@ -332,8 +343,21 @@ def cfd_score(wt: str, sg: str, pam='NGG') -> float:
 
     >>> cfd_score('GAAGGCCAACCGGCGCCGCG', 'CGCGGCGCCGGTTGGCCTTC')
     0.0
+
+    Same examples as in https://github.com/maximilianh/crisporWebsite/blob/master/crispor.py#L1902.
+    Based on source code provided by John Doench
+    >>> cfd_score("GGGGGGGGGGGGGGGGGGGG", "GGGGGGGGGGGGGGGGGAAA")
+    0.4635989007074176
+    >>> cfd_score("GGGGGGGGGGGGGGGGGGGG", "GGGGGGGGGGGGGGGGGGGG")
+    1.0
+    >>> cfd_score("GGGGGGGGGGGGGGGGGGGG", "aaaaGaGaGGGGGGGGGGGG")
+    0.5140384614450001
+    >>> cfd_score("ATGGTCGGACTCCCTGCCAG", "ATGGTGGGACTCCCTGCCAG")
+    0.5
+    >>> cfd_score("ATGGTCGGACTCCCTGCCAG", "ATGATCCAAATCCCTGCCAG")
+    0.53625000020625
     """
-    return calc_cfd(wt + pam, sg, pam[-2:])
+    return calc_cfd(wt.upper() + pam, sg.upper(), pam[-2:])
 
 
 if __name__ == '__main__':
