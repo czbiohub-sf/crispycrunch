@@ -350,13 +350,21 @@ class GuideDesign(BaseModel):
         'hg38': 'Human',
         'hg19': 'Human',
     }
+    HDR_TAG_TO_CDS_LENGTH = {
+        'per_target': None,
+        'start_codon': 96,
+        'stop_codon': 96,
+    }
     HDR_TAG_TERMINUSES = [
         # See cds_length below
         # TODO (gdingle): need both start_codon and start_codon2?
-        # ('start_codon', 'Within 36bp after start codon (N-terminus)'),
-        ('start_codon', 'Within 36bp before or after start codon (N-terminus)'),
-        ('stop_codon', 'Within 36bp before or after stop codon (C-terminus)'),
-        ('per_target', 'Within 36bp before or after, terminus specified per target ("N" or "C")'),
+        # ('start_codon', 'Within {} after start codon (N-terminus)'.format(self.HDR_TAG_TO_CDS_LENGTH['start_codon'])),
+        ('start_codon', 'Within {} before or after start codon (N-terminus)'.format(
+            HDR_TAG_TO_CDS_LENGTH['start_codon'])),
+        ('stop_codon', 'Within {} before or after stop codon (C-terminus)'.format(
+            HDR_TAG_TO_CDS_LENGTH['stop_codon'])),
+        ('per_target', 'Within {} before or after, terminus specified per target ("N" or "C")'.format(
+            HDR_TAG_TO_CDS_LENGTH['start_codon'])),
     ]
     # TODO (gdingle): need to verify when each of these are appropriate
     HDR_TAG_TERMINUS_TO_HDR_SEQ = {
@@ -603,12 +611,6 @@ class GuideDesign(BaseModel):
             return tuple(self.HDR_TAG_TO_CDS_INDEX[tag] for tag in self.target_tags)
         else:
             return self.HDR_TAG_TO_CDS_INDEX[self.hdr_tag]
-
-    HDR_TAG_TO_CDS_LENGTH = {
-        'per_target': None,
-        'start_codon': 72,
-        'stop_codon': 72,
-    }
 
     @cached_property
     def cds_length(self):

@@ -10,7 +10,7 @@ import logging
 import os
 
 from io import BytesIO
-from typing import Dict, Optional, Callable
+from typing import Callable, Dict, Optional
 
 import pandas
 
@@ -91,8 +91,8 @@ def _set_guide_cols(sheet: DataFrame) -> DataFrame:
         axis=1,
     )
 
-    # Take the MIT score
-    sheet['guide_score'] = _apply(lambda g: int(g['_scores'][0]))
+    # Take the Doench 2016 score
+    sheet['guide_score'] = _apply(lambda g: int(g['_scores'][1]))
 
     return sheet
 
