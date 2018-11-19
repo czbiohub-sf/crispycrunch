@@ -586,12 +586,13 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             ontarget_primers=self._extract_ontarget_primers(soup),
         )
 
-    def _extract_ontarget_primers(self, soup: BeautifulSoup) -> Dict[str, tuple]:
+    def _extract_ontarget_primers(self, soup: BeautifulSoup) -> list:
         ontargetPcr = soup.find(id='ontargetPcr')
         table = ontargetPcr.find_next(class_='primerTable')
         message = ontargetPcr.find_next('strong')
+
         if message and 'Warning' in message.get_text():
-            return {}  # will be interpreted as NOT_FOUND
+            return [NOT_FOUND]
 
         if table is None:
             # TODO (gdingle): catch crispor execptions here?
@@ -603,17 +604,16 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             else:
                 raise ValueError('Cripor at {}: "{}"'.format(self.endpoint, text))
 
-        rows = (row.find_all('td') for row in table.find_all('tr'))  # get primers
+        rows = [row.find_all('td') for row in table.find_all('tr')]  # get primers
         tts = ontargetPcr.find_next('div').find_all('tt')  # get products
         # TODO (gdingle): figure out why both products are sometimes not grabbed
         # see http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=oI0f65TEwlZdrH9NMAat&pamId=s97-&pam=NGG
-        # Temp fix because we know both are always the same
-        tts = (list(tts)[0], list(tts)[0])
-        return dict(
-            (row[0].get_text().split('_')[-1],
-                (row[1].get_text(), tt.get_text())
-             )
-            for row, tt in zip(rows, tts))
+
+        return [
+            rows[0][1].get_text(),
+            rows[1][1].get_text(),
+            tts[0].get_text(),
+        ]
 
 
 if __name__ == '__main__':

@@ -58,7 +58,7 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
                 # collections
                 '_crispor_pam_id': list(gd['guide_seqs'].keys()),
                 '_guide_id': [gd['target'] + ' ' + _crispor_pam_id for
-                             _crispor_pam_id in gd['guide_seqs']],
+                              _crispor_pam_id in gd['guide_seqs']],
                 'guide_seq': list(gd['guide_seqs'].values()),
                 '_scores': list(gd['scores'].values()),  # list of lists
             }))
@@ -81,7 +81,7 @@ def sg_to_df(gs: 'models.GuideSelection') -> DataFrame:
         df = df.append(DataFrame({
             # All we need here is an ID for filtering GuideDesign to_df
             '_guide_id': [target_loc + ' ' + _crispor_pam_id for
-                         _crispor_pam_id in sgs],
+                          _crispor_pam_id in sgs],
             # TODO (gdingle): do we want to allow manual override of guide seq?
             # 'guide_seq_selected': list(sgs.values()),
         }))
@@ -94,11 +94,10 @@ def ps_to_df(ps: 'models.PrimerSelection') -> DataFrame:
     easily with to_df of GuideDesign.
     """
     df = DataFrame()
-    for guide_id, primer_pair in ps.selected_primers.items():
+    for guide_id, primers in ps.selected_primers.items():
         df = df.append(DataFrame({
-            # TODO (gdingle): clean up
-            'primer_seq_fwd': primer_pair[0][0] if primer_pair != NOT_FOUND else NOT_FOUND,
-            'primer_seq_rev': primer_pair[1][0] if primer_pair != NOT_FOUND else NOT_FOUND,
-            'primer_product': primer_pair[0][1] if primer_pair != NOT_FOUND else NOT_FOUND,
+            'primer_seq_fwd': primers[0] if NOT_FOUND not in primers else NOT_FOUND,
+            'primer_seq_rev': primers[1] if NOT_FOUND not in primers else NOT_FOUND,
+            'primer_product': primers[2] if NOT_FOUND not in primers else NOT_FOUND,
         }, index=[guide_id]))
     return df

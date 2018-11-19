@@ -722,10 +722,10 @@ class PrimerSelection(BaseModel):
     primer_design = models.ForeignKey(PrimerDesign, on_delete=models.CASCADE)
 
     def _validate_selected_primers(val):
-        return [validate_seq(seq[0])  # type: ignore
+        return [validate_seq(seq)  # type: ignore
                 for seqs in val.values()
                 for seq in seqs
-                if seqs != NOT_FOUND]
+                if seq != NOT_FOUND]
 
     selected_primers = JSONField(
         default=dict,

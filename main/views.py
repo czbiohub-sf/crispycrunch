@@ -425,23 +425,20 @@ class PrimerSelectionView(CreatePlusView):
         primer_data = PrimerDesign.objects.get(
             owner=self.request.user, id=self.kwargs['id']).primer_data
 
-        def get_fwd_and_rev_primers(ontarget_primers: dict):
-            values = list(ontarget_primers.values())
-            if not values:
-                return webscraperequest.NOT_FOUND
-            return values[0], values[1]
+        not_founds = dict(
+            (p['target'], p['ontarget_primers'])
+            for p in primer_data
+            if p == [webscraperequest.NOT_FOUND])
+        primers = dict(
+            (p['target'], p['ontarget_primers'])
+            for p in primer_data
+            if p != [webscraperequest.NOT_FOUND])
 
-        sprimers = dict(
-            (p['target'], get_fwd_and_rev_primers(p['ontarget_primers'])
-             if p['success'] else p['error'])
-            for p in primer_data)
         return {
             'selected_primers': {
                 # Put "not found" on top for readability
-                **dict((t, p) for t, p in sprimers.items()
-                       if p == webscraperequest.NOT_FOUND),
-                **dict((t, p) for t, p in sprimers.items()
-                       if p != webscraperequest.NOT_FOUND)
+                **not_founds,
+                **primers,
             }
         }
 
