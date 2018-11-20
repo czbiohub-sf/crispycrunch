@@ -210,7 +210,7 @@ class HDR:
         'CCATGGCTGAGCTGGATCCGTTC'
         """
         cut_at = self.cut_at
-        if self.guide_strand_same == True:
+        if self.guide_strand_same is True:
             guide_seq = self.target_seq[cut_at - 17:cut_at + 6]
         else:
             guide_seq = self.target_seq[cut_at - 6:cut_at + 17]
@@ -220,11 +220,12 @@ class HDR:
     @property
     def guide_seq_aligned(self) -> str:
         """
-        Returns 21bp subset of guide sequence aligned to codons.
+        Returns subset of guide sequence aligned to codons.
 
         Extra base pairs are removed from the PAM side, because that is
         where we want to mutate whole codons.
 
+        GCCATG|GCTGAGCTGGATCC|GTT|CGGC
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.guide_seq
         'ATGGCTGAGCTGGATCCGTTCGG'
@@ -296,6 +297,7 @@ class HDR:
         'CCTTccCTGATGTGGATCCGTTCGGC'
         """
         if self.pam_outside_cds:
+            # Skip other kinds of mutations because PAM mutation is enough
             return self._pam_mutated
 
         start = self.target_seq.index(self.guide_seq_aligned)
@@ -376,9 +378,9 @@ class HDR:
         for mutated in mutate_silently(self.guide_seq_aligned, self.guide_strand_same):
             if self.score_all:
                 scores = []
-                assert len(self.target_seq) >= 20
-                for i in range(0, len(self.target_seq) - 20):
-                    test_seq = self.target_seq[i:i + 21]
+                assert len(self.target_seq) >= len(mutated)
+                for i in range(0, len(self.target_seq) - len(mutated) + 1):
+                    test_seq = self.target_seq[i:i + len(mutated)]
                     scores.append(mit_hit_score(
                         mutated.upper(),
                         test_seq.upper(),
@@ -644,7 +646,7 @@ def mutate_silently(
     )
     _validate_seq(guide_seq)
 
-    if guide_strand_same == True:
+    if guide_strand_same is True:
         codons = _right_to_left_codons(guide_seq)
     else:
         codons = _left_to_right_codons(guide_seq)
@@ -670,7 +672,7 @@ def mutate_silently(
         else:
             new_guide.append(codon)
 
-        if guide_strand_same == True:
+        if guide_strand_same is True:
             new_guide_str = ''.join(new_guide[::-1])
             combined = guide_seq[:-len(new_guide_str)] + new_guide_str
         else:
