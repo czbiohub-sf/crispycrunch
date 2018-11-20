@@ -234,6 +234,8 @@ class HDR:
         Extra base pairs are removed from the PAM side, because that is
         where we want to mutate whole codons.
 
+        If guide_seq_aligned_length is 24, extra bp are included.
+
         GCCATG|GCTGAGCTGGATCC|GTT|CGGC
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.guide_seq
@@ -252,6 +254,12 @@ class HDR:
         'TGGCTGAGCTGGATCCGTTCGGG'
         >>> hdr.guide_seq_aligned
         'GCTGAGCTGGATCCGTTCGGG'
+
+        Length 24.
+        >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=9, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr.guide_seq_aligned
+        'CCGGAGCCCGCCCCGCCCCCGAGC'
         """
         cut_at = self.cut_at
         codon_offset = abs(self.hdr_dist % 3)
@@ -263,14 +271,16 @@ class HDR:
                 shift = -codon_offset
             else:
                 shift = 3 - codon_offset if codon_offset else 0
-            guide_seq = self.target_seq[cut_at - 17:cut_at + 6 + shift][-length:]
+            right = cut_at + 6 + shift
+            guide_seq = self.target_seq[right - length:right]
         else:
             if length == 21:
                 shift = 3 - codon_offset if codon_offset else 0
             else:
                 shift = -codon_offset
-            guide_seq = self.target_seq[cut_at - 6 + shift:cut_at + 17][:length]
-        assert len(guide_seq) == length, (cut_at, shift, length)
+            left = cut_at - 6 + shift
+            guide_seq = self.target_seq[left:left + length]
+        assert len(guide_seq) == length, (cut_at, shift, length, len(guide_seq), guide_seq)
         return guide_seq
 
     @property
