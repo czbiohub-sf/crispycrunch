@@ -666,6 +666,10 @@ def mutate_silently(
     If all_permutations is True, all possible orderings of mutations will be
     returned.
 
+    Lowercase letters in guide_seq will never be mutated. This is useful for
+    masking inputs. The letters will be uppercased on return, to avoid
+    ambiguity with mutated letters.
+
     >>> it = mutate_silently('TGTTGCGATGAC')
     >>> next(it)
     'TGcTGCGATGAC'
@@ -701,11 +705,13 @@ def mutate_silently(
     'TGTTGCGAcGAC'
 
     Lowercase masking.
-    >>> it = mutate_silently('tgtTGT')
+    >>> it = mutate_silently('TGtTGTTgT')
     >>> next(it)
-    'TGTTGT'
+    'TGTTGTTGT'
     >>> next(it)
-    'TGTTGc'
+    'TGTTGcTGT'
+    >>> next(it)
+    'TGTTGcTGc'
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],
@@ -769,7 +775,7 @@ def mutate_silently(
         for syn in syns.copy():
             for i, c in enumerate(codon):
                 # if masked and mutated, skip
-                if c != c.upper() and c != syn[i] and syn in syns:
+                if c != c.upper() and c.upper() != syn[i] and syn in syns:
                     syns.remove(syn)
 
         if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
@@ -778,7 +784,7 @@ def mutate_silently(
             fractions = tuple((syn_fractions[syn], syn) for syn in syns)
             top = max(fractions)[1]
             lowered = ''.join([
-                c if c == top[i] else top[i].lower()
+                c.upper() if c.upper() == top[i] else top[i].lower()
                 for i, c in enumerate(codon)
             ])
             return lowered
@@ -807,6 +813,7 @@ def mutate_silently(
             codons = _left_to_right_codons(guide_seq)
 
         for mutated_codons in _mutate_codons(codons):
+            guide_seq = guide_seq.upper()  # erase lowercase masking
             if guide_strand_same:
                 new_guide_str = ''.join(mutated_codons[::-1])
                 combined = guide_seq[:-len(new_guide_str)] + new_guide_str
