@@ -257,15 +257,28 @@ class HDR:
 
         Length 24.
         >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=9, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned
+        'CCGGAGCCCGCCCCGCCCCCG'
         >>> hdr.guide_seq_aligned_length = 24
         >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGC'
+        'CCGGAGCCCGCCCCGCCCCCGAGc'
+
+        >>> hdr = HDR('ATGATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=8, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr.guide_seq_aligned
+        'atCCGGAGCCCGCCCCGCCCCCGA'
         """
         cut_at = self.cut_at
         codon_offset = abs(self.hdr_dist % 3)
         length = self.guide_seq_aligned_length
         assert length in (21, 24)
 
+        def _mark_outside(guide_seq: str, shift: int) -> str:
+            shift = abs(shift)
+            return guide_seq[:shift].lower() \
+                + guide_seq[shift:shift + 23] + guide_seq[shift + 23:].lower()
+
+        # TODO (gdingle): refactor this somehow... :(
         if self.guide_strand_same:
             if length == 21:
                 shift = -codon_offset
@@ -273,6 +286,8 @@ class HDR:
                 shift = 3 - codon_offset if codon_offset else 0
             right = cut_at + 6 + shift
             guide_seq = self.target_seq[right - length:right]
+            if length == 24:
+                guide_seq = _mark_outside(guide_seq, shift)
         else:
             if length == 21:
                 shift = 3 - codon_offset if codon_offset else 0
@@ -280,7 +295,10 @@ class HDR:
                 shift = -codon_offset
             left = cut_at - 6 + shift
             guide_seq = self.target_seq[left:left + length]
-        assert len(guide_seq) == length, (cut_at, shift, length, len(guide_seq), guide_seq)
+            if length == 24:
+                guide_seq = _mark_outside(guide_seq, shift)
+
+        assert len(guide_seq) == length, (length, len(guide_seq))
         return guide_seq
 
     @property
@@ -412,6 +430,20 @@ class HDR:
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.guide_mutated
         'ATGGCcGAaCTcGAcCCcTTt'
+
+        24bp guide.
+        >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=9, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr.guide_seq_aligned
+        'CCGGAGCCCGCCCCGCCCCCGAGc'
+        >>> hdr.guide_mutated
+
+        >>> hdr = HDR('ATGATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=8, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr.guide_seq_aligned
+        'atCCGGAGCCCGCCCCGCCCCCGA'
+        >>> hdr.guide_mutated
+
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
@@ -668,6 +700,12 @@ def mutate_silently(
     >>> next(it)
     'TGTTGCGAcGAC'
 
+    Lowercase masking.
+    >>> it = mutate_silently('tgtTGT')
+    >>> next(it)
+    'TGTTGT'
+    >>> next(it)
+    'TGTTGc'
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],
@@ -723,8 +761,16 @@ def mutate_silently(
 
     def _mutate_codon(codon: str) -> str:
         # Make copy and remove current codon
-        syns = list(synonymous[synonymous_index[codon]])
-        syns.remove(codon)
+        syns = list(synonymous[synonymous_index[codon.upper()]])
+        # Remove self codon
+        syns.remove(codon.upper())
+
+        # Skip mutations that affect lowercase masked base pairs
+        for syn in syns.copy():
+            for i, c in enumerate(codon):
+                # if masked and mutated, skip
+                if c != c.upper() and c != syn[i] and syn in syns:
+                    syns.remove(syn)
 
         if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
             return codon
@@ -737,7 +783,7 @@ def mutate_silently(
             ])
             return lowered
         else:
-            return codon
+            return codon.upper()  # erase lowercase masking
 
     def _all_permutations(guide_seq) -> Iterator:
         """This will return increasing numbers of mutations, from right to left"""
