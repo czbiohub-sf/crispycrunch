@@ -1,6 +1,8 @@
 """
 Transformations of genome sequences for HDR.
 """
+import itertools
+
 from typing import Iterator
 
 import math
@@ -210,7 +212,7 @@ class HDR:
         'CCATGGCTGAGCTGGATCCGTTC'
         """
         cut_at = self.cut_at
-        if self.guide_strand_same is True:
+        if self.guide_strand_same:
             guide_seq = self.target_seq[cut_at - 17:cut_at + 6]
         else:
             guide_seq = self.target_seq[cut_at - 6:cut_at + 17]
@@ -515,7 +517,7 @@ class HDR:
         >>> hdr.should_mutate
         True
         """
-        if self.guide_strand_same is True:
+        if self.guide_strand_same:
             guide_right = self.cut_at + 3
             intact = guide_right - self.insert_at
         else:
@@ -536,7 +538,7 @@ class HDR:
         >>> hdr.pam_at
         3
         """
-        if self.guide_strand_same is True:
+        if self.guide_strand_same:
             return self.cut_at + 3
         else:
             return self.cut_at - 6
@@ -603,6 +605,16 @@ def mutate_silently(
     >>> it = mutate_silently('TAG', skip_stop_codon=False)
     >>> next(it)
     'Tga'
+
+    all_permutations
+    >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True)
+    >>> next(it)
+    'TGcTGtGAcGAt'
+    >>> next(it)
+    'TGcTGtGAcGAC'
+    >>> next(it)
+    'TGcTGtGATGAt'
+
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],
@@ -653,40 +665,63 @@ def mutate_silently(
     def _mutate_codons(codons) -> Iterator:
         mutated_codons = []
         for codon in codons:
-            # Make copy and remove current codon
-            syns = list(synonymous[synonymous_index[codon]])
-            syns.remove(codon)
-
-            if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
-                mutated_codons.append(codon)
-            elif len(syns):
-                fractions = tuple((syn_fractions[syn], syn) for syn in syns)
-                top = max(fractions)[1]
-                lowered = ''.join([
-                    c if c == top[i] else top[i].lower()
-                    for i, c in enumerate(codon)
-                ])
-                mutated_codons.append(lowered)
-            else:
-                mutated_codons.append(codon)
-
+            mutated_codons.append(_mutate_codon(codon))
             yield mutated_codons
 
-    if guide_strand_same is True:
-        codons = _right_to_left_codons(guide_seq)
-    else:
-        codons = _left_to_right_codons(guide_seq)
+    def _mutate_codon(codon: str) -> str:
+        # Make copy and remove current codon
+        syns = list(synonymous[synonymous_index[codon]])
+        syns.remove(codon)
 
-    for mutated_codons in _mutate_codons(codons):
-        if guide_strand_same is True:
-            new_guide_str = ''.join(mutated_codons[::-1])
-            combined = guide_seq[:-len(new_guide_str)] + new_guide_str
+        if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
+            return codon
+        elif len(syns):
+            fractions = tuple((syn_fractions[syn], syn) for syn in syns)
+            top = max(fractions)[1]
+            lowered = ''.join([
+                c if c == top[i] else top[i].lower()
+                for i, c in enumerate(codon)
+            ])
+            return lowered
         else:
-            new_guide_str = ''.join(mutated_codons)
-            combined = new_guide_str + guide_seq[len(new_guide_str):]
+            return codon
 
-        assert len(combined) == len(guide_seq), (combined, guide_seq)
-        yield combined
+    def _all_permutations(guide_seq) -> Iterator:
+        codons = list(_left_to_right_codons(guide_seq))
+        masks = itertools.product([True, False], repeat=len(codons))
+        for mask in masks:
+            assert len(mask) == len(codons)
+            new_codons = []
+            for i, do_mutate in enumerate(mask):
+                if do_mutate:
+                    new_codons.append(_mutate_codon(codons[i]))
+                else:
+                    new_codons.append(codons[i])
+            assert len(new_codons) == len(codons)
+            yield ''.join(new_codons)
+
+    def _pam_inwards(guide_seq) -> Iterator:
+        if guide_strand_same:
+            codons = _right_to_left_codons(guide_seq)
+        else:
+            codons = _left_to_right_codons(guide_seq)
+
+        for mutated_codons in _mutate_codons(codons):
+            if guide_strand_same:
+                new_guide_str = ''.join(mutated_codons[::-1])
+                combined = guide_seq[:-len(new_guide_str)] + new_guide_str
+            else:
+                new_guide_str = ''.join(mutated_codons)
+                combined = new_guide_str + guide_seq[len(new_guide_str):]
+
+            assert len(combined) == len(guide_seq), (combined, guide_seq)
+            yield combined
+
+    if all_permutations:
+        yield from _all_permutations(guide_seq)
+
+    else:
+        yield from _pam_inwards(guide_seq)
 
 
 def _validate_seq(seq: str):
