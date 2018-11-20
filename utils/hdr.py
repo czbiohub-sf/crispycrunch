@@ -30,7 +30,12 @@ class HDR:
 
     # When mutating, compare mutated 20-mer guide to all 20-mer sequences in
     # target_seq.
-    score_all = True
+    compare_all_positions = True
+    # When mutating, stop mutating at the first score that is below the
+    # target_mutation_score. This may leave out some closer matches.
+    stop_mutating_at_first_success = True
+    # Try mutate all codons, not just linearly.
+    mutate_all_permutations = False
 
     def __init__(
             self,
@@ -373,12 +378,30 @@ class HDR:
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.guide_mutated
         'ATGGCcGAaCTcGAcCCcTTt'
+
+        Permutations.
+        >>> hdr.stop_mutating_at_first_success = False
+        >>> hdr.mutate_all_permutations = True
+        >>> hdr.target_mutation_score = 1
+        >>> hdr.guide_mutated
+        'ATGGCTGAGCTcGAcCCcTTt'
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.guide_mutated
+        'ATGGCcGAaCTcGAcCCGTTt'
+        >>> hdr.target_mutation_score = 0.01
+        >>> hdr.guide_mutated
+        'ATGGCcGAaCTcGAcCCcTTt'
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
         # in 3bp PAM? should we try to align to the hit_score_m? lols
-        for mutated in mutate_silently(self.guide_seq_aligned, self.guide_strand_same):
-            if self.score_all:
+        candidates = []
+        for mutated in mutate_silently(
+            self.guide_seq_aligned,
+            self.guide_strand_same,
+            all_permutations=self.mutate_all_permutations
+        ):
+            if self.compare_all_positions:
                 scores = []
                 assert len(self.target_seq) >= len(mutated)
                 for i in range(0, len(self.target_seq) - len(mutated) + 1):
@@ -395,8 +418,17 @@ class HDR:
                     self.guide_seq_aligned.upper(),
                     self.guide_strand_same)
 
-            if score <= self.target_mutation_score:
-                break
+            if self.stop_mutating_at_first_success:
+                if score <= self.target_mutation_score:
+                    return mutated
+            else:
+                candidates.append((score, mutated))
+
+        if candidates:
+            filtered = [(s, c) for s, c in candidates
+                        if s <= self.target_mutation_score]
+            if filtered:
+                return max(filtered)[1]
 
         return mutated
 
@@ -409,23 +441,23 @@ class HDR:
         >>> hdr.mutated_score
         41.7
 
-        Verify score_all returns same for normal input.
-        >>> hdr.score_all = True
+        Verify compare_all_positions returns same for normal input.
+        >>> hdr.compare_all_positions = True
         >>> hdr.mutated_score
         41.7
-        >>> hdr.score_all = False
+        >>> hdr.compare_all_positions = False
         >>> hdr.mutated_score
         41.7
 
-        Artifical score_all example. The mutated seq was copied into target seq.
-        score_all then causes more mutation.
+        Artifical compare_all_positions example. The mutated seq was copied into target seq.
+        compare_all_positions then causes more mutation.
         >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAg', hdr_dist=14)
-        >>> hdr.score_all = False
+        >>> hdr.compare_all_positions = False
         >>> hdr.guide_mutated
         'ATGAAAAAAAAAAAgAAgAAg'
         >>> hdr.mutated_score
         0.06084376104417672
-        >>> hdr.score_all = True
+        >>> hdr.compare_all_positions = True
         >>> hdr.guide_mutated
         'ATGAAgAAgAAgAAgAAgAAg'
         >>> hdr.mutated_score
@@ -609,11 +641,11 @@ def mutate_silently(
     all_permutations
     >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True)
     >>> next(it)
-    'TGcTGtGAcGAt'
+    'TGTTGCGATGAC'
     >>> next(it)
-    'TGcTGtGAcGAC'
+    'TGTTGCGATGAt'
     >>> next(it)
-    'TGcTGtGATGAt'
+    'TGTTGCGAcGAC'
 
     """
     synonymous = {
@@ -687,8 +719,9 @@ def mutate_silently(
             return codon
 
     def _all_permutations(guide_seq) -> Iterator:
+        """This will return increasing numbers of mutations, from right to left"""
         codons = list(_left_to_right_codons(guide_seq))
-        masks = itertools.product([True, False], repeat=len(codons))
+        masks = itertools.product([False, True], repeat=len(codons))
         for mask in masks:
             assert len(mask) == len(codons)
             new_codons = []
