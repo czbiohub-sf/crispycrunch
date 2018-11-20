@@ -28,6 +28,8 @@ class HDR:
     guide_strand_same refers to strand of target_seq.
     """
 
+    # TODO (gdingle): review whether we still need all these configs
+    guide_seq_aligned_length = 21
     # When mutating, compare mutated 20-mer guide to all 20-mer sequences in
     # target_seq.
     compare_all_positions = True
@@ -251,16 +253,25 @@ class HDR:
         >>> hdr.guide_seq_aligned
         'GCTGAGCTGGATCCGTTCGGG'
         """
-
-        # TODO (gdingle): do we want to extend to always include entire PAM?
-
+        cut_at = self.cut_at
         codon_offset = abs(self.hdr_dist % 3)
-        if self.guide_strand_same == True:
-            aligned = self.guide_seq[:-codon_offset] if codon_offset else self.guide_seq
-            return aligned[-21:]
+        length = self.guide_seq_aligned_length
+        assert length in (21, 24)
+
+        if self.guide_strand_same:
+            if length == 21:
+                shift = -codon_offset
+            else:
+                shift = 3 - codon_offset if codon_offset else 0
+            guide_seq = self.target_seq[cut_at - 17:cut_at + 6 + shift][-length:]
         else:
-            aligned = self.guide_seq[3 - codon_offset:] if codon_offset else self.guide_seq
-            return aligned[:21]
+            if length == 21:
+                shift = 3 - codon_offset if codon_offset else 0
+            else:
+                shift = -codon_offset
+            guide_seq = self.target_seq[cut_at - 6 + shift:cut_at + 17][:length]
+        assert len(guide_seq) == length, (cut_at, shift, length)
+        return guide_seq
 
     @property
     def inserted(self) -> str:
