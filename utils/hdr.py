@@ -561,12 +561,13 @@ class HDR:
 def mutate_silently(
         guide_seq: str,
         guide_strand_same: bool = False,
-        skip_stop_codon: bool = True) -> Iterator[str]:
+        skip_stop_codon: bool = True,
+        all_permutations: bool = False) -> Iterator[str]:
     """
     Generator that silently mutates input sequence by substituing a different
     codon that encodes the same amino acid. Changes one codon per iteration.
-    Direction is from PAM inwards. The new codon is the selected by frequency
-    in the human genome.
+    Direction is from PAM inwards, unless all_permutations is True. The new
+    codon is the selected by frequency in the human genome.
 
     Data from http://biopython.org/DIST/docs/api/Bio.SeqUtils.CodonUsage-pysrc.html
 
@@ -574,6 +575,9 @@ def mutate_silently(
 
     By default, does not mutate stop codons, because such mutations are not
     always silent.
+
+    If all_permutations is True, all possible orderings of mutations will be
+    returned.
 
     >>> it = mutate_silently('TGTTGCGATGAC')
     >>> next(it)
@@ -646,37 +650,39 @@ def mutate_silently(
     )
     _validate_seq(guide_seq)
 
+    def _mutate_codons(codons) -> Iterator:
+        mutated_codons = []
+        for codon in codons:
+            # Make copy and remove current codon
+            syns = list(synonymous[synonymous_index[codon]])
+            syns.remove(codon)
+
+            if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
+                mutated_codons.append(codon)
+            elif len(syns):
+                fractions = tuple((syn_fractions[syn], syn) for syn in syns)
+                top = max(fractions)[1]
+                lowered = ''.join([
+                    c if c == top[i] else top[i].lower()
+                    for i, c in enumerate(codon)
+                ])
+                mutated_codons.append(lowered)
+            else:
+                mutated_codons.append(codon)
+
+            yield mutated_codons
+
     if guide_strand_same is True:
         codons = _right_to_left_codons(guide_seq)
     else:
         codons = _left_to_right_codons(guide_seq)
 
-    new_guide = []
-    for codon in codons:
-        # Make copy and remove current codon
-        syns = list(synonymous[synonymous_index[codon]])
-        syns.remove(codon)
-
-        if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
-            new_guide.append(codon)
-        elif len(syns):
-            fractions = tuple((syn_fractions[syn], syn) for syn in syns)
-            # TODO (gdingle): better to choose random syn?
-            # TODO (yjl): best to choose furthest syn, then top fraction syn
-            top = max(fractions)[1]
-            lowered = ''.join([
-                c if c == top[i] else top[i].lower()
-                for i, c in enumerate(codon)
-            ])
-            new_guide.append(lowered)
-        else:
-            new_guide.append(codon)
-
+    for mutated_codons in _mutate_codons(codons):
         if guide_strand_same is True:
-            new_guide_str = ''.join(new_guide[::-1])
+            new_guide_str = ''.join(mutated_codons[::-1])
             combined = guide_seq[:-len(new_guide_str)] + new_guide_str
         else:
-            new_guide_str = ''.join(new_guide)
+            new_guide_str = ''.join(mutated_codons)
             combined = new_guide_str + guide_seq[len(new_guide_str):]
 
         assert len(combined) == len(guide_seq), (combined, guide_seq)
