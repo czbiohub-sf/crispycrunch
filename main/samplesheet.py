@@ -37,7 +37,6 @@ NOT_FOUND = 'not found'
 hdr.HDR.guide_seq_aligned_length = 27
 hdr.HDR.use_cfd_score = True
 hdr.HDR.stop_mutating_at_first_success = False
-# TODO (gdingle): increase perf by caching
 hdr.HDR.mutate_all_permutations = True
 
 

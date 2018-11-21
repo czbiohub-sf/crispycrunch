@@ -93,8 +93,6 @@ class HDR:
         if guide_strand_same is not None:
             assert guide_strand_same in (True, False)
             self.guide_strand_same = guide_strand_same
-            # TODO (gdingle): Run inference to double check? or remove _guide_strand_same?
-            # self._guide_strand_same()
         else:
             self.guide_strand_same = self._guide_strand_same()
 
@@ -137,10 +135,9 @@ class HDR:
         return True if is_for else False
 
     def _target_codon_at(self) -> int:
+        # If codon position explicitly passed in, use that.
         if self._codon_at != -1:
             return self._codon_at
-        # TODO (gdingle): sometimes there is an extra stop codon that is picked up first
-        # ... outside CDS? how to fix?
         for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
             if codon in self.boundary_codons:
                 return i * 3
@@ -366,7 +363,7 @@ class HDR:
                 self.target_seq,))
             # Fallback
             # TODO (gdingle): when can we expect this to happen? when target_seq
-            # is too small?
+            # is too small? other edge cases?
             self.guide_seq_aligned_length = 21
             self.use_cfd_score = False
             start = self.target_seq.index(self.guide_seq_aligned)
@@ -479,9 +476,6 @@ class HDR:
         >>> hdr.guide_mutated
         'CCcGAaCCtGCtCCcCCtCCGAGCCGC'
         """
-
-        # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
-        # in 3bp PAM? should we try to align to the hit_score_m? lols
         candidates = []
         left, right = self._guide_offsets
         for mutated in mutate_silently(
@@ -504,6 +498,7 @@ class HDR:
 
             if self.compare_all_positions:
                 # TODO (gdingle): also compare reverse complements?
+                # See https://trello.com/c/C0oDow1l/53-compare-reverse-complements-of-mutation
                 scores = []
                 for i in range(0, len(self.target_seq) - len(mutated) + 1):
                     test_seq = self.target_seq[i:i + len(mutated)]
@@ -527,10 +522,12 @@ class HDR:
                         if s <= self.target_mutation_score]
             if filtered:
                 # TODO (gdingle): do we want to minimize the number of changes?
+                # See https://trello.com/c/GAO2snqy/52-try-all-possible-mutations
                 return max(filtered)[1]
 
         # TODO (gdingle): if nothing reaches target mutation,
         # should we return the most mutated or the input unchanged?
+        # See https://trello.com/c/GAO2snqy/52-try-all-possible-mutations
         return mutated
 
     # TODO (gdingle): do we still want to maintain this ?
@@ -551,8 +548,8 @@ class HDR:
         >>> hdr._mutated_score
         41.7
 
-        Artifical compare_all_positions example. The mutated seq was copied into target seq.
-        compare_all_positions then causes more mutation.
+        Artifical compare_all_positions example. The mutated seq was copied into
+        target seq. compare_all_positions then causes more mutation.
         >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAg', hdr_dist=14)
         >>> hdr.compare_all_positions = False
         >>> hdr.guide_mutated
@@ -615,6 +612,7 @@ class HDR:
         Determines whether there is a mutation inside an intron/exon junction.
 
         # TODO (gdingle): use mutation masking here instead of warning?
+        # See https://trello.com/c/HoEcAlVj/54-filter-out-mutations-in-intron-exon-junction
 
         Mutation just inside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,

@@ -8,6 +8,9 @@
 
 from functools import lru_cache
 
+# TODO (gdingle): adjust values of zeros?
+# See comment in https://trello.com/c/3S8jelQj/51-use-doench-16-in-mutation-scoring
+
 # Loaded from pam_scores.pkl
 pam_scores = {
     'AA': 0.0,
