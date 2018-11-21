@@ -523,9 +523,9 @@ class HDR:
             filtered = [(s, c) for s, c in candidates
                         if s <= self.target_mutation_score]
             if filtered:
-                # TODO (gdingle): do we want to minimize the number of changes?
-                # See https://trello.com/c/GAO2snqy/52-try-all-possible-mutations
-                return max(filtered)[1]
+                # minimize the number of changes below cutoff
+                changes = [(sum(l.islower() for l in c), c) for s, c in filtered]
+                return min(changes)[1]
 
         # TODO (gdingle): if nothing reaches target mutation,
         # should we return the most mutated or the input unchanged?
