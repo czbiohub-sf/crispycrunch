@@ -128,7 +128,7 @@ def enst_to_gene_or_unknown(enst: str, genome: str = 'hg38') ->str:
     'UNKNOWN'
     """
     try:
-        return enst_to_gene(enst, genome, timeout=4)
+        return enst_to_gene(enst, genome, timeout=2)
     except requests.exceptions.Timeout:
         return 'TIMEOUT'
     except IOError:

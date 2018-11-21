@@ -468,8 +468,7 @@ class GuideDesign(BaseModel):
 
     @property
     def is_hdr(self):
-        # TODO (gdingle): simplify when legacy data gone
-        return self.hdr_tag is not None or self.experiment.is_hdr
+        return self.experiment.is_hdr
 
     # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(

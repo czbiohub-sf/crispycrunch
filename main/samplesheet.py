@@ -23,8 +23,8 @@ from main.models import Analysis, GuideDesign, GuideSelection, PrimerSelection
 from protospacex import get_cds_codon_at, get_cds_seq, get_ultramer_seq
 from utils import conversions
 from utils import hdr
-from utils import primerchecks
 from utils import manuscore
+from utils import primerchecks
 from utils.chrloc import *
 
 from crispresso.fastqs import reverse_complement
@@ -236,6 +236,8 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             ultramer_seq, codon_at = get_ultramer_seq(
                 row['target_input'],
                 row['_cds_index'],
+                # TODO (gdingle): parameterize homology arm length
+                # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
                 110,
             )
         except ValueError:
@@ -328,12 +330,18 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         start = guide_offset % 3
 
-        # TODO (gdingle): HACK ALERT!!! Because the target codon seq can appear
-        # in frame but outside the CCDS, the insert is misidentified. We set a buffer here to avoid the worst.
-        # The buffer length is a multiple of 3 less than the min homology len,
+        # TODO (gdingle): HACK ALERT!!! We need to get the guide and the insert
+        # position back out of the primer_product returned from Crispor. They
+        # are somewhere near the middle, by design, but we can't know exactly
+        # where. And because the target codon can appear
+        # in frame but outside the CCDS, we can't simply search for it.
+        # We start near the middle to minimize the chance of false positive.
+        # The start is a multiple of 3 less than the min homology len,
         # and larger than the largest observed misidentification.
-
-        # TODO (gdingle): offset by row['_seq_codon_at']
+        # TODO (gdingle): parameterize homology arm length
+        # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
+        # TODO (gdingle): use row['_seq_codon_at'] somehow
+        # or use something like hdr_arm_len - len(guide_seq_aligned)
         start += 90
 
         before, primer_product_aligned = \
@@ -352,7 +360,12 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         )
 
         try:
-            hdr_primer_product = phdr.inserted_mutated if phdr.should_mutate else phdr.inserted
+            if phdr.should_mutate:
+                hdr_primer_product = phdr.inserted_mutated
+                if not _get_hdr_row(row).guide_mutated in hdr_primer_product:
+                    return 'error in mutating primer product: ' + phdr.inserted
+            else:
+                hdr_primer_product = phdr.inserted
         except AssertionError:
             return 'error in HDR, no insert: ' + primer_product
 
@@ -379,6 +392,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         arms = primer_product.upper().split(row['_hdr_seq'])
         larm, rarm = len(arms[0]), len(arms[1])
+        # TODO (gdingle): parameterize homology arm length
+        # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
         if min(larm, rarm) < 105:
             return 'homology arm too short, {}bp: {}'.format(min(larm, rarm), primer_product)
 

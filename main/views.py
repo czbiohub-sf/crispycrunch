@@ -299,14 +299,13 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
-    # TODO (gdingle): see https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
-    # for optimal min_score
-    # TODO (gdingle): consider min Doench score of 10, like Benchling
-    def _get_top_guides(self, guide_design, min_score=20) -> dict:
+    def _get_top_guides(self, guide_design, min_score=10) -> dict:
         """
         Filters all guides returned by Crispor down to those that have a score
-        greater than min_score, then takes top guides by cut-to-insert distance
+        greater than min_score, then takes top guides by special ranking
         if HDR, else by score.
+
+        Doench min_score = 10 is the same value used by Benchling.
         """
         # TODO (gdingle): figure out why guide_seqs not always there!
         selected_guides = dict(
