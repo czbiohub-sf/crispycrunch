@@ -299,6 +299,8 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
             primer_selection.primer_design.max_amplicon_length)
 
     sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
+    # TODO (gdingle): is there a better way to make _guide_id to re-appear?
+    sheet = sheet.reset_index()
     # TODO (gdingle): is this wanted?
     # sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
 
