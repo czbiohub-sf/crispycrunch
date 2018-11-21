@@ -363,12 +363,10 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         try:
             if phdr.should_mutate:
                 hdr_primer_product = phdr.inserted_mutated
-                if not _get_hdr_row(row).guide_mutated in hdr_primer_product:
-                    return 'error in mutating primer product: ' + phdr.inserted
             else:
                 hdr_primer_product = phdr.inserted
         except AssertionError:
-            return 'error in HDR, no insert: ' + primer_product
+            return 'error in applying HDR to primer: ' + primer_product
 
         assert len(before) + len(hdr_primer_product) == len(primer_product) + \
             len(row['_hdr_seq'])
