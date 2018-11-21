@@ -46,7 +46,6 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet = _join_guide_data(guide_selection)
 
     sheet['_target_genome'] = guide_design.genome
-    sheet['_target_pam'] = guide_design.pam
 
     sheet['target_loc'] = [g['target_loc']
                            if isinstance(g['target_loc'], ChrLoc)

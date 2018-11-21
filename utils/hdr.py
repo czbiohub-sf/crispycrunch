@@ -295,7 +295,7 @@ class HDR:
             right = cut_at + 6 + shift
             guide_seq = self.target_seq[right - length:right]
             if length == 27:
-                guide_seq = _mark_outside(guide_seq, shift)
+                guide_seq = _mark_outside(guide_seq[::-1], shift)[::-1]
         else:
             if length == 21:
                 shift = 3 - codon_offset if codon_offset else 0
@@ -370,6 +370,7 @@ class HDR:
             start = self.target_seq.index(self.guide_seq_aligned)
 
         mutated = self.guide_mutated
+
         return ''.join((
             self.target_seq[:start],
             mutated,
@@ -598,10 +599,10 @@ class HDR:
             assert right - left == 23, (left, right, right - left)
             if self.guide_strand_same:
                 pam = self.guide_seq_aligned[right - 3:right]
-                assert 'GG' in pam, pam
+                assert 'GG' in pam, (pam, self.guide_seq, self.guide_seq_aligned)
             else:
                 pam = self.guide_seq_aligned[left:left + 3]
-                assert 'CC' in pam, pam
+                assert 'CC' in pam, (pam, self.guide_seq, self.guide_seq_aligned)
         else:
             # No good way to find PAM in 21bp
             left, right = 0, len(self.guide_seq_aligned)
