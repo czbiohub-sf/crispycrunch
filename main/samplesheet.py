@@ -32,6 +32,13 @@ logger = logging.getLogger(__name__)
 
 NOT_FOUND = 'not found'
 
+# TODO (gdingle): change defaults in module
+hdr.HDR.guide_seq_aligned_length = 27
+hdr.HDR.use_cfd_score = True
+hdr.HDR.stop_mutating_at_first_success = False
+# TODO (gdingle): increase perf by caching
+hdr.HDR.mutate_all_permutations = True
+
 
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     guide_design = guide_selection.guide_design
@@ -306,7 +313,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             # previous warning
             return primer_product
 
-        guide_seq_aligned = _get_hdr_row(row).guide_seq_aligned
+        guide_seq_aligned = _get_hdr_row(row).guide_seq_aligned.upper()
 
         # Crispor returns primer products by strand. Normalize to positive strand.
         if row['target_loc'].strand == '-':

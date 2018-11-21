@@ -3,6 +3,7 @@ Transformations of genome sequences for HDR.
 """
 import functools
 import itertools
+import logging
 import math
 
 from typing import Iterator
@@ -11,6 +12,8 @@ try:
     from utils import cfdscore
 except ImportError:
     import cfdscore  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 class HDR:
@@ -34,7 +37,10 @@ class HDR:
     """
 
     # TODO (gdingle): review whether we still need all these configs
+    # TODO (gdingle): write tests that don't rely on defaults which change
     guide_seq_aligned_length = 21
+    # Instead of MIT score
+    use_cfd_score = False
     # When mutating, compare mutated 20-mer guide to all 20-mer sequences in
     # target_seq.
     compare_all_positions = True
@@ -43,8 +49,6 @@ class HDR:
     stop_mutating_at_first_success = True
     # Try mutate all codons, not just linearly.
     mutate_all_permutations = False
-    # Instead of MIT score
-    use_cfd_score = True
 
     def __init__(
             self,
@@ -353,7 +357,20 @@ class HDR:
             # Skip other kinds of mutations because PAM mutation is enough
             return self._pam_mutated
 
-        start = self.target_seq.index(self.guide_seq_aligned)
+        try:
+            start = self.target_seq.index(self.guide_seq_aligned.upper())
+        except ValueError:
+            logging.warn('Cannot find {}bp length guide {} in target_seq {}'.format(
+                self.guide_seq_aligned_length,
+                self.guide_seq_aligned,
+                self.target_seq,))
+            # Fallback
+            # TODO (gdingle): when can we expect this to happen? when target_seq
+            # is too small?
+            self.guide_seq_aligned_length = 21
+            self.use_cfd_score = False
+            start = self.target_seq.index(self.guide_seq_aligned)
+
         mutated = self.guide_mutated
         return ''.join((
             self.target_seq[:start],
@@ -452,6 +469,15 @@ class HDR:
         'atCCGGAGCCCGCCCCGCCCCCGAGcc'
         >>> hdr.guide_mutated
         'ATtaGGtcCCCGCCCCGCCCCCGAGCC'
+
+        use_cfd_score
+        >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.use_cfd_score = True
+        >>> hdr.guide_seq_aligned
+        'CCGGAGCCCGCCCCGCCCCCGAGccgc'
+        >>> hdr.guide_mutated
+        'CCcGAaCCtGCtCCcCCtCCGAGCCGC'
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
@@ -464,15 +490,12 @@ class HDR:
         ):
             left, right = self._guide_offsets
 
-            # TODO (gdingle): put cdf score here
             if self.use_cfd_score:
                 assert right - left == 23, 'Must include pam for cfdscore'
-                if self.guide_strand_same
                 hit_score_func = functools.partial(
                     cfdscore.cfd_score,
                     mutated.upper()[left:right],
-                    # TODO (gdingle): is this correct?
-                    pam='NGG' if self.guide_strand_same else 'CCN',)
+                    guide_strand_same=self.guide_strand_same)
             else:
                 hit_score_func = functools.partial(
                     mit_hit_score,
@@ -504,27 +527,29 @@ class HDR:
             filtered = [(s, c) for s, c in candidates
                         if s <= self.target_mutation_score]
             if filtered:
+                # TODO (gdingle): do we want to minimize the number of changes?
                 return max(filtered)[1]
 
         # TODO (gdingle): if nothing reaches target mutation,
         # should we return the most mutated or the input unchanged?
         return mutated
 
+    # TODO (gdingle): do we still want to maintain this ?
     @property
-    def mutated_score(self) -> float:
+    def _mutated_score(self) -> float:
         """
         >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCGTTt'
-        >>> hdr.mutated_score
+        >>> hdr._mutated_score
         41.7
 
         Verify compare_all_positions returns same for normal input.
         >>> hdr.compare_all_positions = True
-        >>> hdr.mutated_score
+        >>> hdr._mutated_score
         41.7
         >>> hdr.compare_all_positions = False
-        >>> hdr.mutated_score
+        >>> hdr._mutated_score
         41.7
 
         Artifical compare_all_positions example. The mutated seq was copied into target seq.
@@ -533,14 +558,15 @@ class HDR:
         >>> hdr.compare_all_positions = False
         >>> hdr.guide_mutated
         'ATGAAAAAAAAAAAgAAgAAg'
-        >>> hdr.mutated_score
+        >>> hdr._mutated_score
         0.06084376104417672
         >>> hdr.compare_all_positions = True
         >>> hdr.guide_mutated
         'ATGAAgAAgAAgAAgAAgAAg'
-        >>> hdr.mutated_score
+        >>> hdr._mutated_score
         0.00844207184487952
         """
+        # TODO (gdingle): update to use cfdscore as well!
         return mit_hit_score(
             self.guide_mutated,
             self.guide_seq_aligned,
