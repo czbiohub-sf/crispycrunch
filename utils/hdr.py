@@ -499,14 +499,14 @@ class HDR:
                     include_pam=(right - left == 23))
 
             if self.compare_all_positions:
-                # TODO (gdingle): also compare reverse complements?
-                # See https://trello.com/c/C0oDow1l/53-compare-reverse-complements-of-mutation
                 scores = []
                 for i in range(0, len(self.target_seq) - len(mutated) + 1):
-                    test_seq = self.target_seq[i:i + len(mutated)]
-                    scores.append(hit_score_func(
-                        test_seq.upper()[left:right],
-                    ))
+                    test_seq = self.target_seq[i:i + len(mutated)].upper()[left:right]
+                    scores.append(hit_score_func(test_seq))
+                    # TODO (gdingle): extract a central rev complement
+                    test_seq2 = cfdscore._revcom(test_seq)
+                    scores.append(hit_score_func(test_seq2))
+
                 score = max(scores)
             else:
                 score = hit_score_func(

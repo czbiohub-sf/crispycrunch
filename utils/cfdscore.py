@@ -276,6 +276,7 @@ mm_scores = {
 }
 
 
+@lru_cache(maxsize=1024 * 1024)
 def _revcom(s: str) -> str:
     """
     Reverse complements a given string
