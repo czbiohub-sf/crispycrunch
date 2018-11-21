@@ -356,14 +356,15 @@ class HDR:
 
         try:
             start = self.target_seq.index(self.guide_seq_aligned.upper())
-        except ValueError:
-            logging.warn('Cannot find {}bp length guide {} in target_seq {}'.format(
+        except (ValueError, AssertionError):
+            logging.warn('Cannot find {}bp length around guide {} in target_seq {}'.format(
                 self.guide_seq_aligned_length,
-                self.guide_seq_aligned,
+                self.guide_seq,
                 self.target_seq,))
             # Fallback
             # TODO (gdingle): when can we expect this to happen? when target_seq
             # is too small? other edge cases?
+            # See https://trello.com/c/EC3VVyOn/56-rare-failures-on-27bp-around-guides-for-mutation
             self.guide_seq_aligned_length = 21
             self.use_cfd_score = False
             start = self.target_seq.index(self.guide_seq_aligned)

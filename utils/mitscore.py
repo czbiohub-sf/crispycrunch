@@ -76,11 +76,11 @@ def mit_hit_score(
 
     assert(len(seq1) == len(seq2)), (seq1, seq2)
 
-    # Use most important 20bp only
     if include_pam:
         assert len(seq1) == 23
         max_dist = 22
     else:
+        # Use most important 20bp only
         seq1 = seq1[-20:]
         seq2 = seq2[-20:]
         assert(len(seq1) == 20)
