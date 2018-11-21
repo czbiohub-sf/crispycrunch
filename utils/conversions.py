@@ -170,7 +170,10 @@ def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -
 
     matches = set(r['name2'] for r in res)
     # TODO (gdingle): how to handle multiple gene matches?
-    assert len(matches) == 1, matches
+    # See https://trello.com/c/yZBXVjC8/57-sometimes-multiple-gene-names-are-matched
+    # ('chr3:128067063-128067085', {'RUVBL1', 'SEC61A1'})
+    if not len(matches) == 1:
+        return 'UNKNOWN'
     return matches.pop()
 
 # TODO (gdingle): share code with protospacex

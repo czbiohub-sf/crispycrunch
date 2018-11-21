@@ -8,7 +8,11 @@
 
 {% block content %}
 <p>
-  <em>This page will refresh every second until all tasks are completed. If progress stops, go back and try again.</em>
+  <em>This page will refresh every second until all tasks are completed. If progress stops, go back and try again. If that still doesn't work, please email
+  <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch%20Error">
+    {{ settings.ADMIN_EMAIL }}
+  </a>.
+  </em>
 </p>
 
 <h3>

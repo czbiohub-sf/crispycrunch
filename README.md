@@ -80,7 +80,7 @@ Deploy to Amazon Elasticbeanstalk.
 
 Wait for deployment to finish, then view the live site at http://crispycrunch.ds.czbiohub.org/.
 
-For more info, see https://realpython.com/deploying-a-django-app-and-postgresql-to-aws-elastic-beanstalk/.
+For more info, see https://realpython.com/deploying-a-django-app-and-postgresql-to-aws-elastic-beanstalk/ and https://hashedin.com/blog/5-gotchas-with-elastic-beanstalk-and-django/ .
 
 To download fastq files stored in s3, you must configure
 ```
