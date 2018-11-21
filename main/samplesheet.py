@@ -24,6 +24,7 @@ from protospacex import get_cds_codon_at, get_cds_seq, get_ultramer_seq
 from utils import conversions
 from utils import hdr
 from utils import primerchecks
+from utils import manuscore
 from utils.chrloc import *
 
 from crispresso.fastqs import reverse_complement
@@ -178,7 +179,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
     sheet['hdr_score'] = sheet.apply(
         lambda row:
         '' if not row['guide_seq'] else
-        round(hdr.manu_score(row['guide_score'], row['hdr_dist']) * 100),
+        round(manuscore.manu_score(row['guide_score'], row['hdr_dist']) * 100),
         axis=1,
     )
 

@@ -6,6 +6,8 @@
 #       2. 23mer Off-target sgRNA sequence
 # Output: CFD score
 
+from functools import lru_cache
+
 # Loaded from pam_scores.pkl
 pam_scores = {
     'AA': 0.0,
@@ -281,6 +283,7 @@ def _revcom(s: str) -> str:
     return ''.join(letters)
 
 
+@lru_cache(maxsize=1024 * 1024)
 def calc_cfd(wt: str, sg: str, pam: str) -> float:
     """
     Calculates CFD score for NGG Cas9 guides.
@@ -307,6 +310,7 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
     return score
 
 
+@lru_cache(maxsize=1024 * 1024)
 def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
     """
     Alternate calling of calc_cfd with common inputs.
