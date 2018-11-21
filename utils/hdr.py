@@ -3,10 +3,14 @@ Transformations of genome sequences for HDR.
 """
 import functools
 import itertools
+import math
 
 from typing import Iterator
 
-import math
+try:
+    from utils import cfdscore
+except ImportError:
+    import cfdscore  # type: ignore
 
 
 class HDR:
@@ -39,6 +43,8 @@ class HDR:
     stop_mutating_at_first_success = True
     # Try mutate all codons, not just linearly.
     mutate_all_permutations = False
+    # Instead of MIT score
+    use_cfd_score = True
 
     def __init__(
             self,
@@ -459,24 +465,32 @@ class HDR:
             left, right = self._guide_offsets
 
             # TODO (gdingle): put cdf score here
-            _mit_hit_score = functools.partial(
-                mit_hit_score,
-                guide_strand_same=self.guide_strand_same,
-                include_pam=(right - left == 23))
+            if self.use_cfd_score:
+                assert right - left == 23, 'Must include pam for cfdscore'
+                if self.guide_strand_same
+                hit_score_func = functools.partial(
+                    cfdscore.cfd_score,
+                    mutated.upper()[left:right],
+                    # TODO (gdingle): is this correct?
+                    pam='NGG' if self.guide_strand_same else 'CCN',)
+            else:
+                hit_score_func = functools.partial(
+                    mit_hit_score,
+                    mutated.upper()[left:right],
+                    guide_strand_same=self.guide_strand_same,
+                    include_pam=(right - left == 23))
 
             if self.compare_all_positions:
+                # TODO (gdingle): also compare reverse complements?
                 scores = []
-                assert len(self.target_seq) >= len(mutated)
                 for i in range(0, len(self.target_seq) - len(mutated) + 1):
                     test_seq = self.target_seq[i:i + len(mutated)]
-                    scores.append(_mit_hit_score(
-                        mutated.upper()[left:right],
+                    scores.append(hit_score_func(
                         test_seq.upper()[left:right],
                     ))
                 score = max(scores)
             else:
-                score = _mit_hit_score(
-                    mutated.upper()[left:right],
+                score = hit_score_func(
                     self.guide_seq_aligned.upper()[left:right],
                 )
 
@@ -492,6 +506,8 @@ class HDR:
             if filtered:
                 return max(filtered)[1]
 
+        # TODO (gdingle): if nothing reaches target mutation,
+        # should we return the most mutated or the input unchanged?
         return mutated
 
     @property
