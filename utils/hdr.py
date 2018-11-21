@@ -1,6 +1,7 @@
 """
 Transformations of genome sequences for HDR.
 """
+import functools
 import itertools
 
 from typing import Iterator
@@ -234,7 +235,7 @@ class HDR:
         Extra base pairs are removed from the PAM side, because that is
         where we want to mutate whole codons.
 
-        If guide_seq_aligned_length is 24, extra bp are included.
+        If guide_seq_aligned_length is 27, extra bp are included.
 
         GCCATG|GCTGAGCTGGATCC|GTT|CGGC
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
@@ -255,23 +256,23 @@ class HDR:
         >>> hdr.guide_seq_aligned
         'GCTGAGCTGGATCCGTTCGGG'
 
-        Length 24.
-        >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=9, guide_strand_same=False)
+        Length 27.
+        >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGT', hdr_dist=9, guide_strand_same=False)
         >>> hdr.guide_seq_aligned
         'CCGGAGCCCGCCCCGCCCCCG'
-        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGc'
+        'CCGGAGCCCGCCCCGCCCCCGAGccgt'
 
         >>> hdr = HDR('ATGATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
-        'atCCGGAGCCCGCCCCGCCCCCGA'
+        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
         """
         cut_at = self.cut_at
         codon_offset = abs(self.hdr_dist % 3)
         length = self.guide_seq_aligned_length
-        assert length in (21, 24)
+        assert length in (21, 27)
 
         def _mark_outside(guide_seq: str, shift: int) -> str:
             shift = abs(shift)
@@ -286,7 +287,7 @@ class HDR:
                 shift = 3 - codon_offset if codon_offset else 0
             right = cut_at + 6 + shift
             guide_seq = self.target_seq[right - length:right]
-            if length == 24:
+            if length == 27:
                 guide_seq = _mark_outside(guide_seq, shift)
         else:
             if length == 21:
@@ -295,7 +296,7 @@ class HDR:
                 shift = -codon_offset
             left = cut_at - 6 + shift
             guide_seq = self.target_seq[left:left + length]
-            if length == 24:
+            if length == 27:
                 guide_seq = _mark_outside(guide_seq, shift)
 
         assert len(guide_seq) == length, (length, len(guide_seq))
@@ -431,19 +432,20 @@ class HDR:
         >>> hdr.guide_mutated
         'ATGGCcGAaCTcGAcCCcTTt'
 
-        24bp guide.
-        >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=9, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 24
+        27bp guide.
+        >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGc'
+        'CCGGAGCCCGCCCCGCCCCCGAGccgc'
         >>> hdr.guide_mutated
+        'CCcGAaCCtGCtCCGCCCCCGAGCCGC'
 
-        >>> hdr = HDR('ATGATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 24
+        >>> hdr = HDR('CATATGATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
-        'atCCGGAGCCCGCCCCGCCCCCGA'
+        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
         >>> hdr.guide_mutated
-
+        'ATtaGGtcCCCGCCCCGCCCCCGAGCC'
         """
 
         # TODO (gdingle): is it okay to use mit_hit_score on sequence that does not end precisely
@@ -454,22 +456,29 @@ class HDR:
             self.guide_strand_same,
             all_permutations=self.mutate_all_permutations
         ):
+            left, right = self._guide_offsets
+
+            # TODO (gdingle): put cdf score here
+            _mit_hit_score = functools.partial(
+                mit_hit_score,
+                guide_strand_same=self.guide_strand_same,
+                include_pam=(right - left == 23))
+
             if self.compare_all_positions:
                 scores = []
                 assert len(self.target_seq) >= len(mutated)
                 for i in range(0, len(self.target_seq) - len(mutated) + 1):
                     test_seq = self.target_seq[i:i + len(mutated)]
-                    scores.append(mit_hit_score(
-                        mutated.upper(),
-                        test_seq.upper(),
-                        self.guide_strand_same,
+                    scores.append(_mit_hit_score(
+                        mutated.upper()[left:right],
+                        test_seq.upper()[left:right],
                     ))
                 score = max(scores)
             else:
-                score = mit_hit_score(
-                    mutated.upper(),
-                    self.guide_seq_aligned.upper(),
-                    self.guide_strand_same)
+                score = _mit_hit_score(
+                    mutated.upper()[left:right],
+                    self.guide_seq_aligned.upper()[left:right],
+                )
 
             if self.stop_mutating_at_first_success:
                 if score <= self.target_mutation_score:
@@ -522,9 +531,49 @@ class HDR:
             self.guide_strand_same)
 
     @property
+    def _guide_offsets(self) -> tuple:
+        """
+        This is a silly way to get back the position of the 23bp guide within
+        the aligned guide. TODO: store this info better.
+
+        >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.guide_seq_aligned
+        'CCGGAGCCCGCCCCGCCCCCGAGccgc'
+        >>> hdr._guide_offsets
+        (0, 23)
+
+        >>> hdr = HDR('CATATGATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.guide_seq_aligned
+        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
+        >>> hdr._guide_offsets
+        (2, 25)
+        """
+        if self.guide_seq_aligned_length == 27:
+            # Skip lowercase mask
+            guide_cs = [i for i, c in enumerate(self.guide_seq_aligned)
+                        if c.isupper()]
+            assert len(guide_cs) == 23, len(guide_cs)
+            left, right = min(guide_cs), max(guide_cs) + 1
+            assert right - left == 23, (left, right, right - left)
+            if self.guide_strand_same:
+                pam = self.guide_seq_aligned[right - 3:right]
+                assert 'GG' in pam, pam
+            else:
+                pam = self.guide_seq_aligned[left:left + 3]
+                assert 'CC' in pam, pam
+        else:
+            # No good way to find PAM in 21bp
+            left, right = 0, len(self.guide_seq_aligned)
+        return left, right
+
+    @property
     def mutation_in_junction(self) -> bool:
         """
         Determines whether there is a mutation inside an intron/exon junction.
+
+        # TODO (gdingle): use mutation masking here instead of warning?
 
         Mutation just inside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
@@ -745,7 +794,7 @@ def mutate_silently(
         'TGT': 0.45, 'TAT': 0.43, 'AAA': 0.42, 'GAA': 0.42, 'CTG': 0.41, 'CAT':
         0.41, 'GCC': 0.4, 'ATT': 0.36, 'ACC': 0.36, 'GGC': 0.34, 'CCC': 0.33,
         'TAA': 0.28, 'CCT': 0.28, 'ACA': 0.28, 'CCA': 0.27, 'GCT': 0.26, 'CAA':
-        0.25, 'GGA': 0.25, 'GGG': 0.25, 'GTC': 0.24, 'ACT': 0.24, 'AGC': 0.24,
+        0.25, 'GGA': 0.25, 'GGG': 0.25, 'GTC': 0.24, 'ACT': 0.24, 'AGC': 0.27,
         'GCA': 0.23, 'TCC': 0.22, 'CGG': 0.21, 'TAG': 0.2, 'CTC': 0.2, 'AGA':
         0.2, 'AGG': 0.2, 'CGC': 0.19, 'GTT': 0.18, 'TCT': 0.18, 'ATA': 0.16,
         'GGT': 0.16, 'TCA': 0.15, 'AGT': 0.15, 'TTG': 0.13, 'CTT': 0.13, 'ACG':
@@ -913,12 +962,6 @@ def mit_hit_score(
 
     # Use most important 20bp only
     if include_pam:
-        seq1 = seq1[-23:]
-        seq2 = seq2[-23:]
-        assert (
-            seq1[-3:].endswith(('GG', 'CC')) or
-            seq2[-3:].endswith(('GG', 'CC'))
-        ), (seq1[-3:], seq2[-3:])
         assert len(seq1) == 23
         max_dist = 22
     else:
