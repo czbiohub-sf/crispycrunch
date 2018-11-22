@@ -322,7 +322,7 @@ class GuideSelectionView(CreatePlusView):
             guide_design=guide_design,
             selected_guides=selected_guides
         )
-        sheet = samplesheet.from_guide_selection(guide_selection)
+        sheet = samplesheet.from_guide_selection(guide_selection, do_hdr=False)
         sheet = sheet.loc[sheet['guide_score'] >= min_score, :]
         if not len(sheet):
             # TODO (gdingle): handle zero guides case better

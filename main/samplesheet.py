@@ -40,7 +40,7 @@ hdr.HDR.stop_mutating_at_first_success = False
 hdr.HDR.mutate_all_permutations = True
 
 
-def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
+def from_guide_selection(guide_selection: GuideSelection, do_hdr=True) -> DataFrame:
     guide_design = guide_selection.guide_design
 
     sheet = _join_guide_data(guide_selection)
@@ -56,7 +56,10 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     sheet = _set_guide_cols(sheet)
 
     if guide_design.is_hdr:
-        sheet = _set_hdr_cols(sheet, guide_design, sheet)
+        sheet = _set_hdr_scores(sheet, guide_design, sheet)
+        # Perf optimization for guide selection
+        if do_hdr:
+            sheet = _set_hdr_cols(sheet, guide_design, sheet)
 
     return sheet
 
@@ -136,7 +139,7 @@ def _well_positions(size=96 * 12,
     return [c + str(i) for c in chars for i in ints][:size]
 
 
-def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
+def _set_hdr_scores(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
     sheet['target_terminus'] = list(guides['target_terminus'])
 
     sheet['hdr_dist'] = sheet.apply(
@@ -147,6 +150,17 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         ) if row['guide_seq'] else '',
         axis=1,
     )
+
+    sheet['hdr_score'] = sheet.apply(
+        lambda row:
+        '' if not row['guide_seq'] else
+        round(manuscore.manu_score(row['guide_score'], row['hdr_dist']) * 100),
+        axis=1,
+    )
+    return sheet
+
+
+def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
 
     # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
     # It's another instance of IO, but should be cached always, first in sqlite
@@ -171,13 +185,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         lambda row:
         '' if not row['guide_seq'] else
         _get_hdr_row(row).inserted,
-        axis=1,
-    )
-
-    sheet['hdr_score'] = sheet.apply(
-        lambda row:
-        '' if not row['guide_seq'] else
-        round(manuscore.manu_score(row['guide_score'], row['hdr_dist']) * 100),
         axis=1,
     )
 
