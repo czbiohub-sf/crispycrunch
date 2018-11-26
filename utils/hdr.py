@@ -42,7 +42,7 @@ class HDR:
     # Instead of MIT score
     use_cfd_score = False
     # When mutating, compare mutated 20-mer guide to all 20-mer sequences in
-    # target_seq.
+    # target_seq after inserting the hdr_seq.
     compare_all_positions = True
     # When mutating, stop mutating at the first score that is below the
     # target_mutation_score. This may leave out some closer matches.
@@ -442,17 +442,12 @@ class HDR:
         'ATGGCcGAaCTcGAcCCcTTt'
 
         Permutations.
-        >>> hdr.stop_mutating_at_first_success = False
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
+        >>> hdr.stop_mutating_at_first_success = True
         >>> hdr.mutate_all_permutations = True
         >>> hdr.target_mutation_score = 1
         >>> hdr.guide_mutated
-        'ATGGCTGAGCTcGAcCCcTTt'
-        >>> hdr.target_mutation_score = 0.1
-        >>> hdr.guide_mutated
-        'ATGGCcGAaCTcGAcCCGTTt'
-        >>> hdr.target_mutation_score = 0.01
-        >>> hdr.guide_mutated
-        'ATGGCcGAaCTcGAcCCcTTt'
+        'ATGGCcGAaCTGGATCCGTTC'
 
         27bp guide.
         >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
@@ -500,13 +495,13 @@ class HDR:
 
             if self.compare_all_positions:
                 scores = []
-                for i in range(0, len(self.target_seq) - len(mutated) + 1):
-                    test_seq = self.target_seq[i:i + len(mutated)].upper()[left:right]
+                for i in range(0, len(self.inserted) - len(mutated) + 1):
+                    # TODO (gdingle): this needs to include the insert!!!
+                    test_seq = self.inserted[i:i + len(mutated)].upper()[left:right]
                     scores.append(hit_score_func(test_seq))
                     # TODO (gdingle): extract a central rev complement
                     test_seq2 = cfdscore._revcom(test_seq)
                     scores.append(hit_score_func(test_seq2))
-
                 score = max(scores)
             else:
                 score = hit_score_func(
@@ -790,9 +785,9 @@ def mutate_silently(
     >>> next(it)
     'TGTTGCGATGAC'
     >>> next(it)
-    'TGTTGCGATGAt'
+    'TGcTGCGATGAC'
     >>> next(it)
-    'TGTTGCGAcGAC'
+    'TGTTGtGATGAC'
 
     Lowercase masking.
     >>> it = mutate_silently('TGtTGTTgT')
@@ -883,11 +878,14 @@ def mutate_silently(
             return codon.upper()  # erase lowercase masking
 
     def _all_permutations(guide_seq) -> Iterator:
-        """This will return increasing numbers of mutations, from right to left"""
+        """This will return increasing numbers of mutations, from right to left,
+        or left to right depending on strand."""
         codons = list(_left_to_right_codons(guide_seq))
         masks = itertools.product([False, True], repeat=len(codons))
         for mask in masks:
             assert len(mask) == len(codons)
+            if not guide_strand_same:
+                mask = mask[::-1]
             new_codons = []
             for i, do_mutate in enumerate(mask):
                 if do_mutate:

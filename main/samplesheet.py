@@ -36,10 +36,9 @@ NOT_FOUND = 'not found'
 # TODO (gdingle): change defaults in module
 hdr.HDR.guide_seq_aligned_length = 27
 hdr.HDR.use_cfd_score = True
-hdr.HDR.stop_mutating_at_first_success = False
-# TODO (gdingle): this is just too slow... see
-# https://trello.com/c/aLO46jUe/2-compare-mutated-protospacer-to-all-possible-rebinding-positions-including-hdr-seq
-hdr.HDR.mutate_all_permutations = True
+hdr.HDR.stop_mutating_at_first_success = True  # 10x slowdown
+hdr.HDR.compare_all_positions = True  # 50x slowdown
+hdr.HDR.mutate_all_permutations = True  # 100x slowdown
 
 
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
