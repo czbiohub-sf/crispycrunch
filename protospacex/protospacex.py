@@ -280,6 +280,10 @@ def _get_cds_seq_and_codon_at(
         cds_index
     )
 
+    # Edge case
+    if length == -1 and end - start < 3:
+        return '', -1
+
     if end > len(record.seq) or start < 0:
         cds_seq = _get_seq_from_surrounding(record, start, end)
     else:
@@ -290,7 +294,7 @@ def _get_cds_seq_and_codon_at(
     elif cds_index == -1:
         target_codons = ['TAG', 'TGA', 'TAA']
     assert cds_seq[codon_at:codon_at + 3] in target_codons, (
-        str(cds_seq), codon_at, cds_seq[codon_at - 3:codon_at])
+        str(cds_seq), codon_at)
 
     if length != -1:
         assert len(cds_seq) == length, (len(cds_seq), start, end, length)
@@ -428,34 +432,34 @@ def get_ultramer_seq(
         length: int = 110) -> tuple:
     """
     Function to get the precise sequence centered around the target codon
-    needed for IDT ultramer ordering (donor DNA template).
+    insert position needed for IDT ultramer ordering (donor DNA template).
 
     Length default of 110 is determined by need for max donor length of 200 bp.
     See https://www.idtdna.com/pages/education/decoded/article/crispr-cas9-mediated-hdr-tips-for-successful-experimental-design .
 
     >>> get_ultramer_seq('ENST00000398844')[0]
-    'CTCTCTTCTTGTGCGCTGTTGTCGACCCCGACCAGCCCCTTCCAACCCAGTCATCATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCC'
+    'TCTTCTTGTGCGCTGTTGTCGACCCCGACCAGCCCCTTCCAACCCAGTCATCATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCCAGA'
 
     >>> get_ultramer_seq('ENST00000411809')[0]
-    'CGGGGTCCGTGGGGAGCAGGAGAGGGAGGCGGCGGACCGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGCGTGAGTATCGGGGG'
+    'GGTCCGTGGGGAGCAGGAGAGGGAGGCGGCGGACCGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGCGTGAGTATCGGGGGGCA'
 
     Stop codon.
 
     >>> get_ultramer_seq('ENST00000398844', -1)[0]
-    'TGCATTATCATATTATGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGAATGAATGAAGAAATTTGACTTATTTTTAAGGAATGTCACGATAGTGCAGAATACC'
+    'ATCTGCATTATCATATTATGAATTCCTGTTGCATATACAGCAACAAGTGAATAAATGAATGAATGAAGAAATTTGACTTATTTTTAAGGAATGTCACGATAGTGCAGAAT'
 
     >>> get_ultramer_seq('ENST00000411809', -1)[0]
-    'AACTGTGCAACCCAAGCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAAGCAGATTGAATGAAGAATTTTTAGCTGTGCAGATAGGTGA'
+    'TGGAACTGTGCAACCCAAGCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAAGCAGATTGAATGAAGAATTTTTAGCTGTGCAGATAGG'
 
     >>> get_ultramer_seq('ENST00000221801', -1)[0]
-    'CCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTGTGT'
+    'GACCCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTG'
 
     Not enough in the transcript for the ultramer.
     >>> get_ultramer_seq('ENST00000258648')[0]
-    'ACGCACCTGCGTCAGCTCGCTCTGCGCGTGCGCCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGG'
+    'CACCTGCGTCAGCTCGCTCTGCGCGTGCGCCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGGGAG'
 
     >>> get_ultramer_seq('ENST00000267113')[0]
-    'CTAGGCAACCTCCAGCCAGTCCCTGGGTCGGGCGGATCCTCCCAGAGGTGGCACAATGGAGCGATCTCCAGGAGAGGGCCCCAGCCCCAGCCCCATGGACCAGCCCTCTG'
+    'GGCAACCTCCAGCCAGTCCCTGGGTCGGGCGGATCCTCCCAGAGGTGGCACAATGGAGCGATCTCCAGGAGAGGGCCCCAGCCCCAGCCCCATGGACCAGCCCTCTGCTC'
     """
 
     record = fetch_ensembl_transcript(ensembl_transcript_id)
@@ -467,13 +471,14 @@ def get_ultramer_seq(
     start = location.start
     end = location.end
     if cds_index == -1:  # stop codon
-        start = end - length // 2
         codon_at = end - 3
-        end = end + length // 2
+        start = codon_at - length // 2
+        end = codon_at + length // 2
     elif cds_index == 0:  # start codon
-        end = start + length // 2
         codon_at = start
-        start = start - length // 2
+        insert_at = codon_at + 3
+        end = insert_at + length // 2
+        start = insert_at - length // 2
     assert end - start == length
 
     ult_seq = record.seq[start:end]
@@ -641,6 +646,6 @@ def _get_cds_seq(record, cds: list, cds_index: int) -> str:
 
 
 if __name__ == '__main__':
-    # import doctest
-    # doctest.testmod()
-    fetch_ensembl_transcript('ENST00000398844').description
+    import doctest
+    doctest.testmod()
+    # fetch_ensembl_transcript('ENST00000398844').description
