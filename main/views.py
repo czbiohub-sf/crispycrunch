@@ -377,23 +377,34 @@ class PrimerDesignView(CreatePlusView):
 
         sheet = samplesheet.from_guide_selection(guide_selection)
         batch = webscraperequest.CrisporPrimerBatchWebRequest(obj)
+
         largs = [[row['_crispor_batch_id'],
                   row['_crispor_pam_id'],
                   obj.amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   row['_guide_id'],
-                  int(row['hdr_dist']) * (
-            # CrispyCrunch hdr_dist is relative to strand of gene.
-            # Crispor hdr_dist is relative to positive genome strand.
-            1 if row['target_loc'].strand == '+' else -1)]
-            for row in sheet.to_records()
-            if row['guide_seq']]
+                  self._get_hdr_dist_for_crispor(row)]
+                 for row in sheet.to_records()
+                 if row['guide_seq']]
         batch.start(largs, [-2])
 
         # TODO (gdingle): run crispr-primer if HDR experiment
         # https://github.com/chanzuckerberg/crispr-primer
         return obj
+
+    @staticmethod
+    def _get_hdr_dist_for_crispor(row):
+        """
+        Presence of hdr_dist arg causes different primer design in Crispor.
+        CrispyCrunch hdr_dist is relative to strand of gene.
+        Crispor hdr_dist is relative to positive genome strand.
+        """
+        if 'hdr_dist' not in row.dtype.names:
+            return None
+        else:
+            return int(row['hdr_dist']) * (
+                1 if row['target_loc'].strand == '+' else -1)
 
 
 class PrimerDesignProgressView(View):
