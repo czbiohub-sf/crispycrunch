@@ -783,11 +783,24 @@ def mutate_silently(
     all_permutations
     >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True)
     >>> next(it)
-    'TGTTGCGATGAC'
-    >>> next(it)
     'TGcTGCGATGAC'
     >>> next(it)
     'TGTTGtGATGAC'
+    >>> next(it)
+    'TGcTGtGATGAC'
+    >>> next(it)
+    'TGTTGCGAcGAC'
+    >>> next(it)
+    'TGcTGCGAcGAC'
+    >>> next(it)
+    'TGTTGtGAcGAC'
+    >>> next(it)
+    'TGcTGtGAcGAC'
+    >>> next(it)
+    'TGTTGCGATGAt'
+    >>> next(it)
+    'TGcTGCGATGAt'
+
 
     Lowercase masking.
     >>> it = mutate_silently('TGtTGTTgT')
@@ -882,6 +895,7 @@ def mutate_silently(
         or left to right depending on strand."""
         codons = list(_left_to_right_codons(guide_seq))
         masks = itertools.product([False, True], repeat=len(codons))
+        next(masks) # advance one to skip all False
         for mask in masks:
             assert len(mask) == len(codons)
             if not guide_strand_same:
