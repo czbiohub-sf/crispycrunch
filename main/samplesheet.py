@@ -37,6 +37,8 @@ NOT_FOUND = 'not found'
 hdr.HDR.guide_seq_aligned_length = 27
 hdr.HDR.use_cfd_score = True
 hdr.HDR.stop_mutating_at_first_success = False
+# TODO (gdingle): this is just too slow... see
+# https://trello.com/c/aLO46jUe/2-compare-mutated-protospacer-to-all-possible-rebinding-positions-including-hdr-seq
 hdr.HDR.mutate_all_permutations = True
 
 
@@ -231,49 +233,6 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
 
     sheet.apply(check_hdr_guide_match, axis=1)
 
-    def set_ultramer(row):
-        if not row['guide_seq']:
-            return ''
-
-        # HACK ALERT! Get the ultramer from the ENST.
-        # It's another instance of IO, but should be cached always.
-        # TODO (gdingle): return more info from protospacex, and store throughout
-        try:
-            ultramer_seq, codon_at = get_ultramer_seq(
-                row['target_input'],
-                row['_cds_index'],
-                # TODO (gdingle): parameterize homology arm length
-                # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
-                110,
-            )
-        except ValueError:
-            return NOT_FOUND
-
-        uhdr = hdr.HDR(
-            ultramer_seq,
-            row['_hdr_seq'],
-            row['_hdr_tag'],
-            row['hdr_dist'],
-            row['_guide_strand_same'],
-            row['_seq_cds'],
-            codon_at)
-        try:
-            ultramer_mutated = uhdr.inserted_mutated
-        except Exception:
-            # TODO (gdingle): figure out why!
-            return 'error in ultramer: please contact ' + settings.ADMIN_EMAIL
-
-        # TODO (gdingle): non-IDT ultramers?
-        # assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
-        assert len(ultramer_mutated) >= 150, '150bp is min for IDT ultramer'
-
-        if not row['_guide_strand_same']:
-            return reverse_complement(ultramer_mutated)
-        else:
-            return ultramer_mutated
-
-    sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
-
     return sheet
 
 
@@ -304,6 +263,9 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
             sheet,
             guide_selection.guide_design,
             primer_selection.primer_design.max_amplicon_length)
+
+        sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
+
 
     sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
     # TODO (gdingle): is there a better way to make _guide_id to re-appear?
@@ -481,6 +443,48 @@ def _transform_primer_product(row) -> str:
         assert row['primer_product'].endswith(reverse_complement(row['primer_seq_fwd']))
 
     return 'Ns converted: ' + converted
+
+
+def set_ultramer(row):
+    if not row['guide_seq']:
+        return ''
+
+    # HACK ALERT! Get the ultramer from the ENST.
+    # It's another instance of IO, but should be cached always.
+    # TODO (gdingle): return more info from protospacex, and store throughout
+    try:
+        ultramer_seq, codon_at = get_ultramer_seq(
+            row['target_input'],
+            row['_cds_index'],
+            # TODO (gdingle): parameterize homology arm length
+            # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
+            110,
+        )
+    except ValueError:
+        return NOT_FOUND
+
+    uhdr = hdr.HDR(
+        ultramer_seq,
+        row['_hdr_seq'],
+        row['_hdr_tag'],
+        row['hdr_dist'],
+        row['_guide_strand_same'],
+        row['_seq_cds'],
+        codon_at)
+    try:
+        ultramer_mutated = uhdr.inserted_mutated
+    except Exception:
+        # TODO (gdingle): figure out why!
+        return 'error in ultramer: please contact ' + settings.ADMIN_EMAIL
+
+    # TODO (gdingle): non-IDT ultramers?
+    # assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
+    assert len(ultramer_mutated) >= 150, '150bp is min for IDT ultramer'
+
+    if not row['_guide_strand_same']:
+        return reverse_complement(ultramer_mutated)
+    else:
+        return ultramer_mutated
 
 
 def from_analysis(analysis: Analysis) -> DataFrame:
