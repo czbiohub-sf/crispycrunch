@@ -496,7 +496,6 @@ class HDR:
             if self.compare_all_positions:
                 scores = []
                 for i in range(0, len(self.inserted) - len(mutated) + 1):
-                    # TODO (gdingle): this needs to include the insert!!!
                     test_seq = self.inserted[i:i + len(mutated)].upper()[left:right]
                     scores.append(hit_score_func(test_seq))
                     # TODO (gdingle): extract a central rev complement
@@ -801,6 +800,18 @@ def mutate_silently(
     >>> next(it)
     'TGcTGCGATGAt'
 
+    all_permutations, other direction
+    >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True, guide_strand_same=True)
+    >>> next(it)
+    'TGTTGCGATGAt'
+    >>> next(it)
+    'TGTTGCGAcGAC'
+    >>> next(it)
+    'TGTTGCGAcGAt'
+
+    # TODO (gdingle): why not simply increasing number of mutations?
+    >>> next(it)
+    'TGTTGtGATGAC'
 
     Lowercase masking.
     >>> it = mutate_silently('TGtTGTTgT')
@@ -895,7 +906,7 @@ def mutate_silently(
         or left to right depending on strand."""
         codons = list(_left_to_right_codons(guide_seq))
         masks = itertools.product([False, True], repeat=len(codons))
-        next(masks) # advance one to skip all False
+        next(masks)  # advance one to skip all False
         for mask in masks:
             assert len(mask) == len(codons)
             if not guide_strand_same:
