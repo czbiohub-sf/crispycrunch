@@ -40,12 +40,26 @@ def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
 
     >>> chr_loc_to_seq('chr2:136114380-136114399', 'hg38')
     'AATACAAGACTGTACACTGT'
+
+    >>> chr_loc_to_seq('chr3:128067063-128067085', 'hg38')
+    'CCCTGGTGTCCAACCTTTATGTC'
+
+    >>> chr_loc_to_seq('chr3:128067063-128067085:-', 'hg38')
+    'GACATAAAGGTTGGACACCAGGG'
     """
+    if chr_loc.endswith((':+', ':-')):
+        chr_loc, strand = chr_loc[:-2], chr_loc[-1]
+        if strand == '-':
+            matches = re.search(CHR_REGEX, chr_loc)
+            # flip for togows
+            if matches:
+                chr_loc = f'chr{matches[1]}:{matches[3]}-{matches[2]}'
+
     url = 'http://togows.org/api/ucsc/{}/{}.fasta'.format(
         genome, chr_loc)
     response = _cached_session.get(url)
     response.raise_for_status()
-    return _reformat_fasta(response.text)
+    return _reformat_fasta(response.text).upper()
 
 
 def _reformat_fasta(fasta: str) -> str:
@@ -170,6 +184,9 @@ def chr_loc_to_gene(
     >>> chr_loc_to_gene('chr3:128067063-128067085', strand='-')
     'RUVBL1'
     """
+    if chr_loc.endswith((':+', ':-')):
+        chr_loc, strand = chr_loc[:-2], chr_loc[-1]
+
     url = 'http://togows.org/api/ucsc/{}/refGene/{}/{}.json'.format(
         genome, 'inclusive' if straddle else 'exclusive', chr_loc)
     response = _cached_session.get(url)
