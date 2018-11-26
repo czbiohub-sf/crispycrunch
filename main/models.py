@@ -403,8 +403,10 @@ class GuideDesign(BaseModel):
     experiment = models.ForeignKey(Experiment, on_delete=models.CASCADE)
 
     # TODO (gdingle): enforce match of ENST transcript and genome
+    # TODO (gdingle): hide this or add more?
     genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
 
+    # TODO (gdingle): hide this or add more?
     pam = models.CharField(
         verbose_name='PAM',
         help_text='Protospacer Adjacent Motif',
@@ -560,6 +562,13 @@ class GuideDesign(BaseModel):
     def __str__(self):
         return 'GuideDesign({}, {}, {}, ...)'.format(
             self.genome, self.pam, self.target_locs)
+
+    @cached_property
+    def genome_name(self):
+        """
+        For friendly display.
+        """
+        return dict(self.GENOMES)[self.genome]
 
     @cached_property
     def hdr_seq(self):

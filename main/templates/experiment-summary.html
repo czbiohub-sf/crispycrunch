@@ -13,26 +13,31 @@
   <dd class="col-sm-9">{{ experiment.owner.username }}</dd>
   <dt class="col-sm-12">&nbsp;</dt>
   <dt class="col-sm-3">Genome</dt>
-  <dd class="col-sm-9">{{ guide_design.genome }}</dd>
+  <dd class="col-sm-9">{{ guide_design.genome_name }}</dd>
   <dt class="col-sm-3">PAM</dt>
   <dd class="col-sm-9">{{ guide_design.pam }}</dd>
-  {% if guide_design.hdr_tag %}
+  {% if experiment.is_hdr %}
+  <dt class="col-sm-12">&nbsp;</dt>
   <dt class="col-sm-3">HDR Tag Terminus</dt>
   <dd class="col-sm-9">{{ guide_design.hdr_tag_verbose }}</dd>
-  <dt class="col-sm-3">HDR Sequence Name</dt>
+  <dt class="col-sm-3">HDR Tag Sequence Name</dt>
   <dd class="col-sm-9">
     {{ guide_design.hdr_seq_name }}
   </dd>
-  <dt class="col-sm-3">HDR Sequence</dt>
+  <dt class="col-sm-3">HDR Tag Sequence</dt>
   <dd class="col-sm-9">
     {{ guide_design.hdr_seq|truncatechars:show }}
+  </dd>
+  <dt class="col-sm-3">HDR Homology Arm Length</dt>
+  <dd class="col-sm-9">
+    {{ guide_design.hdr_homology_arm_length }} bp
   </dd>
   {% endif %}
   <dt class="col-sm-12">&nbsp;</dt>
   <dt class="col-sm-3">Primer Temp</dt>
-  <dd class="col-sm-9">{{ primer_design.primer_temp }}</dd>
+  <dd class="col-sm-9">{{ primer_design.primer_temp }} C</dd>
   <dt class="col-sm-3">Max Amplicon Length</dt>
-  <dd class="col-sm-9">{{ primer_design.max_amplicon_length }}</dd>
+  <dd class="col-sm-9">{{ primer_design.max_amplicon_length }} bp</dd>
   <dt class="col-sm-3">Number of Wells</dt>
   <dd class="col-sm-9">{{ sheet|length }}</dd>
 
@@ -65,7 +70,7 @@
     </a>
   </dd>
 
-  {% if guide_design.hdr_tag %}
+  {% if experiment.is_hdr %}
   <dt class="col-sm-3">
     IDT Ultramer Order Form (for HDR)
   </dt>
