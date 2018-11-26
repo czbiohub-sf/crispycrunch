@@ -42,7 +42,7 @@ hdr.HDR.stop_mutating_at_first_success = False
 hdr.HDR.mutate_all_permutations = True
 
 
-def from_guide_selection(guide_selection: GuideSelection, do_hdr=True) -> DataFrame:
+def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     guide_design = guide_selection.guide_design
 
     sheet = _join_guide_data(guide_selection)
@@ -59,9 +59,6 @@ def from_guide_selection(guide_selection: GuideSelection, do_hdr=True) -> DataFr
 
     if guide_design.is_hdr:
         sheet = _set_hdr_scores(sheet, guide_design, sheet)
-        # Perf optimization for guide selection
-        if do_hdr:
-            sheet = _set_hdr_cols(sheet, guide_design, sheet)
 
     return sheet
 
@@ -259,13 +256,13 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
     if guide_selection.guide_design.is_hdr:
+        # Do this after guide_design for perf
+        sheet = _set_hdr_cols(sheet, guide_selection.guide_design, sheet)
         sheet = _set_hdr_primer(
             sheet,
             guide_selection.guide_design,
             primer_selection.primer_design.max_amplicon_length)
-
         sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
-
 
     sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
     # TODO (gdingle): is there a better way to make _guide_id to re-appear?
