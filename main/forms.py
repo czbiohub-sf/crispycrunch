@@ -72,6 +72,7 @@ class GuideDesignForm(ModelForm):
 class GuideDesignForm2(ModelForm):
     """
     Same as above but excludes hdr fields.
+    # TODO (gdingle): refactor both classes to "include" instead of "exclude"
     """
 
     class Meta:
@@ -81,6 +82,7 @@ class GuideDesignForm2(ModelForm):
             'hdr_tag',
             'hdr_start_codon_tag_seq',
             'hdr_stop_codon_tag_seq',
+            'hdr_homology_arm_length',
         ]
         field_classes = GuideDesignForm.Meta.field_classes
 

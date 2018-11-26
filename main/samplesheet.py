@@ -255,14 +255,17 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
 
-    if guide_selection.guide_design.is_hdr:
+    guide_design = guide_selection.guide_design
+    if guide_design.is_hdr:
         # Do this after guide_design for perf
-        sheet = _set_hdr_cols(sheet, guide_selection.guide_design, sheet)
+        sheet = _set_hdr_cols(sheet, guide_design, sheet)
         sheet = _set_hdr_primer(
             sheet,
-            guide_selection.guide_design,
+            guide_design,
             primer_selection.primer_design.max_amplicon_length)
-        sheet['_hdr_ultramer'] = sheet.apply(set_ultramer, axis=1)
+        sheet['_hdr_ultramer'] = sheet.apply(
+            lambda row: set_ultramer(row, guide_design.hdr_homology_arm_length),
+            axis=1)
 
     sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
     # TODO (gdingle): is there a better way to make _guide_id to re-appear?
@@ -442,7 +445,7 @@ def _transform_primer_product(row) -> str:
     return 'Ns converted: ' + converted
 
 
-def set_ultramer(row):
+def set_ultramer(row, hdr_homology_arm_length: int):
     if not row['guide_seq']:
         return ''
 
@@ -455,7 +458,7 @@ def set_ultramer(row):
             row['_cds_index'],
             # TODO (gdingle): parameterize homology arm length
             # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
-            110,
+            hdr_homology_arm_length * 2,
         )
     except ValueError:
         return NOT_FOUND

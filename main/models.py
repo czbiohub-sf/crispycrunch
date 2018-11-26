@@ -519,6 +519,16 @@ class GuideDesign(BaseModel):
         blank=True,
         null=True,
     )
+    # TODO (gdingle): put all the HDR specific stuff in its own model?
+    hdr_homology_arm_length = models.IntegerField(
+        verbose_name='Homology arm length',
+        help_text='Length of each homolgous sequence that flank the tag sequence',
+        default=55,
+        validators=[
+            # See https://www.idtdna.com/pages/support/faqs/when-designing-donor-dna-for-use-in-homology-directed-repair-(hdr)-what-are-the-optimal-lengths-of-the-left-and-right-homology-arms-and-what-is-the-maximum-size-of-sequence-that-can-be-efficiently-inserted-in-mammalian-cellss
+            MinValueValidator(15),
+            MaxValueValidator(1000),
+        ])
 
     # TODO (gdingle): custom encoder/decoder for custom dict wrapper object
     guide_data = JSONField(default=list, blank=True,
