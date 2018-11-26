@@ -69,7 +69,7 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&position=ATL2
 
     >>> gene_to_chr_loc('ATL2')
-    'chr2:38294880-38377262'
+    'chr2:38295901-38377273'
     >>> gene_to_chr_loc('XXXX')
     Traceback (most recent call last):
     ...
@@ -135,7 +135,12 @@ def enst_to_gene_or_unknown(enst: str, genome: str = 'hg38') ->str:
         return 'UNKNOWN'
 
 
-def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -> str:
+def chr_loc_to_gene(
+    chr_loc: str,
+    genome: str = 'hg38',
+    straddle: bool = True,
+    strand: str = None,
+) -> str:
     """
     Gets the gene symbols associated with a chromosome range.
 
@@ -158,6 +163,12 @@ def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -
 
     >>> chr_loc_to_gene('chr2:38294880-38377262', straddle=False)
     ''
+    >>> chr_loc_to_gene('chr3:128067063-128067085')
+    'MULTIPLE'
+    >>> chr_loc_to_gene('chr3:128067063-128067085', strand='+')
+    'SEC61A1'
+    >>> chr_loc_to_gene('chr3:128067063-128067085', strand='-')
+    'RUVBL1'
     """
     url = 'http://togows.org/api/ucsc/{}/refGene/{}/{}.json'.format(
         genome, 'inclusive' if straddle else 'exclusive', chr_loc)
@@ -168,12 +179,12 @@ def chr_loc_to_gene(chr_loc: str, genome: str = 'hg38', straddle: bool = True) -
         response.raise_for_status()
     res = response.json()
 
-    matches = set(r['name2'] for r in res)
-    # TODO (gdingle): how to handle multiple gene matches?
-    # See https://trello.com/c/yZBXVjC8/57-sometimes-multiple-gene-names-are-matched
-    # ('chr3:128067063-128067085', {'RUVBL1', 'SEC61A1'})
-    if not len(matches) == 1:
+    strands = [strand] if strand else ['+', '-']
+    matches = set(r['name2'] for r in res if r['strand'] in strands)
+    if not len(matches):
         return 'UNKNOWN'
+    if len(matches) > 1:
+        return 'MULTIPLE'
     return matches.pop()
 
 # TODO (gdingle): share code with protospacex
