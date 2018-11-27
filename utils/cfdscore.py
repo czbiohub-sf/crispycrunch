@@ -300,17 +300,18 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
     assert len(sg) == 20, len(sg)
     assert len(wt) == 23
     score = 1.0
+    score *= pam_scores[pam]
+    if score == 0:
+        # early exit
+        return score
     sg = sg.replace('T', 'U')
     wt = wt.replace('T', 'U')
-    s_list = list(sg)
-    wt_list = list(wt)
-    for i, sl in enumerate(s_list):
-        if wt_list[i] == sl:
+    for i, sl in enumerate(sg):
+        if wt[i] == sl:
             score *= 1
         else:
-            key = 'r' + wt_list[i] + ':d' + _revcom(sl) + ',' + str(i + 1)
+            key = 'r' + wt[i] + ':d' + _revcom(sl) + ',' + str(i + 1)
             score *= mm_scores[key]
-    score *= pam_scores[pam]
     return score
 
 
