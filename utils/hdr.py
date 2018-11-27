@@ -794,19 +794,9 @@ def mutate_silently(
     >>> next(it)
     'TGTTGtGATGAC'
     >>> next(it)
-    'TGcTGtGATGAC'
-    >>> next(it)
     'TGTTGCGAcGAC'
     >>> next(it)
-    'TGcTGCGAcGAC'
-    >>> next(it)
-    'TGTTGtGAcGAC'
-    >>> next(it)
-    'TGcTGtGAcGAC'
-    >>> next(it)
     'TGTTGCGATGAt'
-    >>> next(it)
-    'TGcTGCGATGAt'
 
     all_permutations, other direction
     >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True, guide_strand_same=True)
@@ -814,10 +804,6 @@ def mutate_silently(
     'TGTTGCGATGAt'
     >>> next(it)
     'TGTTGCGAcGAC'
-    >>> next(it)
-    'TGTTGCGAcGAt'
-
-    # TODO (gdingle): why not simply increasing number of mutations?
     >>> next(it)
     'TGTTGtGATGAC'
 
@@ -915,7 +901,8 @@ def mutate_silently(
         codons = list(_left_to_right_codons(guide_seq))
         masks = itertools.product([False, True], repeat=len(codons))
         next(masks)  # advance one to skip all False
-        for mask in masks:
+        # sort to ensure strictly increasing number of mutations
+        for mask in sorted(masks, key=lambda m: sum(m)):
             assert len(mask) == len(codons)
             if not guide_strand_same:
                 mask = mask[::-1]
