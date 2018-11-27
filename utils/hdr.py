@@ -134,6 +134,7 @@ class HDR:
         assert not (is_for and is_rev)
         return True if is_for else False
 
+    @functools.lru_cache(1024 * 1024)
     def _target_codon_at(self) -> int:
         # If codon position explicitly passed in, use that.
         if self._codon_at != -1:
@@ -281,6 +282,7 @@ class HDR:
         length = self.guide_seq_aligned_length
         assert length in (21, 27)
 
+        @functools.lru_cache(1024 * 1024)
         def _mark_outside(guide_seq: str, shift: int) -> str:
             shift = abs(shift)
             return guide_seq[:shift].lower() \
@@ -327,6 +329,7 @@ class HDR:
         """
         return self._inserted(True)
 
+    @functools.lru_cache(1024 * 1024)
     def _inserted(self, mutate: bool = False) -> str:
         target_seq = self.mutated if mutate else self.target_seq
         return (
@@ -495,12 +498,8 @@ class HDR:
 
             if self.compare_all_positions:
                 scores = []
-                for i in range(0, len(self.inserted) - len(mutated) + 1):
-                    test_seq = self.inserted[i:i + len(mutated)].upper()[left:right]
+                for test_seq in self._test_sequences(len(mutated), left, right):
                     scores.append(hit_score_func(test_seq))
-                    # TODO (gdingle): extract a central rev complement
-                    test_seq2 = cfdscore._revcom(test_seq)
-                    scores.append(hit_score_func(test_seq2))
                 score = max(scores)
             else:
                 score = hit_score_func(
@@ -525,6 +524,15 @@ class HDR:
         # should we return the most mutated or the input unchanged?
         # See https://trello.com/c/GAO2snqy/52-try-all-possible-mutations
         return mutated
+
+    @functools.lru_cache(1024 * 1024)
+    def _test_sequences(self, length, left, right) -> list:
+        seqs = []  # type: ignore
+        for i in range(0, len(self.inserted) - length + 1):
+            test_seq = self.inserted[i:i + length].upper()[left:right]
+            test_seq2 = cfdscore._revcom(test_seq)
+            seqs += [test_seq, test_seq2]
+        return seqs
 
     # TODO (gdingle): do we still want to maintain this ?
     @property
