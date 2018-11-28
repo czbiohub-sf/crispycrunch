@@ -357,6 +357,12 @@ class HDR:
         True
         >>> hdr.mutated
         'TGAggTAGAGATTGCAAGGGCGGG'
+
+        >>> hdr = HDR('TGATCCCAAATTTGTCCATAGCTGAAG', hdr_dist=10, guide_strand_same=False, hdr_tag='stop_codon')
+        >>> hdr.pam_outside_cds
+        True
+        >>> hdr.mutated
+        'TGATggCAAATTTGTCCATAGCTGAAG'
         """
         if self.pam_outside_cds:
             # Skip other kinds of mutations because PAM mutation is enough
