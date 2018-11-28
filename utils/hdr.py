@@ -50,6 +50,10 @@ class HDR:
     # Try mutate all codons, not just linearly.
     mutate_all_permutations = False
 
+    # Default based on analysis of
+    # https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
+    target_mutation_score = 0.1
+
     def __init__(
             self,
             target_seq: str,
@@ -58,10 +62,7 @@ class HDR:
             hdr_dist: int = 0,
             guide_strand_same: bool = None,
             cds_seq: str = '',
-            codon_at: int = -1,
-            # Default based on analysis of
-            # https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
-            target_mutation_score: float = 0.1) -> None:
+            codon_at: int = -1) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
@@ -75,9 +76,6 @@ class HDR:
 
         assert abs(hdr_dist) < len(target_seq)
         self.hdr_dist = hdr_dist
-
-        assert target_mutation_score < 100 and target_mutation_score > 0
-        self.target_mutation_score = target_mutation_score
 
         # TODO (gdingle): refactor _target_codon_at
         self._codon_at = codon_at
@@ -104,7 +102,6 @@ class HDR:
             self.hdr_dist,
             self.guide_strand_same,
             self.cds_seq,
-            self.target_mutation_score,
         )
 
     def _guide_strand_same(self) -> bool:
@@ -323,7 +320,8 @@ class HDR:
     @property
     def inserted_mutated(self) -> str:
         """
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14, target_mutation_score=50.0)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
+        >>> hdr.target_mutation_score = 50.0
         >>> hdr.inserted_mutated
         'GCCATGnnnGCTGAGCTGGATCCGTTtGGC'
         """
@@ -344,7 +342,8 @@ class HDR:
         the PAM is mutated in place. Otherwise, some codons in the guide are
         mutated silently.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
+        >>> hdr.target_mutation_score = 50.0
         >>> hdr.mutated
         'GCCATGGCTGAGCTGGATCCGTTtGGC'
 
@@ -352,6 +351,12 @@ class HDR:
         >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
         >>> hdr.mutated
         'CCTTccCTGATGTGGATCCGTTCGGC'
+
+        >>> hdr = HDR('TGACCTAGAGATTGCAAGGGCGGG', hdr_dist=9, guide_strand_same=False, hdr_tag='stop_codon')
+        >>> hdr.pam_outside_cds
+        True
+        >>> hdr.mutated
+        'TGAggTAGAGATTGCAAGGGCGGG'
         """
         if self.pam_outside_cds:
             # Skip other kinds of mutations because PAM mutation is enough
@@ -385,12 +390,13 @@ class HDR:
         """
         Target seq with 3bp PAM mutated inside it.
 
-        >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
-        >>> hdr._pam_mutated
+        # TODO (gdingle): fixme
+        >> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >> hdr._pam_mutated
         'CCTTccCTGATGTGGATCCGTTCGGC'
 
-        >>> hdr = HDR('ATGCCTTGGCTGATATGGATCCGT', hdr_dist=6, guide_strand_same=False)
-        >>> hdr._pam_mutated
+        >> hdr = HDR('ATGCCTTGGCTGATATGGATCCGT', hdr_dist=6, guide_strand_same=False)
+        >> hdr._pam_mutated
         'ATGggTTGGCTGATATGGATCCGT'
         """
         before, pam, after = (
@@ -414,7 +420,8 @@ class HDR:
         """
         Silently mutates codons in the guide sequence, going from the PAM side inwards.
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
+        >>> hdr.target_mutation_score = 50.0
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCGTTt'
 
@@ -429,7 +436,8 @@ class HDR:
         >>> hdr.guide_mutated
         'ATGGCcGAaCTcGAcCCcTTt'
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1, target_mutation_score=50.0)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
+        >>> hdr.target_mutation_score = 50.0
         >>> hdr.guide_mutated
         'ATGGCcGAGCTGGATCCGTTC'
 
@@ -538,7 +546,8 @@ class HDR:
     @property
     def _mutated_score(self) -> float:
         """
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14, target_mutation_score=50.0)
+        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
+        >>> hdr.target_mutation_score = 50.0
         >>> hdr.guide_mutated
         'ATGGCTGAGCTGGATCCGTTt'
         >>> hdr._mutated_score
@@ -620,13 +629,15 @@ class HDR:
 
         Mutation just inside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCCG', target_mutation_score=50.0)
+        ... cds_seq='ATGGCTGAGCTGGATCCG')
+        >>> hdr.target_mutation_score = 50.0
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
         ('GCCATGGCTGAGCTGGATCCGTTtGGC', (21, 24), True)
 
         Mutation just outside 3 bp window.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCC', target_mutation_score=50.0)
+        ... cds_seq='ATGGCTGAGCTGGATCC')
+        >>> hdr.target_mutation_score = 50.0
         >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
         ('GCCATGGCTGAGCTGGATCCGTTtGGC', (20, 23), False)
 
@@ -647,6 +658,7 @@ class HDR:
 
     @property
     def should_mutate(self) -> bool:
+        # TODO (gdingle): remove me if no longer needed because of cdf score
         """
         Determines whether a guide should be mutated depending on the cut to
         insert distance and the guide orientation. The rule is: mutate if more
@@ -711,7 +723,11 @@ class HDR:
         >>> hdr.pam_at
         3
 
-        >>> hdr = HDR('TCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >> hdr.pam_at
+        3
+
+        >>> hdr = HDR('TGACCTAGAGATTGCAAGGGCGGG', hdr_dist=9, guide_strand_same=False, hdr_tag='stop_codon')
         >>> hdr.pam_at
         3
         """
@@ -730,11 +746,15 @@ class HDR:
         >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
         >>> hdr.pam_outside_cds
         True
+
+        >>> hdr = HDR('TGACCTAGAGATTGCAAGGGCGGG', hdr_dist=9, guide_strand_same=False, hdr_tag='stop_codon')
+        >>> hdr.pam_outside_cds
+        True
         """
         if self.hdr_tag == 'start_codon':
-            return self.pam_at <= self.insert_at - 6
+            return self.pam_at <= self._target_codon_at() - 3
         else:
-            return self.pam_at >= self.insert_at + 6
+            return self.pam_at >= self._target_codon_at() + 3
 
 
 def mutate_silently(

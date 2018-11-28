@@ -475,8 +475,7 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
-        # Should be blank to avoid confusion in non-HDR experiments
-        default=None,
+        default='per_target',
         max_length=40,
         verbose_name='HDR tag terminus',
         help_text='Where to insert the tag in each gene',

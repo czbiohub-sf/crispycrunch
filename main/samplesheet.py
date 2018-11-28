@@ -39,6 +39,8 @@ hdr.HDR.use_cfd_score = True
 hdr.HDR.stop_mutating_at_first_success = True  # 10x slowdown
 hdr.HDR.compare_all_positions = True  # 50x slowdown
 hdr.HDR.mutate_all_permutations = True  # 100x slowdown
+# TODO (gdingle): changeme to 0.01
+hdr.HDR.target_mutation_score = 0.1 # 5x per factor 10
 
 
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
@@ -200,8 +202,9 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
 
         row_hdr = _get_hdr_row(row)
 
-        if not row_hdr.should_mutate:
-            return 'not needed'
+        # TODO (gdingle): remove me if no longer needed because of cdf score
+        # if not row_hdr.should_mutate:
+        #     return 'not needed'
 
         if not row_hdr.junction:
             return row_hdr.inserted_mutated
