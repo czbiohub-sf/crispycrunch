@@ -316,7 +316,7 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
 
 
 @lru_cache(maxsize=1024 * 1024)
-def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
+def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> float:
     """
     Alternate calling of calc_cfd with common inputs.
 
@@ -382,6 +382,11 @@ def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
     >>> cfd_score("AAAAAAAAAAAAAAAAAAAA", "CCNAAAAAAAAAAAAAAAAAAAA", guide_strand_same=False)
     1.0
 
+    Non-symmetric.
+    >>> cfd_score('CCAAAAAGGAGAGATGGTGCTGG', 'CCAAAAAGGAGAaATGGTcCTGG')
+    0.41379310335013264
+    >>> cfd_score('CCAAAAAGGAGAaATGGTcCTGG', 'CCAAAAAGGAGAGATGGTGCTGG')
+    0.08152173912499999
     """
     if guide_strand_same is False:
         wt = _revcom(wt)

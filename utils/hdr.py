@@ -488,7 +488,7 @@ class HDR:
         >>> hdr.guide_seq_aligned
         'CCGGAGCCCGCCCCGCCCCCGAGccgc'
         >>> hdr.guide_mutated
-        'CCcGAaCCtGCtCCcCCtCCGAGCCGC'
+        'CCcGAaCCtGCtCCcCCtCCctcCCGC'
         """
         candidates = []
         left, right = self._guide_offsets
@@ -501,7 +501,7 @@ class HDR:
                 assert right - left == 23, 'Must include pam for cfdscore'
                 hit_score_func = functools.partial(
                     cfdscore.cfd_score,
-                    mutated.upper()[left:right],
+                    sg=mutated.upper()[left:right],
                     guide_strand_same=self.guide_strand_same)
             else:
                 hit_score_func = functools.partial(
@@ -522,6 +522,9 @@ class HDR:
 
             if self.stop_mutating_at_first_success:
                 if score <= self.target_mutation_score:
+                    logger.info(score)
+                    logger.info(self.guide_seq_aligned.upper()[left:right])
+                    logger.info(mutated[left:right])
                     return mutated
             else:
                 candidates.append((score, mutated))
@@ -815,6 +818,8 @@ def mutate_silently(
 
     all_permutations
     >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True)
+    >>> next(it) # first one no effect when all_permutations
+    'TGTTGCGATGAC'
     >>> next(it)
     'TGcTGCGATGAC'
     >>> next(it)
@@ -826,6 +831,8 @@ def mutate_silently(
 
     all_permutations, other direction
     >>> it = mutate_silently('TGTTGCGATGAC', all_permutations=True, guide_strand_same=True)
+    >>> next(it)
+    'TGTTGCGATGAC'
     >>> next(it)
     'TGTTGCGATGAt'
     >>> next(it)
@@ -926,7 +933,6 @@ def mutate_silently(
         or left to right depending on strand."""
         codons = list(_left_to_right_codons(guide_seq))
         masks = itertools.product([False, True], repeat=len(codons))
-        next(masks)  # advance one to skip all False
         # sort to ensure strictly increasing number of mutations
         for mask in sorted(masks, key=lambda m: sum(m)):
             assert len(mask) == len(codons)
@@ -937,7 +943,7 @@ def mutate_silently(
                 if do_mutate:
                     new_codons.append(_mutate_codon(codons[i]))
                 else:
-                    new_codons.append(codons[i])
+                    new_codons.append(codons[i].upper())  # erase lowercase masking
             assert len(new_codons) == len(codons)
             yield ''.join(new_codons)
 
