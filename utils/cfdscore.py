@@ -309,9 +309,6 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
 
     # Perf optimization
     mm = mm_scores
-
-    sg = sg.replace('T', 'U')
-    wt = wt.replace('T', 'U')
     for i, sl in enumerate(sg):
         if wt[i] != sl:
             score *= mm[_key(wt[i], sl, i)]
@@ -321,7 +318,8 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
 
 @lru_cache(maxsize=1024 * 1024 * 1024)
 def _key(r, sl, i) -> str:
-    return 'r' + r + ':d' + _revcom(sl) + ',' + str(i + 1)
+    return 'r' + r.replace('T', 'U') + ':d' \
+        + _revcom(sl.replace('T', 'U')) + ',' + str(i + 1)
 
 
 @lru_cache(maxsize=1024 * 1024 * 1024)

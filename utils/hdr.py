@@ -513,8 +513,8 @@ class HDR:
 
             if self.compare_all_positions:
                 #  6s of 18s request is spent in this generator!
-                # TODO (gdingle): do something about it!
-                # TODO (gdingle): vectorize function with pandas?
+                #  10M calls == slow! See
+                #  https://ilovesymposia.com/2015/12/10/the-cost-of-a-python-function-call/
                 score = max([
                     hit_score_func(test_seq)
                     for test_seq
