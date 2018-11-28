@@ -15,6 +15,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
 
+    # See https://github.com/jazzband/django-silk
+    path('silk/', include('silk.urls', namespace='silk')),
+
     # See https://stackoverflow.com/questions/9371378/warning-not-found-favicon-ico
     path('favicon.ico', RedirectView.as_view(url='/static/biohub-icon.png')),
 ]

@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     'main.apps.MainConfig',
     'bootstrap4',
     'error_email_throttle',
+    'silk',
     # End crispycrunch apps
 ]
 
@@ -127,6 +128,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Start crispycrunch
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'silk.middleware.SilkyMiddleware',
     # ENd crispycrunch
 ]
 
@@ -289,5 +291,8 @@ DEBUG_TOOLBAR_PANELS = [
     # 'debug_toolbar.panels.profiling.ProfilingPanel',
 ]
 
+if DEBUG:
+    # https://github.com/jazzband/django-silk
+    SILKY_PYTHON_PROFILER = False
 
 # END ADDED BY GDINGLE

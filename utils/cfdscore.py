@@ -276,7 +276,7 @@ mm_scores = {
 }
 
 
-@lru_cache(maxsize=1024 * 1024)
+@lru_cache(maxsize=1024 * 1024 * 1024)
 def _revcom(s: str) -> str:
     """
     Reverse complements a given string
@@ -287,7 +287,7 @@ def _revcom(s: str) -> str:
     return ''.join(letters)
 
 
-@lru_cache(maxsize=1024 * 1024)
+@lru_cache(maxsize=1024 * 1024 * 1024)
 def calc_cfd(wt: str, sg: str, pam: str) -> float:
     """
     Calculates CFD score for NGG Cas9 guides.
@@ -296,26 +296,35 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
     sg: Off-target 20mer sgRNA sequence
     pam: 2bp PAM
     """
-    assert len(pam) == 2, 'last two chars of PAM only'
-    assert len(sg) == 20, len(sg)
-    assert len(wt) == 23
+    # Disabled for perf. # TODO (gdingle): re-enable
+    # assert len(pam) == 2, 'last two chars of PAM only'
+    # assert len(sg) == 20, len(sg)
+    # assert len(wt) == 23
     score = 1.0
     score *= pam_scores[pam]
+
     if score == 0:
         # early exit
         return score
+
+    # Perf optimization
+    mm = mm_scores
+
     sg = sg.replace('T', 'U')
     wt = wt.replace('T', 'U')
     for i, sl in enumerate(sg):
-        if wt[i] == sl:
-            score *= 1
-        else:
-            key = 'r' + wt[i] + ':d' + _revcom(sl) + ',' + str(i + 1)
-            score *= mm_scores[key]
+        if wt[i] != sl:
+            score *= mm[_key(wt[i], sl, i)]
+
     return score
 
 
-@lru_cache(maxsize=1024 * 1024)
+@lru_cache(maxsize=1024 * 1024 * 1024)
+def _key(r, sl, i) -> str:
+    return 'r' + r + ':d' + _revcom(sl) + ',' + str(i + 1)
+
+
+@lru_cache(maxsize=1024 * 1024 * 1024)
 def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> float:
     """
     Alternate calling of calc_cfd with common inputs.

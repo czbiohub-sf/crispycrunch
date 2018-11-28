@@ -490,6 +490,7 @@ class HDR:
         >>> hdr.guide_mutated
         'CCcGAaCCtGCtCCcCCtCCctcCCGC'
         """
+
         candidates = []
         left, right = self._guide_offsets
         for mutated in mutate_silently(
@@ -511,10 +512,13 @@ class HDR:
                     include_pam=(right - left == 23))
 
             if self.compare_all_positions:
-                scores = []
-                for test_seq in self._test_sequences(len(mutated), left, right):
-                    scores.append(hit_score_func(test_seq))
-                score = max(scores)
+                #  6s of 18s request is spent in this generator!
+                # TODO (gdingle): do something about it!
+                # TODO (gdingle): vectorize function with pandas?
+                score = max([
+                    hit_score_func(test_seq)
+                    for test_seq
+                    in self._test_sequences(len(mutated), left, right)])
             else:
                 score = hit_score_func(
                     self.guide_seq_aligned.upper()[left:right],
@@ -522,9 +526,6 @@ class HDR:
 
             if self.stop_mutating_at_first_success:
                 if score <= self.target_mutation_score:
-                    logger.info(score)
-                    logger.info(self.guide_seq_aligned.upper()[left:right])
-                    logger.info(mutated[left:right])
                     return mutated
             else:
                 candidates.append((score, mutated))
