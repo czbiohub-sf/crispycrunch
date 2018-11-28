@@ -128,7 +128,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Start crispycrunch
     'debug_toolbar.middleware.DebugToolbarMiddleware',
-    'silk.middleware.SilkyMiddleware',
+    # TODO (gdingle): figure out to make if DEBUG
+    # 'silk.middleware.SilkyMiddleware',
     # ENd crispycrunch
 ]
 

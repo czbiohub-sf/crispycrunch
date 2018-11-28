@@ -475,7 +475,8 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): rename to hdr_tag_terminus?
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
-        default='per_target',
+        # TODO (gdingle): how to make this possible?
+        # default='per_target',
         max_length=40,
         verbose_name='HDR tag terminus',
         help_text='Where to insert the tag in each gene',
@@ -544,13 +545,14 @@ class GuideDesign(BaseModel):
         target_tags = [self.TERMINUS_TO_TAG[p[1].strip().upper()]
                        for p in parsed if len(p) > 1]
 
-        if self.hdr_tag != 'per_target' and target_tags:
-            raise ValueError(
-                'HDR tags entered per target but also "{}". Did you mean to select "per target" HDR?'.format(
-                    self.hdr_tag_verbose or '--------'))
+        if self.is_hdr:
+            if self.hdr_tag != 'per_target' and target_tags:
+                raise ValueError(
+                    'HDR tags entered per target but also "{}". Did you mean to select "per target" HDR?'.format(
+                        self.hdr_tag_verbose or '--------'))
 
-        if self.hdr_tag == 'per_target' and not target_tags:
-            raise ValueError('You must specify "N" or "C" for each target')
+            if self.hdr_tag == 'per_target' and not target_tags:
+                raise ValueError('You must specify "N" or "C" for each target')
 
         assert not target_tags or len(target_tags) == len(targets_raw)
         return targets_raw, target_tags

@@ -6,6 +6,7 @@ django-debug-toolbar
 git+https://github.com/krisys/django-error-email-throttle.git@master
 django-ses
 django-settings-export
+django-silk
 Django>=2
 httmock
 openpyxl
