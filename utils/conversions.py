@@ -62,6 +62,48 @@ def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
     return _reformat_fasta(response.text).upper()
 
 
+def seq_to_chr_loc(seq: str, genome: str = 'hg38') -> str:
+    """
+    Looks up chr loc by exact sequence match.
+
+    >>> seq_to_chr_loc('AAGGTGAAGAACTGAAGTTCAGCGCTGTCA')
+    'chr19:39834523-39834552:-'
+
+    Matched with Crispor: http://crispor.tefor.net/crispor.py?batchId=PpKGGNjVF5Bjt5u3G88P
+    >>> seq_to_chr_loc('CACCTCGAGCTCTCGCACCAGGG')
+    'chr11:134177387-134177409:+'
+
+    No match.
+    >>> seq_to_chr_loc('CACCTCGAGCTCTCGCACCAGGC')
+    Traceback (most recent call last):
+    ...
+    ValueError: No match for sequence CACCTCGAGCTCTCGCACCAGGC in genome hg38
+    """
+
+    url = 'http://gggenome.dbcls.jp/{}/0/{}.json'.format(
+        genome, seq)
+    response = _cached_session.get(url)
+    response.raise_for_status()
+    data = response.json()
+
+    if data['error'] != 'none':
+        raise RuntimeError('gggenome error: "{}"'.format(data['error']))
+
+    results = data['results']
+    if len(results) == 0:
+        raise ValueError('No match for sequence {} in genome {}'.format(
+            seq, genome))
+    if len(results) > 1:
+        raise ValueError('More than one match for sequence {} in genome {}'.format(
+            seq, genome))
+    return '{}:{}-{}:{}'.format(
+        results[0]['name'],
+        results[0]['position'],
+        results[0]['position_end'],
+        results[0]['strand'],
+    )
+
+
 def _reformat_fasta(fasta: str) -> str:
     r"""
     >>> fasta = '''>hg38:chr1:12,345-12,500\n

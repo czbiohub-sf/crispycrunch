@@ -136,11 +136,6 @@ class GuideDesignView(CreatePlusView):
     def _normalize_targets(self, targets, guide_design):
         genome = guide_design.genome
 
-        if all(is_seq(t) for t in targets):
-            # TODO (gdingle): gggenome all seqs
-            raise ValidationError(
-                'Targeting fasta sequences is not currently implemented: {}'.format(targets))
-
         if guide_design.is_hdr:
             if not all(is_ensemble_transcript(t) or is_gene(t) for t in targets):
                 raise ValidationError(
@@ -163,6 +158,13 @@ class GuideDesignView(CreatePlusView):
                     length=guide_design.cds_length)
                 with ThreadPoolExecutor() as pool:
                     return list(pool.map(func, targets))
+
+        elif all(is_seq(t) for t in targets):
+            func = functools.partial(
+                conversions.seq_to_chr_loc,
+                genome=genome)
+            with ThreadPoolExecutor() as pool:
+                return list(pool.map(func, targets))
 
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
             # TODO (gdingle): this still needs some work to get best region of gene and not the whole thing
