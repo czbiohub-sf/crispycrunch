@@ -388,24 +388,43 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
     23bp calls.
     >>> cfd_score("AAAAAAAAAAAAAAAAAAAA", "CCNAAAAAAAAAAAAAAAAAAAA", guide_strand_same=False)
     1.0
+    >>> cfd_score("AAAAAAAAAAAAAAAAAAAA", "TTNAAAAAAAAAAAAAAAAAAAA", guide_strand_same=False)
+    0.0
 
     Non-symmetric.
     >>> cfd_score('CCAAAAAGGAGAGATGGTGCTGG', 'CCAAAAAGGAGAaATGGTcCTGG')
     0.41379310335013264
     >>> cfd_score('CCAAAAAGGAGAaATGGTcCTGG', 'CCAAAAAGGAGAGATGGTGCTGG')
     0.08152173912499999
+
+    WT PAM is not NGG.
+    >>> cfd_score('TGTGAATAGCCCGACAGTTCTGA', 'CtTGAATAGCCCGACAGTTCTGA'.upper(), guide_strand_same=False)
+    0.0
     """
     if guide_strand_same is False:
         wt = _revcom(wt)
         sg = _revcom(sg)
         pam = _revcom(pam)
 
-    wt = wt.upper() + pam if len(wt) == 20 else wt.upper()
+    wt_pam = None
+    if len(wt) == 23:
+        wt, wt_pam = wt[:20], wt[20:]
+        pam = wt_pam
 
+    sg_pam = None
     if len(sg) == 23:
-        sg, pam = sg[:20], sg[20:]
+        sg, sg_pam = sg[:20], sg[20:]
+        pam = sg_pam
 
-    return calc_cfd(wt, sg.upper(), pam[-2:])
+    if wt_pam and sg_pam:
+        # wild type PAM may differ from NGG if it was broken up by HDR insertion
+        # In this case, we return the lower score.
+        return min(
+            calc_cfd(wt.upper(), sg.upper(), wt_pam[-2:]),
+            calc_cfd(wt.upper(), sg.upper(), sg_pam[-2:]),
+        )
+    else:
+        return calc_cfd(wt.upper(), sg.upper(), pam[-2:])
 
 
 if __name__ == '__main__':
