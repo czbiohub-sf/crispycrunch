@@ -14,19 +14,17 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('admin/', admin.site.urls),
     path('main/', include('main.urls')),
-
-    # See https://github.com/jazzband/django-silk
-    path('silk/', include('silk.urls', namespace='silk')),
-
     # See https://stackoverflow.com/questions/9371378/warning-not-found-favicon-ico
     path('favicon.ico', RedirectView.as_view(url='/static/biohub-icon.png')),
 ]
 
-# See https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
 if settings.DEBUG:
     import debug_toolbar
     urlpatterns += [
+        # See https://django-debug-toolbar.readthedocs.io/en/latest/installation.html
         path('__debug__/', include(debug_toolbar.urls)),
+        # See https://github.com/jazzband/django-silk
+        path('silk/', include('silk.urls', namespace='silk')),
     ]
 
 # TODO (gdingle): 500 error pass in exception message with custom view see https://docs.djangoproject.com/en/2.0/ref/views/
