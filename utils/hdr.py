@@ -515,6 +515,9 @@ class HDR:
                 #  6s of 18s request is spent in this generator!
                 #  10M calls == slow! See
                 #  https://ilovesymposia.com/2015/12/10/the-cost-of-a-python-function-call/
+                # TODO (gdingle): use cython?
+                # TODO (gdingle): we probably only need to check all positions on the first pass...
+                # see https://trello.com/c/lXeGRUjN/62-mutation-when-mutation-not-needed#comment-5c002431f9ce9703f03020b2
                 score = max([
                     hit_score_func(test_seq)
                     for test_seq

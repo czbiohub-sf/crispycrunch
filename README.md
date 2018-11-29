@@ -16,6 +16,7 @@ CrispyCrunch calls out to several bioinformatics web services.
 * [Togows](http://togows.org)
 * [UCSC Genome Browser](https://genome.ucsc.edu/cgi-bin/hgTracks)
 * [Ensemble](http://rest.ensembl.org/)
+* [GGGenome](http://gggenome.dbcls.jp)
 
 Currently, CrispyCrunch calls out to mirrors for Crispor and Crispresso:
 * [Crispor mirror](http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py)
@@ -50,7 +51,7 @@ Configure `DATABASES` in `settings.py` if needed.
 
 Initialize the database.
 
-```docker-compose exec web python manage.py migrate```
+```python manage.py migrate```
 
 Create a superuser for admin.
 
@@ -110,7 +111,7 @@ To login to prod postgres:
 
 ```
 eb ssh
-psql -h aa798nzxm9ji03.cpmmq0ugoybf.us-west-2.rds.amazonaws.com -U ebroot ebdb
+psql -h RDS_HOSTNAME -U RDS_USERNAME RDS_DB_NAME
 ```
 
 Hint: Look in `/opt/python/current/env` for secrets.
