@@ -400,6 +400,21 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
     WT PAM is not NGG.
     >>> cfd_score('TGTGAATAGCCCGACAGTTCTGA', 'CtTGAATAGCCCGACAGTTCTGA'.upper(), guide_strand_same=False)
     0.0
+
+    WT PAM bug
+    >>> cfd_score('CCAGGTAGTGCCGCGCTGCCTGC', 'CCAGGggtggcggattggaagtt'.upper(), guide_strand_same=False)
+    0.0001810095144455036
+
+    >>> cfd_score('CCAGGTAGTGCCGCGCTGCCTGC', 'tgatgTAGTGCCGCGCTGCCTGC'.upper(), guide_strand_same=False)
+    0.0
+
+    >>> cfd_score('GCAGGCAGCGCGGCACTACC', 'TTTGAAGGTTAGGCGGTGGG')
+    5.716801869405846e-05
+
+    >>> cfd_score('CCAGCCAGTCCCACTCCAGCTCC', 'CCAGGTAGTGCCGCGCTGCCTGC', guide_strand_same=False)
+    0.01913357577630766
+    >>> cfd_score('CCAGGTAGTGCCGCGCTGCCTGC', 'CCAGCCAGTCCCACTCCAGCTCC', guide_strand_same=False)
+    0.0
     """
     if guide_strand_same is False:
         wt = _revcom(wt)

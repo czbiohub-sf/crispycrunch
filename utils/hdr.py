@@ -489,6 +489,19 @@ class HDR:
         'CCGGAGCCCGCCCCGCCCCCGAGccgc'
         >>> hdr.guide_mutated
         'CCcGAaCCtGCtCCcCCtCCctcCCGC'
+
+        # TODO (gdingle): what to do about this?
+        Strange case of off-target.
+        # ACCACCTCCT|CCAGCCAGTCCCACTCCAGCTCC|ATGATCT|CCAGGTAGTGCCGCGCTGCCTGC|ACCTAGTGTGCAGAGGGGACGGCCGCCCCTCCT
+        >>> hdr = HDR('ACCACCTCCTCCAGCCAGTCCCACTCCAGCTCCATGATCTCCAGGTAGTGCCGCGCTGCCTGCACCTAGTGTGCAGAGGGGACGGCCGCCCCTCCT', hdr_dist=1, guide_strand_same=False, hdr_tag='stop_codon', hdr_seq='ggtggcggattggaagttttgtttcaaggtccaggaagtggtaccgagctcaacttcaaggagtggcaaaaggcctttaccgatatgatg')
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.use_cfd_score = True
+        >>> hdr.mutate_all_permutations = True
+        >>> hdr.guide_seq_aligned
+        'tCCAGGTAGTGCCGCGCTGCCTGCacc'
+        >>> hdr.target_mutation_score = 0.01
+        >>> hdr.guide_mutated
+        'TCtAGGTAGTGCCGCGCTGCCTGCACC'
         """
 
         candidates = []
@@ -522,6 +535,7 @@ class HDR:
                     hit_score_func(test_seq)
                     for test_seq
                     in self._test_sequences(len(mutated), left, right)])
+
             else:
                 score = hit_score_func(
                     self.guide_seq_aligned.upper()[left:right],
@@ -852,6 +866,12 @@ def mutate_silently(
     'TGTTGcTGT'
     >>> next(it)
     'TGTTGcTGc'
+
+    Problem case.
+    >>> it = mutate_silently('tCCAGGTAGTGCCGCGCTGCCTGCacc', all_permutations=True)
+    >>> next(it)
+    'TCCAGGTAGTGCCGCGCTGCCTGCACC'
+
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],
@@ -938,6 +958,7 @@ def mutate_silently(
         codons = list(_left_to_right_codons(guide_seq))
         masks = itertools.product([False, True], repeat=len(codons))
         # sort to ensure strictly increasing number of mutations
+
         for mask in sorted(masks, key=lambda m: sum(m)):
             assert len(mask) == len(codons)
             if not guide_strand_same:
