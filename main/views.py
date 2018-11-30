@@ -482,7 +482,10 @@ class ExperimentSummaryView(View):
         except (PrimerSelection.DoesNotExist, IndexError):
             raise Http404('Experiment summary does not exist')
 
-        sheet = samplesheet.from_primer_selection(primer_selection)
+        sheet = samplesheet.from_primer_selection(primer_selection,
+                                                  # TODO (gdingle): temp remove me,
+                                                  float(request.GET.get('ms', None))
+                                                  )
         sheet = self._prepare_sheet(sheet)
 
         primer_design = primer_selection.primer_design

@@ -423,6 +423,10 @@ class HDR:
 
     @property
     def guide_mutated(self) -> str:
+        return self._guide_mutated[0]
+
+    @property
+    def _guide_mutated(self) -> tuple:
         """
         Silently mutates codons in the guide sequence, going from the PAM side inwards.
 
@@ -543,7 +547,7 @@ class HDR:
 
             if self.stop_mutating_at_first_success:
                 if score <= self.target_mutation_score:
-                    return mutated
+                    return mutated, score
             else:
                 candidates.append((score, mutated))
 
@@ -552,13 +556,13 @@ class HDR:
                         if s <= self.target_mutation_score]
             if filtered:
                 # minimize the number of changes below cutoff
-                changes = [(sum(l.islower() for l in c), c) for s, c in filtered]
-                return min(changes)[1]
+                changes = [(sum(l.islower() for l in c), c, s) for s, c in filtered]
+                return min(changes)[1], min(changes)[2]
 
         # TODO (gdingle): if nothing reaches target mutation,
         # should we return the most mutated or the input unchanged?
         # See https://trello.com/c/GAO2snqy/52-try-all-possible-mutations
-        return mutated
+        return mutated, score
 
     @functools.lru_cache(1024 * 1024)
     def _test_sequences(self, length, left, right) -> list:
@@ -600,13 +604,12 @@ class HDR:
         >>> hdr.guide_mutated
         'ATGAAgAAgAAgAAgAAgAAg'
         >>> hdr._mutated_score
-        0.00844207184487952
+        0.1183136295180723
         """
-        # TODO (gdingle): update to use cfdscore as well!
-        return mitscore.mit_hit_score(
-            self.guide_mutated,
-            self.guide_seq_aligned,
-            self.guide_strand_same)
+        if self.pam_outside_cds:
+            return 0
+
+        return self._guide_mutated[1]
 
     @property
     def _guide_offsets(self) -> tuple:

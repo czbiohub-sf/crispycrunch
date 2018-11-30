@@ -218,6 +218,10 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         return row_hdr.inserted_mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
+    # TODO (gdingle): temp for manu
+    sheet['hdr_mutate_score'] = sheet.apply(
+        lambda row: round(_get_hdr_row(row)._mutated_score, 4),
+        axis=1)
 
     def check_hdr_guide_match(row):
         if not row['guide_seq']:
@@ -246,7 +250,9 @@ def _get_hdr_row(row) -> hdr.HDR:
     )
 
 
-def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
+def from_primer_selection(primer_selection: PrimerSelection,
+                          # TODO (gdingle): temp ... remove me
+                          target_mutation_score=None) -> DataFrame:
     guide_selection = primer_selection.primer_design.guide_selection
     sheet = from_guide_selection(guide_selection)
 
@@ -258,6 +264,9 @@ def from_primer_selection(primer_selection: PrimerSelection) -> DataFrame:
 
     guide_design = guide_selection.guide_design
     if guide_design.is_hdr:
+        # TODO (gdingle): temp remove me
+        if target_mutation_score:
+            hdr.HDR.target_mutation_score = target_mutation_score
         # Do this after guide_design for perf
         sheet = _set_hdr_cols(sheet, guide_design, sheet)
         sheet = _set_hdr_primer(
