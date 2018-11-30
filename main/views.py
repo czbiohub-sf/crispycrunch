@@ -12,6 +12,7 @@ sequence.
 import logging
 import os
 import time
+import copy
 
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO, StringIO
@@ -79,7 +80,9 @@ class CreatePlusView(CreateView):
             obj = self.plus(obj)
             obj.full_clean()
         except (ValidationError, ValueError) as e:
-            logging.exception(e)
+            e2 = copy.copy(e)
+            e2.args += (obj.owner.username, obj.owner.email)
+            logging.exception(e2)
             # Force field specific errors to __all__ because they are likely
             # from fields excluded from the form.
             if isinstance(e, ValidationError) and hasattr(e, 'error_dict'):
