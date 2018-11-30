@@ -484,7 +484,7 @@ class ExperimentSummaryView(View):
 
         sheet = samplesheet.from_primer_selection(primer_selection,
                                                   # TODO (gdingle): temp remove me,
-                                                  float(request.GET.get('ms', None))
+                                                  float(request.GET.get('ms', 0.01))
                                                   )
         sheet = self._prepare_sheet(sheet)
 
