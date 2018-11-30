@@ -133,10 +133,13 @@ class GuideDesignView(CreatePlusView):
         else:
             return GuideDesignForm2
 
-    def _normalize_targets(self, targets, guide_design):
+    def _get_targets_chr_loc(self, targets, guide_design):
         genome = guide_design.genome
 
-        if guide_design.is_hdr:
+        if all(is_chr(t) for t in targets):
+            return targets
+
+        elif guide_design.is_hdr:
             if not all(is_ensemble_transcript(t) or is_gene(t) for t in targets):
                 raise ValidationError(
                     'Targets must all be ENST transcripts or gene symbols for HDR')
@@ -174,10 +177,7 @@ class GuideDesignView(CreatePlusView):
             with ThreadPoolExecutor() as pool:
                 return list(pool.map(func, targets))
 
-        elif all(is_chr(t) for t in targets):
-            return targets
-
-        assert False
+        raise ValidationError('Targets must be all of one accepted type')
 
     def _get_target_seqs(self, targets, guide_design):
         if all(is_seq(t) for t in targets):
@@ -211,29 +211,41 @@ class GuideDesignView(CreatePlusView):
             raise ValidationError(
                 'Targeting genes by name is only currently implemented for HDR')
 
-        else:
+        elif all(is_chr(t) for t in targets):
             func = functools.partial(
                 conversions.chr_loc_to_seq,
                 genome=genome)
             with ThreadPoolExecutor() as pool:
                 return list(pool.map(func, targets))
 
-        assert False
+        raise ValidationError('Targets must be all of one accepted type')
 
     def _get_target_genes(self, targets, guide_design):
-        if all(is_ensemble_transcript(t) for t in targets):
+        if all(is_gene(t) for t in targets):
+            return targets
+
+        elif all(is_ensemble_transcript(t) for t in targets):
             func = functools.partial(
                 conversions.enst_to_gene_or_unknown,
                 genome=guide_design.genome)
-        elif all(is_gene(t) for t in targets):
-            return targets
+
         elif all(is_seq(t) for t in targets):
-            raise ValidationError(
-                'Targeting fasta sequences is not currently implemented')
-        else:
+            func1 = functools.partial(
+                conversions.seq_to_chr_loc,
+                genome=guide_design.genome)
+            func2 = functools.partial(
+                conversions.chr_loc_to_gene,
+                genome=guide_design.genome)
+
+            def func(target): return func2(func1(target))  # noqa
+
+        elif all(is_chr(t) for t in targets):
             func = functools.partial(
                 conversions.chr_loc_to_gene,
                 genome=guide_design.genome)
+
+        else:
+            raise ValidationError('Targets must be all of one accepted type')
 
         with ThreadPoolExecutor() as pool:
             return list(pool.map(func, targets))
@@ -245,8 +257,8 @@ class GuideDesignView(CreatePlusView):
         targets_cleaned, target_tags = obj.parse_targets_raw()
         obj.target_tags = target_tags
 
-        logger.info('Normalizing targets...')
-        obj.target_locs = self._normalize_targets(
+        logger.info('Getting chromosome locations...')
+        obj.target_locs = self._get_targets_chr_loc(
             targets_cleaned,
             obj
         )

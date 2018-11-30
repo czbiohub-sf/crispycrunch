@@ -15,7 +15,7 @@ except ImportError:
 
 # See https://www.genenames.org/about/guidelines
 # And see https://www.biostars.org/p/60118/ .
-GENE_REGEX = r'^[A-Z0-9-]+$|^C[0-9XY]+orf[0-9]+$'
+GENE_REGEX = r'^[A-Z0-9-]{3,8}$|^C[0-9XY]+orf[0-9]+$'
 
 
 def validate_fastq(filename: str) -> None:
