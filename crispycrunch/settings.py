@@ -35,6 +35,9 @@ if 'RDS_DB_NAME' in os.environ:  # prod
             },
             'mail_admins': {
                 'level': 'ERROR',
+                # TODO (gdingle): this is not working for most common email error :(
+                # TODO (gdingle): switch to sentry? or airbrake?
+                # see https://github.com/krisys/django-error-email-throttle/blob/18b61824d716e887173a224ef696a77cceae98ee/error_email_throttle/handler.py#L58
                 'class': 'error_email_throttle.handler.AdminEmailThrottler',
                 'include_html': True,
             },

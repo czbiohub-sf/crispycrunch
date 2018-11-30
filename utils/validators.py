@@ -15,7 +15,8 @@ except ImportError:
 
 # See https://www.genenames.org/about/guidelines
 # And see https://www.biostars.org/p/60118/ .
-GENE_REGEX = r'^[A-Z0-9-]{3,8}$|^C[0-9XY]+orf[0-9]+$'
+# Also covers mouse genes... which are lowercase
+GENE_REGEX = r'^[A-Za-z0-9-]{3,8}$|^C[0-9XY]+orf[0-9]+$'
 
 
 def validate_fastq(filename: str) -> None:
@@ -143,10 +144,10 @@ def validate_gene(value: str) -> None:
     """
     >>> validate_gene('ATL2') is None
     True
-    >>> validate_gene('atl2')
+    >>> validate_gene('atl 2')
     Traceback (most recent call last):
     ...
-    django.core.exceptions.ValidationError: ['"atl2" is not a valid HGNC gene name']
+    django.core.exceptions.ValidationError: ['"atl 2" is not a valid HGNC gene name']
     """
     if re.match(GENE_REGEX, value) is None:
         raise ValidationError('"{}" is not a valid HGNC gene name'.format(value))

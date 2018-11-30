@@ -46,6 +46,10 @@ def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
 
     >>> chr_loc_to_seq('chr3:128067063-128067085:-', 'hg38')
     'GACATAAAGGTTGGACACCAGGG'
+
+    Mouse.
+    >>> chr_loc_to_seq('chr7:28179081-28179112:+', 'mm10')
+    'CTGAGAAGCCAAAAGTGGTTACAACTCGACCC'
     """
     if chr_loc.endswith((':+', ':-')):
         chr_loc, strand = chr_loc[:-2], chr_loc[-1]
@@ -78,6 +82,10 @@ def seq_to_chr_loc(seq: str, genome: str = 'hg38') -> str:
     Traceback (most recent call last):
     ...
     ValueError: No match for sequence CACCTCGAGCTCTCGCACCAGGC in genome hg38
+
+    Mouse.
+    >>> seq_to_chr_loc('CTGAGAAGCCAAAAGTGGTTACAACTCGACCC', 'mm10')
+    'chr7:28179081-28179112:+'
     """
 
     url = 'http://gggenome.dbcls.jp/{}/0/{}.json'.format(
@@ -133,11 +141,9 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     >>> gene_to_chr_loc('cxcr4')
     'chr2:136114349-136116243'
 
-    Also handles ENST transcripts.
-    # TODO (gdingle): how reliable is this?
-
-    >>> gene_to_chr_loc('ENST00000398844')
-    'chr5:134648789-134727823'
+    Mouse
+    >>> gene_to_chr_loc('CNTNAP1', 'mm10')
+    'chr11:101176117-101190720'
     """
     url = 'https://genome.ucsc.edu/cgi-bin/hgTracks'
     response = _cached_session.get(url, params={
@@ -225,6 +231,10 @@ def chr_loc_to_gene(
     'SEC61A1'
     >>> chr_loc_to_gene('chr3:128067063-128067085', strand='-')
     'RUVBL1'
+
+    Mouse.
+    >>> chr_loc_to_gene('chr11:101176117-101190720', genome='mm10')
+    'Cntnap1'
     """
     if chr_loc.endswith((':+', ':-')):
         chr_loc, strand = chr_loc[:-2], chr_loc[-1]

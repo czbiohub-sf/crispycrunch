@@ -343,12 +343,11 @@ class Experiment(BaseModel):
 class GuideDesign(BaseModel):
     GENOMES = [
         ('hg38', 'Homo sapiens - Human - UCSC Dec. 2013 (GRCh38/hg38)'),
-        # ('hg19', 'Homo sapiens - Human - UCSC Feb. 2009 (GRCh37/hg19)'),
-        # ('todo', 'TODO: more genomes'),
+        ('mm10', 'Mus musculus - Mouse - UCSC Dec. 2011 (GRCm38/mm10)'),
     ]
     GENOME_TO_ORGANISM = {
         'hg38': 'Human',
-        'hg19': 'Human',
+        'mm10': 'Mouse',
     }
     HDR_TAG_TO_CDS_LENGTH = {
         'per_target': None,
