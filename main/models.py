@@ -619,7 +619,9 @@ class GuideDesign(BaseModel):
             return 0
         else:
             # 5 based on safe-harbor experiment
-            return self.guides_per_target * 5
+            # return self.guides_per_target * 5
+            # TODO (gdingle): expose this as checkbox in UI
+            return 0
 
     @cached_property
     def cds_index(self):

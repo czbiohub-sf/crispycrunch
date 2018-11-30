@@ -440,6 +440,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         # Filter for rows that have actual primers (by http request),
         # but only first `pre_filter` to save time.
         # TODO (gdingle): pool.map parallelize? Or are we already parallel enough at this point?
+        # TODO (gdingle): flag as "no primer" for later filtering in _get_top_guides
         if self.pre_filter:
             rows = [r for i, r in enumerate(rows)
                     if i > self.pre_filter or
@@ -449,6 +450,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 return dict(
                     target=self.target,
                     guide_seqs={NOT_FOUND: NOT_FOUND},
+                    url=url,
                 )
 
         # TODO (gdingle): refactor to simple lists... see GuideDesign.to_df
@@ -617,6 +619,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
 
 if __name__ == '__main__':
+    # TODO (gdingle): fix doctests which are currently broken
     import doctest  # noqa
     doctest.testmod()
 
