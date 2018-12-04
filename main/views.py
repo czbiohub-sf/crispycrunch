@@ -9,10 +9,10 @@ the next form. Each model has a foreign key into the preceding model. One
 exception is PrimerDesign which depends on GuideSelection, two steps back in the
 sequence.
 """
+import copy
 import logging
 import os
 import time
-import copy
 
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO, StringIO
@@ -387,6 +387,12 @@ class PrimerDesignView(CreatePlusView):
     form_class = PrimerDesignForm
     success_url = '/main/primer-design/{id}/progress/'
 
+    def get_form_kwargs(self):
+        return {
+            **super().get_form_kwargs(),
+            **{'id': self.kwargs['id']},
+        }
+
     def plus(self, obj):
         guide_selection = GuideSelection.objects.get(
             owner=self.request.user, id=self.kwargs['id'])
@@ -397,7 +403,7 @@ class PrimerDesignView(CreatePlusView):
 
         largs = [[row['_crispor_batch_id'],
                   row['_crispor_pam_id'],
-                  obj.amplicon_length,
+                  obj.max_amplicon_length,
                   obj.primer_temp,
                   guide_selection.guide_design.pam,
                   row['_guide_id'],

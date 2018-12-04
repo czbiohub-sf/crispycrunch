@@ -698,37 +698,20 @@ class PrimerDesign(BaseModel):
             MinValueValidator(58),
             MaxValueValidator(62),
         ])
-
-    # TODO (gdingle): crispor has a preset list of values... mirror?
+    # See custom form PrimerDesignForm
     max_amplicon_length = models.IntegerField(
-        # TODO (gdingle): this value is always set to 400 in HDR experiments because of
-        # Crispor customizaitons... how to show that in UI?
         verbose_name='Maximum amplicon length',
         help_text='Amplicon = primer product. Length after HDR insertion.',
         default=400,
         validators=[
-            # Constrain range to Biohub plausible experiments
-            MinValueValidator(200),
-            MaxValueValidator(400),
+            # Constrained to currently supported by Crispor
+            MinValueValidator(100),
+            MaxValueValidator(800),
         ])
     primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):
         return 'PrimerDesign({}, {}, ...)'.format(self.primer_temp, self.max_amplicon_length)
-
-    @cached_property
-    def amplicon_length(self):
-        """
-        Knocks down size a notch to make space for hdr_seq in primer
-        # TODO (gdingle): this is no longer needed with mods to crispor
-        # need to indicate this somehow in UI
-        """
-        hdr_tag = self.guide_selection.guide_design.hdr_tag
-        if hdr_tag:
-            # TODO (gdingle): generalize up to len(hdr_seq) 200
-            return self.max_amplicon_length - 100
-        else:
-            return self.max_amplicon_length
 
     @cached_property
     def crispor_urls(self):

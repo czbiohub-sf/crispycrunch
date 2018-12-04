@@ -99,11 +99,52 @@ class GuideSelectionForm(ModelForm):
 
 
 class PrimerDesignForm(ModelForm):
+
     class Meta:
         model = PrimerDesign
         fields = '__all__'
         exclude = ['owner', 'guide_selection', 'primer_data']
-        # TODO (gdingle):
+
+    def __init__(self, *args, **kwargs):
+        self._is_hdr = GuideSelection.objects.get(id=kwargs['id']).guide_design.is_hdr
+        del kwargs['id']
+        super().__init__(*args, **kwargs)
+        max_amplicon_length = self.fields['max_amplicon_length']
+        max_amplicon_length.initial = self._initial
+        max_amplicon_length.help_text = self._help_text
+        max_amplicon_length.disabled = self._disabled
+        # Only enforced for non-hdr
+        max_amplicon_length.widget.attrs['step'] = 100
+
+    @property
+    def _help_text(self):
+        if self._is_hdr:
+            # TODO (gdingle): make amplicon size for hdr variable in crispor.py
+            # and then variable here.
+            return """Primers will flank each side of insertion point by at
+            least 105bp. The resulting amplicon length will be between 250-310bp,
+            not including the HDR tag sequence. Shorter amplicons are preferred
+            in returned primers."""
+        else:
+            return """Primers will be centered on the guide for optimal
+                sequencing of NHEJ. The resulting amplicon length will be
+                between: [max_length - 150, max_length] if max_length > 250, or
+                [max_length - 50, max_length] if max_length <= 250."""
+
+    @property
+    def _initial(self):
+        if self._is_hdr:
+            return 310
+        else:
+            return self.fields['max_amplicon_length'].initial
+
+    @property
+    def _disabled(self):
+        if self._is_hdr:
+            return True
+        else:
+            return False
+
 
 class PrimerSelectionForm(ModelForm):
 
