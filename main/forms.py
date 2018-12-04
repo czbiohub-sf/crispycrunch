@@ -103,7 +103,7 @@ class PrimerDesignForm(ModelForm):
         model = PrimerDesign
         fields = '__all__'
         exclude = ['owner', 'guide_selection', 'primer_data']
-
+        # TODO (gdingle):
 
 class PrimerSelectionForm(ModelForm):
 

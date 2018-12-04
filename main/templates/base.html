@@ -36,15 +36,15 @@
 
   {# TODO (gdingle): style better #}
   <div class="float-right m-3">
-    <a href="https://www.czbiohub.org/">
+    <a tabindex="-1" href="https://www.czbiohub.org/">
       <img src="/static/biohub-logo-2.jpg" width="100" class="d-inline align-middle mr-2" />
     </a>
     {% if request.user.is_authenticated %}
-    <a href="/main/" class="btn btn-outline-primary btn-sm">Account</a>
-    <a href="/accounts/logout/" class="btn btn-primary btn-sm">Logout</a>
+    <a href="/main/" class="btn btn-outline-primary btn-sm" tabindex="-1">Account</a>
+    <a href="/accounts/logout/" class="btn btn-primary btn-sm" tabindex="-1">Logout</a>
     {% else %}
-    <a href="/main/signup/" class="btn btn-outline-primary btn-sm">Signup</a>
-    <a href="/accounts/login/" class="btn btn-outline-primary btn-sm">Login</a>
+    <a href="/main/signup/" class="btn btn-outline-primary btn-sm" tabindex="-1">Signup</a>
+    <a href="/accounts/login/" class="btn btn-outline-primary btn-sm" tabindex="-1">Login</a>
     {% endif %}
     <br />
   </div>
@@ -87,14 +87,14 @@
 
   <hr />
   <footer class="text-center">
-    <a class="col-sm-2" href="/">Home</a>
-    <a class="col-sm-2" href="/main/">Account</a>
-    <a class="col-sm-2" href="/main/experiment">Experiment</a>
-    <a class="col-sm-2" href="/main/analysis">Analysis</a>
-    <a class="col-sm-2" href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch">Contact</a>
-    <a class="col-sm-2" href="https://github.com/czbiohub/crispycrunch">GitHub</a>
+    <a tabindex="-1" class="col-sm-2" href="/">Home</a>
+    <a tabindex="-1" class="col-sm-2" href="/main/">Account</a>
+    <a tabindex="-1" class="col-sm-2" href="/main/experiment">Experiment</a>
+    <a tabindex="-1" class="col-sm-2" href="/main/analysis">Analysis</a>
+    <a tabindex="-1" class="col-sm-2" href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch">Contact</a>
+    <a tabindex="-1" class="col-sm-2" href="https://github.com/czbiohub/crispycrunch">GitHub</a>
     <p>
-      <a href="https://www.czbiohub.org/">
+      <a tabindex="-1" href="https://www.czbiohub.org/">
         <img src="/static/biohub-logo-2.jpg" width="200" class="m-4" />
       </a>
     </p>
