@@ -125,6 +125,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    # For access to demo account: https://github.com/aaugustin/django-sesame
+    'sesame.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     # TODO (gdingle): turn this on when cache bugs all fixed
     # 'django.middleware.cache.FetchFromCacheMiddleware',
@@ -134,6 +136,12 @@ MIDDLEWARE = [
     # TODO (gdingle): figure out to make if DEBUG
     # 'silk.middleware.SilkyMiddleware',
     # ENd crispycrunch
+]
+
+# For access to demo account: https://github.com/aaugustin/django-sesame
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'sesame.backends.ModelBackend'
 ]
 
 ROOT_URLCONF = 'crispycrunch.urls'

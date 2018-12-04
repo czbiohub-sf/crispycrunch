@@ -5,6 +5,7 @@ django-bootstrap4
 django-debug-toolbar
 git+https://github.com/krisys/django-error-email-throttle.git@master
 django-ses
+django-sesame
 django-settings-export
 django-silk
 Django>=2
