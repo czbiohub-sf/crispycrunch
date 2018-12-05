@@ -2,7 +2,18 @@
 
 {% block content %}
 
+<h2>Get Started</h2>
+
+<ul>
+  <li class="h4"><a href="/main/signup/">Create an account</a></li>
+  <li class="h4"><a href="/main/experiment/">Design a new experiment</a></li>
+  <li class="h4"><a href="/main/analysis/">Start a new analysis</a></li>
+  <li class="h4"><a href="/main/">View current experiments and analyses</a></li>
+</ul>
+
 <h2>Introduction</h2>
+
+{# TODO (gdingle): link to addgene post when ready or own documentation #}
 
 <p>CrispyCrunch is a tool for defining <strong>batches</strong> of <a target="_blank" href="https://en.wikipedia.org/wiki/CRISPR">CRISPR</a> edits and analyzing their basic effects. An edit can be either a plain CRISPR/Cas9 cut––a "<strong>knock-out</strong>"––or a cut plus insertion through <a target="_blank" href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>––a "<strong>knock-in</strong>". It was initially built for the <a target="_blank" href="https://www.czbiohub.org">CZ Biohub</a> <a target="_blank" href="https://www.czbiohub.org/people3/cz-biohub-staff#l-start">project</a> to tag all <a target="_blank" href="https://en.wikipedia.org/wiki/Human_genome#Coding_sequences_(protein-coding_genes)">22,000 protein coding genes</a> in the human genome with <a target="_blank" href="https://en.wikipedia.org/wiki/Green_fluorescent_protein">GFP</a>.</p>
 
@@ -43,28 +54,13 @@
 
 <p>The advantages of using CrispyCrunch over the underlying tools are:</p>
 <ul>
-  <li>Define <strong>multiple CRISPR edits</strong> as unit and analyze them as a unit. Save time and avoid mistakes by not doing your own record keeping.</li>
+  <li>Design <strong>multiple CRISPR edits</strong> as unit and analyze them as a unit. Save time and avoid mistakes by not doing your own record keeping.</li>
   <li><strong>Automatic quality control</strong> of CRISPR edits. Just point CrispyCrunch to the FastQ output files of your <a target="_blank" href="https://en.wikipedia.org/wiki/DNA_sequencer">DNA sequencer</a>.</li>
   <li>Benefit from <strong>sophisticated HDR design rules</strong> which consider cut-to-insert distance, re-cutting, synonymous mutations, optimal primer length, intron/exon junctions, UTR boundaries and more.</li>
   <li><strong>Pre-filled order forms</strong> for <a target="_blank" href="https://www.idtdna.com/pages">IDT</a>.</li>
 </ul>
 
-<p>When <strong>not</strong> to use CrispyCrunch:</p>
-<ul>
-  <li>When you only want to make a <strong>single</strong>, knock-out CRISPR edit.</li>
-  <li>When you are planning a knock-out <a target="_blank" href="https://en.wikipedia.org/wiki/Genetic_screen">genetic screen</a>. Try <a target="_blank" href="http://crispor.tefor.net/crispor.py?libDesign=1">Crispor</a>.</li>
-</ul>
-
 {# TODO (gdingle): example crispycrunch analysis summary #}
-
-<h2>Get Started</h2>
-
-<ul>
-  <li class="h4"><a href="/main/signup/">Create an account</a></li>
-  <li class="h4"><a href="/main/experiment/">Define a new experiment</a></li>
-  <li class="h4"><a href="/main/analysis/">Start a new analysis</a></li>
-  <li class="h4"><a href="/main/">View current experiments and analyses</a></li>
-</ul>
 
 <h2>Feedback</h2>
 
