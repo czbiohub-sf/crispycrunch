@@ -710,6 +710,10 @@ class OrderFormView(DetailView):
         ws['B1'] = 'Sequence Name'
         ws['C1'] = 'Sequence'
 
+        # TODO (gdingle): how to avoid?
+        # '_guide_id' may be dropped on earlier join
+        sheet = sheet.reset_index()
+
         for j, well_pos in enumerate(sheet.index):
             for i, seq_key in enumerate(self.seq_keys):
                 # TODO (gdingle): what to do if empty?
@@ -755,7 +759,8 @@ class UltramerOrderFormView(OrderFormView):
 
 class IlluminaSheetView(View):
 
-    def _make_sample(self, experiment: Experiment, row: Any) -> illumina.Sample:
+    def _make_sample(self, guide_design: GuideDesign, row: Any) -> illumina.Sample:
+        experiment = guide_design.experiment
         return illumina.Sample({
             # A short ID assigned to the specific study and/or project based
             #  on the conventions used at your institution/group. Accepted
@@ -796,14 +801,14 @@ class IlluminaSheetView(View):
             # should be unique for each row. Sample_ID can be the same as
             # Sample_Name
             # (Required)
-            'Sample_ID': experiment.short_name + '-' + row.index,
+            'Sample_ID': f'{experiment.short_name}-{row.index}',
 
             # A distinct and descriptive name for each specific library.
             # Accepted characters are numbers, letters, "-", and "_". Name
             # must begin with a letter. This field should be unique for each
             # row. The sample name will go into the final fastq file names.
             # (Required) e.g. Mouse_Liver_SingleCell_plate02_A10_20171210
-            'Sample_Name': experiment.short_name + '-' + row.index,
+            'Sample_Name': f'{experiment.short_name}-{row.index}',
 
             # If people are combining samples to sequence on the same run,
             # this column is used to keep track of to whom each sample
@@ -841,7 +846,7 @@ class IlluminaSheetView(View):
             # Some examples are Human, Mouse, Mosquito, Yeast, Bacteria,
             # etc.
             # (Required)
-            'Organism': GuideDesign.GENOME_TO_ORGANISM[row['target_genome']],
+            'Organism': guide_design.organism,
 
             # TODO (gdingle): will these below ever be useful?
             # This field is used record the host of the organism where the
@@ -868,13 +873,14 @@ class IlluminaSheetView(View):
         primer_selection = PrimerSelection.objects.get(
             owner=self.request.user, id=kwargs['id'])
         sheet = samplesheet.from_primer_selection(primer_selection)
-        experiment = primer_selection.primer_design.guide_selection.guide_design.experiment
+        guide_design = primer_selection.primer_design.guide_selection.guide_design
+        experiment = guide_design.experiment
 
         illumina_sheet = illumina.SampleSheet()
         # TODO (gdingle): Add link to Biohub submission form
         illumina_sheet.Header['CrispyCrunch'] = 'Please fill in the following required columns: BioSample_ID, BioSample_Description, Index_ID, Index, Index2_ID, Index2.'
         for row in sheet.to_records():
-            illumina_sheet.add_sample(self._make_sample(experiment, row))
+            illumina_sheet.add_sample(self._make_sample(guide_design, row))
 
         csv = StringIO()
         illumina_sheet.write(csv)

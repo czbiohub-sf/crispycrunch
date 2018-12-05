@@ -563,6 +563,10 @@ class GuideDesign(BaseModel):
         return 'GuideDesign({}, {}, {}, ...)'.format(
             self.genome, self.pam, self.target_locs)
 
+    @property
+    def organism(self):
+        return self.GENOME_TO_ORGANISM[self.genome]
+
     @cached_property
     def genome_name(self):
         """

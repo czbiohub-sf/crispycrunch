@@ -27,7 +27,7 @@ While CrispyCrunch may evolve over time, you can depend on it to stick to a few 
 
 * **It builds on existing popular web services**, currently [Crispor](http://crispor.tefor.net) and [Crispresso](http://crispresso.pinellolab.partners.org), that adhere to the same principles listed here.
 
-* **It employs best practices**. For example, it ranks guides by [CFD score](https://blog.addgene.org/how-to-design-your-grna-for-crispr-genome-editing), and it [mutates HDR donor templates](https://blog.addgene.org/crispr-101-homology-directed-repair) to avoid re-cutting when needed.
+* **It employs Biological best practices**. For example, it ranks guides by [CFD score](https://blog.addgene.org/how-to-design-your-grna-for-crispr-genome-editing), and it [mutates HDR donor templates](https://blog.addgene.org/crispr-101-homology-directed-repair) to avoid re-cutting when needed.
 
 * **It gives you control over your data**. CrispyCrunch keeps a record of all your designs and analyses, but it also allows you to download any generated info for your own purposes, or delete the originals if desired.
 
