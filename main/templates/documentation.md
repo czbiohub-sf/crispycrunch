@@ -199,6 +199,8 @@ Send us your questions or comments to gdingle@chanzuckerberg.com. We're eager to
 
 ## Acknowledgements
 
+<!-- TODO: cleanup -->
+
 * Chan Zuckerberg Initiative
 * Chan Zuckerberg BioHub
 
