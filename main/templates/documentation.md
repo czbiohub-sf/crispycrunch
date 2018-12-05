@@ -1,14 +1,19 @@
 # CrispyCrunch: High-throughput design and analysis of CRISPR+HDR experiments
 
+<img src="https://crispycrunch.ds.czbiohub.org/static/crispycrunch-logo.jpg" width="200">
+
+
 ## Introduction
 
 We hereby announce the general availability of new a tool for CRISPR scientists––[CrispyCrunch](http://crispycrunch.ds.czbiohub.org)! We invite you to jump in and [try it out](http://crispycrunch.ds.czbiohub.org), or take a look at our live examples: experiment or analysis.
 
 <!-- TODO: create demo account and reports  -->
-In the rest of this article, we'll explain the thinking behind the tool, its key features, and how it works.
+In the rest of this article, we'll explain the [thinking behind the tool](#guiding-principles), its [key features](#why-not-existing-tool-x-y-or-z), [how it works](#optimal-mutation-in-depth), and [how to use it](#how-to-use-crispycrunch).
 
-<!-- TODO: internal links  -->
+
 ## Background
+
+<img src="https://crispycrunch.ds.czbiohub.org/static/biohub-logo-2.jpg" width="400">
 
 CrispyCrunch was initially built for the [CZ Biohub project](https://www.czbiohub.org/people3/cz-biohub-staff#l-start) to tag all 22,000 protein coding genes in the human genome with GFP. At 3 guides per gene, 66,000 individually designed guides will be needed, plus the same number of primers and HDR donor templates. For such a goal, automation is crucial, both for speeding things up and for standardizing the process.
 
@@ -16,7 +21,9 @@ Already, too much time for this project has been spent on the mechanical process
 
 In July 2018 we began work on CrispyCrunch and in November we began using it internally.
 
+
 ## Guiding principles
+
 While CrispyCrunch may evolve over time, you can depend on it to stick to a few guiding principles that we've followed since the beginning.
 
 * **It's free and open to all.** The project is funded by [CZI](http://czi.org) and the [CZ Biohub](https://www.czbiohub.org/) for the acceleration of science.
@@ -33,14 +40,14 @@ While CrispyCrunch may evolve over time, you can depend on it to stick to a few 
 
 * **It works as a whole or in part**. For example, you can analyze experiments designed outside CrispyCrunch, or you can input pre-existing guides for primer design.
 
+
 ## Why not existing tool X, Y or Z?
 
-Before deciding to build our own, we looked hard at existing tools. As has been written here on addgene, there has been a [Cambrian-like explosion](https://blog.addgene.org/the-crispr-software-matchmaker-a-new-tool-for-choosing-the-best-crispr-software-for-your-needs) of software tools accompanying the CRISPR revolution.
+Before deciding to build our own, we looked hard at existing tools. As has been written here on addgene, there has been a [Cambrian-like explosion](https://blog.addgene.org/the-crispr-software-matchmaker-a-new-tool-for-choosing-the-best-crispr-software-for-your-needs) of software tools accompanying the CRISPR revolution. (See [omictools](https://omictools.com/search?q=CRISPR&page=1) for even more.)
 
 However, none of the tools we found performed *batch* guide design, *batch* primer design or *batch* analysis. We wanted to relieve scientists of having to manage all the standard information that goes into a 96-well plate and comes out of it. Companies such as [Caribou Biosciences](https://cariboubio.com/) are known to have tools that do this internally.
 
-Furthermore, we did not find any tools which were optimized for [HDR](https://en.wikipedia.org/wiki/Homology_directed_repair), except for [TagIn](http://tagin.stembio.org). HDR requires the additional step of mutating guide sequences in a way that prevents re-cutting but does not disrupt gene expression. (See section below.)
-<!-- TODO: internal link -->
+Furthermore, we did not find any tools which were optimized for [HDR](https://en.wikipedia.org/wiki/Homology_directed_repair), except for [TagIn](http://tagin.stembio.org). HDR requires the additional step of mutating guide sequences in a way that prevents re-cutting but does not disrupt gene expression. (See [section below](#optimal-mutation-in-depth).)
 
 For guide design, we decided to fork the popular guide design tool [Crispor](http://crispor.tefor.net). With a few extra lines of code, we enabled it to return guides and primers in batch, optimized for HDR.
 
@@ -52,6 +59,7 @@ The only ones we found were which worked with NGS data were :
 * [AmpliCan](https://bioconductor.org/packages/release/bioc/html/amplican.html)
 
 We chose to use Crispresso because of its ease-of-use and comprehensive reports. With CrispyCrunch, you get the all information from Crispresso plus a summary per batch.
+
 
 ## Optimal mutation in-depth
 
@@ -67,54 +75,72 @@ With these constraints in mind, we implemented the following algorithm for optim
 
 3) *Silently* mutate codons in the guide sequence, one by one, from the PAM inwards. After each mutation, check the CFD score. If it is below 0.01, stop mutating. (Note: the most common synonym in the human genome is chosen for a silent mutation.)
 
+
 ## How to use CrispyCrunch
 
 **Step (1)** Create a new *experiment*. This is the term CrispyCrunch uses for a batch of CRISPR edits which will be processed as a unit.
 
 **Step (2)** Design your sgRNA guides by inputting the *target regions*. Targets can be input as Ensembl transcript IDs, gene names, chromosome locii, or raw *AGCT* FASTA sequences. Each type of input will be translated to other types for versatility.
 
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/guide-design.png" width="400">
+
 Optionally override the default *genome*, *guides per target* and other settings.
 
 On submission, you will need to wait up to 30 minutes as CrispyCrunch gets candidate guides for each target from Crispor. After all guides are returned, you will have a chance to review them and make modifications.
 
-<!-- TODO: Insert screenshot -->
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/guide-design-progress.png" width="400">
+
 **Step (3)** Optional: Design a donor template for insertion by HDR (Homology Directed Repair). Target the [start](https://en.wikipedia.org/wiki/Start_codon) or [stop codon](https://en.wikipedia.org/wiki/Stop_codon) in a gene. Specify a custom sequence to be inserted, and the desired length of the homolgy arms. The default HDR sequence is [mNeonGreen](https://www.fpbase.org/protein/mneongreen/).
 
-<!-- TODO: Insert screenshot -->
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/hdr-design.png" width="400">
+
 **Step (4)** Primer design. Specify target [optimal temperature](http://primer3.sourceforge.net/primer3_manual.htm#PRIMER_PRODUCT_OPT_TM) and [maximum amplicon length](http://primer3.sourceforge.net/primer3_manual.htm#PRIMER_PRODUCT_SIZE_RANGE). These values are passed down to Primer3.
+
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/primer-design.png" width="400">
 
 On submission, you will need to wait up to 10 minutes as CrispyCrunch gets primers for each guide from Crispor. After all primers are returned, you will have a chance to review them and make modifications.
 
 **Step (5)** Review experiment design and order reagents. On the summary page, you can see all information gathered so far, and you can download pre-filled excel order forms ready for submission to [IDT](https://www.idtdna.com). You can order guides, primers and HDR donor templates in this way.
 
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/experiment-summary.png" width="400">
+
 **Step (6)** The wet lab. In a few weeks, once your reagents have arrived, you should use them as normal in your wet lab to do your CRISPR edits as designed.
+
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/wet-lab.png" width="400">
 
 Next, if you want to analyze with CrispyCrunch, sequence your modified cells with [NGS](https://en.wikipedia.org/wiki/DNA_sequencing#Next-generation_methods).
 
-<!-- TODO: Funny pic -->
 **Step (7)** Optional: Analysis. Choose the *experiment* you want to analyze. Upload the *fasta files* from sequencing associated with that experiment.
+
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/analysis.png" width="400">
 
 CrispyCrunch will automatically determine the correct pair of fasta files for each well by comparing the primers in each sequencing sample to the known primers of the experiment.
 
-<!-- TODO: Insert screenshot -->
 On submission, you will need to wait up to 45 minutes as CrispyCrunch sends each pair of fastas to Crispresso for analysis. After all reports are returned, you will get a summary page with links to each detailed report.
+
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/results-summary.png" width="400">
 
 Crispresso quantifies repair outcomes--both [NHEJ](https://en.wikipedia.org/wiki/Non-homologous_end_joining) and [HDR](https://en.wikipedia.org/wiki/Homology_directed_repair)--in a variety of ways that are useful for ensuring that your CRISPR edits occurred as expected.
 
-<!-- TODO: Insert screenshot -->
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/repair-outcomes.png" width="400">
+
+<img src="https://crispycrunch.ds.czbiohub.org/static/screenshots/repair-rows.png" width="400">
+
 ## Conclusion
 
 As of this writing, CrispyCrunch is the first publicly-available tool for high-throughput design and analysis of CRISPR experiments. It's boosted our productivity in the BioHub. We hope it will do the same for you.
 
 Send us your questions or comments to gdingle@chanzuckerberg.com. We're eager to hear your thoughts.
 
+
 ## Acknowledgements
 
-Chan Zuckerberg BioHub
 Chan Zuckerberg Initiative
+Chan Zuckerberg BioHub
+
+Manuel Leonetti
+Ryan Leenay
+Jason Li
 Max Haeussler
 Luca Pinello
 Andy May
-Ryan Leenay
-Manuel Leonetti
-Jason Li
