@@ -56,11 +56,9 @@ Furthermore, we did not find any tools which were optimized for [HDR](https://en
   <img src="../static/crispor-logo.png" width="300">
 </p>
 
-For guide design, we decided to fork the popular guide design tool [Crispor](http://crispor.tefor.net). With a few extra lines of code, we enabled it to return guides and primers in batch, optimized for HDR.
+For guide design, we decided to fork the popular guide design tool [Crispor](http://crispor.tefor.net). With a few extra lines of code, we enabled it to return guides and primers in batch, [optimized for HDR](#ranking-guides-for-hdr-in-depth).
 
-Compared to guide design, there are few tools for analysis of CRISPR repair outcomes, which is important for quality control.
-
-The only ones we found were which worked with NGS data were :
+Compared to guide design, there are few tools for analysis of CRISPR repair outcomes, which is important for quality control. The only ones we found were which worked with NGS data were:
 * [Crispresso](http://crispresso.pinellolab.partners.org)
 * [CrispRVariants](https://bioconductor.org/packages/release/bioc/html/CrispRVariants.html)
 * [AmpliCan](https://bioconductor.org/packages/release/bioc/html/amplican.html)
@@ -70,6 +68,19 @@ The only ones we found were which worked with NGS data were :
 </p>
 
 We chose to use Crispresso because of its ease-of-use and comprehensive reports. With CrispyCrunch, you get the all information from Crispresso plus a summary per batch.
+
+
+## Ranking guides for HDR in-depth
+
+In other tools, guides are ranked by specificity for knock-out CRISPR or by cut-to-insert distance for HDR. (The notable exception is [TagIn](http://tagin.stembio.org/about/)––see their "summarisation score".) For CrispyCrunch, we wanted to consider both factors, as a bench scientist would looking at a genome by eye. We came up with the following ranking formula:
+
+    (compressed CFD score) * (gaussian normalized cut-to-insert distance)
+
+The CFD score is compressed to the most important range by flattening high and low values, and the importance of cut-to-insert distance is fitted to experimental data. The transformations are illustrated below.
+
+<p align="center">
+  <img src="../static/manu-score.png" width="800">
+</p>
 
 ## Optimal mutation in-depth
 
