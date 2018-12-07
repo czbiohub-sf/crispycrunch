@@ -7,6 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <script type="text/javascript">
     // Redirect public traffic to HTTPS
+    {# TODO (gdingle): make crispycrunch.ds.czbiohub.org a setting #}
     if (location.hostname == 'crispycrunch.ds.czbiohub.org'
         && location.protocol != 'https:') {
       console.log('Redirecting to HTTPS');
@@ -33,8 +34,6 @@
 </head>
 
 <body style="padding: 2em;">
-
-  {# TODO (gdingle): style better #}
   <div class="float-right m-3">
     <a tabindex="-1" href="https://www.czbiohub.org/">
       <img src="/static/biohub-logo-2.jpg" width="100" class="d-inline align-middle mr-2" />
@@ -50,7 +49,11 @@
   </div>
 
   <h1>
-    {% block h1 %}{{request.resolver_match.url_name}}{% endblock %}
+    {% block h1 %}
+    {{request.resolver_match.url_name}}
+    {# TODO (gdingle): remove when ready #}
+    <sub class="text-warning"><h6 class="d-inline">BETA</h6></sub>
+    {% endblock %}
   </h1>
 
   <hr />
