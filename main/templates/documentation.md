@@ -145,7 +145,8 @@ On submission, you will need to wait up to 10 minutes as CrispyCrunch gets prime
 
 ### Step 5: Review and order reagents
 
-Review experiment design and order reagents. On the summary page, you can see all information gathered so far, and you can download pre-filled excel order forms ready for submission to [IDT](https://www.idtdna.com). You can order guides, primers and HDR donor templates in this way.
+<!-- {# TODO (gdingle): consider removing reference to IDT #} -->
+Review experiment design and order reagents. On the summary page, you can see all information gathered so far, and you can download pre-filled excel order forms ready for submission to [IDT](https://www.idtdna.com) or other vendors. You can order guides, primers and HDR donor templates in this way.
 
 <p align="center">
   <img src="../static/screenshots/experiment-summary.png" width="600">

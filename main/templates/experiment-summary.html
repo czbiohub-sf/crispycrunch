@@ -44,7 +44,7 @@
   <dt class="col-sm-12">&nbsp;</dt>
 
   <dt class="col-sm-3">
-    IDT Guide Order Form
+    Guide Order Form (crRNAs)
   </dt>
   <dd class="col-sm-9">
     {# TODO (gdingle): friendly icons for down and up #}
@@ -52,19 +52,21 @@
       Download
     </a>
     &rarr;
+    {# TODO (gdingle): consider removing reference to IDT #}
     <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/crispr">
       Upload
     </a>
   </dd>
 
   <dt class="col-sm-3">
-    IDT Primer Order Form
+    Primer Order Form (gDNAs)
   </dt>
   <dd class="col-sm-9">
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.order_form_url }}">
       Download
     </a>
     &rarr;
+    {# TODO (gdingle): consider removing reference to IDT #}
     <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/primermix/1799">
       Upload
     </a>
@@ -72,13 +74,14 @@
 
   {% if experiment.is_hdr %}
   <dt class="col-sm-3">
-    IDT Ultramer Order Form (for HDR)
+    Donor Template Order Form (ssODNs for HDR)
   </dt>
   <dd class="col-sm-9">
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.hdr_order_form_url }}">
       Download
     </a>
     &rarr;
+    {# TODO (gdingle): consider removing reference to IDT #}
     <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/ultra/2683">
       Upload
     </a>
