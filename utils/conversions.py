@@ -3,6 +3,7 @@ Convert between DNA sequence formats using using togows.org and crispycrunch
 defaults.
 """
 import doctest
+import logging
 import re
 
 import requests
@@ -23,6 +24,8 @@ _cached_session = requests_cache.CachedSession(
 adapter = requests.adapters.HTTPAdapter(pool_connections=96 * 4, pool_maxsize=96 * 4)
 _cached_session.mount('http://', adapter)
 _cached_session.mount('https://', adapter)
+
+logger = logging.getLogger(__name__)
 
 
 def chr_loc_to_seq(chr_loc: str, genome: str = 'hg38') -> str:
@@ -185,15 +188,16 @@ def enst_to_gene(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
 
 def enst_to_gene_or_unknown(enst: str, genome: str = 'hg38') ->str:
     """
-    Suppresses not foundn exceptions.
+    Suppresses not found exceptions.
     >>> enst_to_gene_or_unknown('ENST00000617316')
     'UNKNOWN'
     """
     try:
-        return enst_to_gene(enst, genome, timeout=3)
+        return enst_to_gene(enst, genome, timeout=4)
     except requests.exceptions.Timeout:
         return 'TIMEOUT'
-    except IOError:
+    except IOError as e:
+        logger.warning(e)
         return 'UNKNOWN'
 
 
