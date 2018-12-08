@@ -18,6 +18,11 @@ beginning of sequence lines in a fastq, guides are somewhere following, and
 there will always be a "high" number of such matches in a "matching" file.
 
 An added benefit is validating fastqs before full alignment by Crispresso.
+
+# TODO (gdingle): change to use vectorzied matching by pandas startswith
+
+# TODO (gdingle): consider also
+https://bergvca.github.io/2017/10/14/super-fast-string-matching.html
 """
 
 
@@ -79,7 +84,7 @@ def matches_fastq_pair(
     if parallelize:
         with ProcessPoolExecutor(2) as pool:
             f1 = pool.submit(partial(in_fastq, fastq_r1, primer_seq_fwd, guide_seq, 4))
-            f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_fwd,
+            f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_rev,
                                      reverse_complement(guide_seq), 4))
         in_r1 = f1.result()
         in_r2 = f2.result()

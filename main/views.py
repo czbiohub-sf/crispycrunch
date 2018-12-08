@@ -250,7 +250,8 @@ class GuideDesignView(CreatePlusView):
         else:
             raise ValidationError('Targets must be all of one accepted type')
 
-        with ThreadPoolExecutor() as pool:
+        # More than 16 starts causing strange 404 errors from togows.org :(
+        with ThreadPoolExecutor(16) as pool:
             return list(pool.map(func, targets))
 
     def plus(self, obj):
