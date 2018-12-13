@@ -421,6 +421,65 @@ class HDR:
         assert len(combined) == len(self.target_seq)
         return combined
 
+    def _inserted_mutated2(self) -> str:
+        """
+        Returns the target_seq with inserted hdr_seq after optimal mutation.
+        # TODO (gdingle): rename once good to replace guide_mutated
+
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'aaa', hdr_dist=14)
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.guide_seq
+        'ATGGCTGAGCTGGATCCGTTCGG'
+
+        >>> hdr.target_mutation_score = 0.5
+        >>> hdr._inserted_mutated2()
+        'GCCATGaaaGCTGAGCTGGATCCGTTCGGC'
+
+        >>> hdr.target_mutation_score = 0.01
+        >>> hdr._inserted_mutated2()
+        'GCCATGaaaGCTGAGCTGGATCCcTTCGGC'
+
+        # TODO (gdingle): other proper tests
+        """
+        length = self.guide_seq_aligned_length
+        inserted = list(self.inserted)  # To mutate string in place
+        for i in range(0, len(inserted) - length + 1):
+            # TODO (gdingle): test revcomp as well
+            test_seq = ''.join(inserted[i:i + 23])
+            assert len(test_seq) == 23
+            hit_score_func = functools.partial(
+                cfdscore.cfd_score,
+                test_seq,
+                guide_strand_same=self.guide_strand_same)
+
+            codon_offset = i % 3
+            left = i - codon_offset
+            right = i - codon_offset + length
+            mutate_seq = ''.join(inserted[left:right])
+            # mask outside of 23bp of guide seq
+            # TODO (gdingle): keep lowercasing mask of insert seq?
+            mutate_seq = (
+                mutate_seq[:codon_offset].lower() +
+                mutate_seq[codon_offset:codon_offset + 23] +
+                mutate_seq[codon_offset + 23:].lower()
+            )
+            assert len(mutate_seq) == length, len(mutate_seq)
+            for mutated in mutate_silently(
+                mutate_seq,
+                self.guide_strand_same,
+                all_permutations=self.mutate_all_permutations
+            ):
+                # note: no change on first pass
+                score = hit_score_func(mutated[codon_offset:codon_offset + 23])
+                if score <= self.target_mutation_score:
+                    inserted[left:right] = mutated
+                    break
+        # TODO (gdingle): hack alert... relowercase anything different because
+        # mutate_silently will upper or lowercase all on *each* iteration
+        lower_mutations = [c.lower() if inserted[i] != self.inserted[i] else c.upper()
+                           for i, c in enumerate(inserted)]
+        return ''.join(lower_mutations)
+
     @property
     def guide_mutated(self) -> str:
         return self._guide_mutated[0]
@@ -789,9 +848,9 @@ class HDR:
 
 def mutate_silently(
         guide_seq: str,
-        guide_strand_same: bool = False,
-        skip_stop_codon: bool = True,
-        all_permutations: bool = False) -> Iterator[str]:
+        guide_strand_same: bool=False,
+        skip_stop_codon: bool=True,
+        all_permutations: bool=False) -> Iterator[str]:
     """
     Generator that silently mutates input sequence by substituing a different
     codon that encodes the same amino acid. Changes one codon per iteration.

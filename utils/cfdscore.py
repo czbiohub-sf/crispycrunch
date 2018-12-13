@@ -435,11 +435,11 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
         # wild type PAM may differ from NGG if it was broken up by HDR insertion
         # In this case, we return the lower score.
         return min(
-            calc_cfd(wt.upper(), sg.upper(), wt_pam[-2:]),
-            calc_cfd(wt.upper(), sg.upper(), sg_pam[-2:]),
+            calc_cfd(wt.upper(), sg.upper(), wt_pam[-2:].upper()),
+            calc_cfd(wt.upper(), sg.upper(), sg_pam[-2:].upper()),
         )
     else:
-        return calc_cfd(wt.upper(), sg.upper(), pam[-2:])
+        return calc_cfd(wt.upper(), sg.upper(), pam[-2:].upper())
 
 
 if __name__ == '__main__':
