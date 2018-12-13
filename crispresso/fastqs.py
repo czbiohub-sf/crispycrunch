@@ -19,7 +19,8 @@ there will always be a "high" number of such matches in a "matching" file.
 
 An added benefit is validating fastqs before full alignment by Crispresso.
 
-# TODO (gdingle): change to use vectorzied matching by pandas startswith
+NOTE: vectorzied string matching with pandas is actually slower here.
+See https://stackoverflow.com/questions/49112552/.
 
 # TODO (gdingle): consider also
 https://bergvca.github.io/2017/10/14/super-fast-string-matching.html
@@ -61,8 +62,7 @@ def matches_fastq_pair(
         primer_seq_rev: str,
         guide_seq: str,
         fastq_r1: str,
-        fastq_r2: str,
-        parallelize: bool = False) -> bool:
+        fastq_r2: str) -> bool:
     """
     Determines whether a pair of fastq files, r1 and r2, contain the given primers and guide.
 
@@ -80,17 +80,8 @@ def matches_fastq_pair(
     assert fastq_r1.replace('_R1_', '') == fastq_r2.replace('_R2_', ''), \
         'FastQ filenames should match: {} {}'.format(fastq_r1, fastq_r2)
 
-    # TODO (gdingle): evaluate whether this is actually faster
-    if parallelize:
-        with ProcessPoolExecutor(2) as pool:
-            f1 = pool.submit(partial(in_fastq, fastq_r1, primer_seq_fwd, guide_seq, 4))
-            f2 = pool.submit(partial(in_fastq, fastq_r2, primer_seq_rev,
-                                     reverse_complement(guide_seq), 4))
-        in_r1 = f1.result()
-        in_r2 = f2.result()
-    else:
-        in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq, 4)
-        in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
+    in_r1 = in_fastq(fastq_r1, primer_seq_fwd, guide_seq, 4)
+    in_r2 = in_fastq(fastq_r2, primer_seq_rev, reverse_complement(guide_seq), 4)
 
     return (
         # The lowest seen so far has been 29% ... for a single correct file
@@ -125,7 +116,9 @@ def find_matching_pair_from_dir(
 
 def find_matching_pairs(
         fastqs: Iterable,
-        records: Iterable[Mapping[str, str]]) -> Sequence[Tuple[str, str]]:
+        records: Iterable[Mapping[str, str]],
+        parallelize: bool = False,
+) -> Sequence[Tuple[str, str]]:
     """
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
     >>> records = [{
@@ -138,13 +131,20 @@ def find_matching_pairs(
     seen: Set[str] = set()
     pairs: List[Tuple[str, str]] = []
     match_keys: Set[tuple] = set()
+
+    if parallelize:
+        pool = ProcessPoolExecutor()
+    else:
+        pool = None  # type: ignore
+
     for row in records:
         pair = find_matching_pair(
             [f for f in fastqs if '_R1_' in f and f not in seen],
             [f for f in fastqs if '_R2_' in f and f not in seen],
             row['primer_seq_fwd'].strip().upper(),
             row['primer_seq_rev'].strip().upper(),
-            row['guide_seq'].strip().upper())
+            row['guide_seq'].strip().upper(),
+            pool)
         if pair:
             pairs.append(pair)
             seen.add(pair[0])
@@ -155,6 +155,9 @@ def find_matching_pairs(
                 match_key))
         match_keys.add(match_key)
 
+    if parallelize:
+        pool.shutdown()
+
     return pairs
 
 
@@ -164,14 +167,13 @@ def find_matching_pair(
         primer_seq_fwd: str,
         primer_seq_rev: str,
         guide_seq: str,
-        parallelize: bool = False) -> Tuple[str, str]:
+        pool: ProcessPoolExecutor = None) -> Tuple[str, str]:
 
-    if parallelize:
-        with ProcessPoolExecutor() as pool:
-            bools = pool.map(
-                partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev, guide_seq),
-                fastq_r1s,
-                fastq_r2s)
+    if pool:
+        bools = pool.map(
+            partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev, guide_seq),
+            fastq_r1s,
+            fastq_r2s)
         matches = [
             (str(r1), str(r2)) for r1, r2, is_match in zip(fastq_r1s, fastq_r2s, bools)
             if is_match]
@@ -219,3 +221,45 @@ def _get_seq_lines(fastq: str) -> List[str]:
 if __name__ == '__main__':
     doctest.testmod(optionflags=doctest.FAIL_FAST)
     # print(reverse_complement('CGGGCAGCGGGTCCATCGCG'))
+
+    # import timeit
+
+    # fastqs = (
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+
+    # )
+    # records = [{
+    #     'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
+    #     'primer_seq_rev': 'GTGGACGAGACGTGGTTAA',
+    #     'guide_seq': 'AATCGGTACAAGATGGCGGA'}]
+    # find_matching_pairs(fastqs, records) == [fastqs]
+
+    # out = timeit.timeit(
+    #     """find_matching_pairs(fastqs, records)""",
+    #     number=100,
+    #     globals=globals()
+    # )
+    # print(out, 's')
+
+    # out = timeit.timeit(
+    #     f"""find_matching_pairs(fastqs, records, True)""",
+    #     number=100,
+    #     globals=globals()
+    # )
+    # print(out, 's')
