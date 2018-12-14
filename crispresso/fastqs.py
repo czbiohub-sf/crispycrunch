@@ -215,6 +215,7 @@ def _get_demux_path(
     read_file_marker = ''
     new_path = ''
     for row in records:
+        # TODO (gdingle): should PRIMER_IN_READ_LIMIT be stricter for demuxing?
         if row['primer_seq_fwd'] in line[:PRIMER_IN_READ_LIMIT]:
             read_file_marker = '_R1_'
             matches += 1
@@ -230,6 +231,7 @@ def _get_demux_path(
 
     if matches > 1:
         # TODO (gdingle): how to rank more than one match?
+        # TODO (gdingle): what about bias towards last match?
         logger.warning('More than one match for read: ' + line)
 
     return new_path

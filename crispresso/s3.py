@@ -3,6 +3,7 @@ import doctest
 import os
 
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import List
 
 PLATE_SIZE = 96
@@ -18,7 +19,7 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
     """
     Downloads all fastq files from an s3 folder.
     >>> downloads = download_fastqs('jasonli-bucket', 'JasonHDR/96wp1sorted-fastq/')
-    >>> downloads[0].startswith(DOWNLOAD_DIR + '/A1-')
+    >>> downloads[0].startswith(DOWNLOAD_DIR)
     True
     >>> all(d.endswith(FASTQ_SUFFIX) for d in downloads)
     True
@@ -33,20 +34,27 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
     paths = []
     with ThreadPoolExecutor() as pool:
         for key, size in _get_fastqs(response):
-            path = DOWNLOAD_DIR + '/' + key.split('/')[-1]
-            paths.append(path)
-            if not overwrite and os.path.exists(path) and os.path.getsize(path) == size:
+            new_dir = Path(DOWNLOAD_DIR) / Path(key).parent
+            new_dir.mkdir(parents=True, exist_ok=True)
+            new_filepath = new_dir / Path(key).name
+            paths.append(new_filepath)
+            if not overwrite and new_filepath.exists() and new_filepath.stat().st_size == size:
                 continue
             else:
                 pool.submit(
                     s3.download_file,
-                    bucket, key, path,
+                    bucket, key, str(new_filepath),
                 )
-    return paths
+    # Callers expect strings
+    return [str(p) for p in paths]
 
 
 def _get_fastqs(response) -> list:
     assert response['IsTruncated'] is False
+
+    if 'Contents' not in response:
+        raise ValueError('No contents in AWS bucket prefix {}'.format(response['Prefix']))
+
     fastqs = [(obj['Key'], obj['Size']) for obj in response['Contents']
               if obj['Key'].endswith(FASTQ_SUFFIX)]
     # TODO (gdingle): what should the min and max in a dir be?
@@ -58,4 +66,5 @@ def _get_fastqs(response) -> list:
 if __name__ == '__main__':
     # aws s3 ls s3://jasonli-bucket/JasonHDR/96wp1sorted-fastq/
     # print(download_fastqs('jasonli-bucket', 'JasonHDR/96wp1sorted-fastq/', False))
+    # print(download_fastqs('jasonli-bucket', 'CrispyCrunch/', False))
     doctest.testmod()
