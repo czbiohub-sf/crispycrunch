@@ -172,7 +172,19 @@ def _demultiplex(fastqs: Iterable,
 
     >>> _demultiplex(fastqs, records)
     ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq.gz', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq.gz']
+
+    >>> records.append(records[0])
+    >>> _demultiplex(fastqs, records)
+    Traceback (most recent call last):
+    ...
+    ValueError: primers must be unique for demultiplexing
     """
+    if not (len({row['primer_seq_fwd'] for row in records}) == len(list(records))
+            and len({row['primer_seq_rev'] for row in records}) == len(list(records))):
+        raise ValueError('primers must be unique for demultiplexing')
+
+    # TODO (gdingle): parallelize
+
     new_fastqs = defaultdict(list)  # type: ignore
     for fastq in fastqs:
         for read in _get_reads(fastq):
@@ -217,6 +229,7 @@ def _get_demux_path(
                 old_path.parent, guide_loc, read_file_marker, '.fastq.gz')
 
     if matches > 1:
+        # TODO (gdingle): how to rank more than one match?
         logger.warning('More than one match for read: ' + line)
 
     return new_path
