@@ -115,14 +115,14 @@ def find_matching_pairs(
     """
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
     >>> records = [{
+    ... 'guide_loc': 'chr7:4-23:-',
     ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
     >>> find_matching_pairs(fastqs, records) == [fastqs]
     True
 
-    # TODO (gdingle): why not working... ???
     >>> find_matching_pairs(fastqs, records, demultiplex=True)
-
+    [('fastqs/demultiplexed/chr7_4-23_-_R1_.fastq.gz', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq.gz')]
     """
     seen: Set[str] = set()
     pairs: List[Tuple[str, str]] = []
@@ -133,10 +133,8 @@ def find_matching_pairs(
     else:
         pool = None  # type: ignore
 
-    # TODO (gdingle): why not working... ???
     if demultiplex:
         fastqs = _demultiplex(fastqs, records)
-        assert False, fastqs
 
     for row in records:
         pair = find_matching_pair(
@@ -168,11 +166,12 @@ def _demultiplex(fastqs: Iterable,
 
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
     >>> records = [{
-    ... 'target_loc': 'chr7:4-23:-',
+    ... 'guide_loc': 'chr7:4-23:-',
     ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
+
     >>> _demultiplex(fastqs, records)
-    ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq']
+    ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq.gz', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq.gz']
     """
     new_fastqs = defaultdict(list)  # type: ignore
     for fastq in fastqs:
@@ -186,17 +185,13 @@ def _demultiplex(fastqs: Iterable,
             else:
                 logger.info('No demultiplex match for read: ' + line)
 
-    # TODO (gdingle): move write to own function?
-    # TODO (gdingle): is ret needed?
     # TODO (gdingle): gzip for space?
-    ret = []
     for new_fastq, reads in new_fastqs.items():
-        ret.append(new_fastq)
-        with open(new_fastq, 'w') as file:
+        with gzip.open(new_fastq, 'wt') as file:
             for read in reads:
                 file.write('\n'.join(read) + '\n')
 
-    return ret
+    return list(new_fastqs.keys())
 
 
 def _get_demux_path(
@@ -216,10 +211,10 @@ def _get_demux_path(
             read_file_marker = '_R2_'
             matches += 1
 
-        target = row['target_loc'].replace(':', '_')
         if matches:
+            guide_loc = row['guide_loc'].replace(':', '_')
             new_path = '{}/demultiplexed/{}{}{}'.format(
-                old_path.parent, target, read_file_marker, old_path.suffix)
+                old_path.parent, guide_loc, read_file_marker, '.fastq.gz')
 
     if matches > 1:
         logger.warning('More than one match for read: ' + line)
@@ -289,17 +284,18 @@ def _get_seq_lines(fastq: str) -> List[str]:
 @lru_cache(maxsize=1024)
 def _get_reads(fastq: str) -> Iterable[tuple]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
+    reads = []
     with file:
         while True:
             next_read = tuple(l.strip() for l in islice(file, 4))
             if not len(next_read) == 4:
-                # TODO (gdingle): how does fastq file end?
                 break
             # See https://en.wikipedia.org/wiki/FASTQ_format
             assert next_read[0].startswith('@'), next_read[0]
             assert next_read[1].startswith(tuple('AGCT')), next_read[1]
             assert next_read[2].startswith('+'), next_read[2]
-            yield next_read
+            reads.append(next_read)
+    return reads
 
 
 if __name__ == '__main__':
