@@ -210,11 +210,13 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
 
         batch = CrispressoBatchWebRequest(analysis)
         largs = [[
-            row['primer_product'],  # reference amplicon
+            # "amplicon" in crispresso
+            # TODO (gdingle): rename primer_product in CC ?
+            row['primer_product_wt'] if analysis.experiment.is_hdr else row['primer_product'],
             row['guide_seq'],
             row['fastq_fwd'],
             row['fastq_rev'],
-            row['hdr_seq'],
+            row['primer_product'] if analysis.experiment.is_hdr else '',
             str(row['index']),
         ] for row in records]
         return batch.start(largs, [-1, 1])

@@ -79,6 +79,9 @@ def matches_fastq_pair(
     in_r1 = in_fastq(fastq_r1, primer_seq_fwd)
     in_r2 = in_fastq(fastq_r2, primer_seq_rev)
 
+    # logger.warning((primer_seq_fwd, fastq_r1.split('/')[-1], in_r1, fastq_r2.split('/')
+    #                 [-1], in_r2, in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25))
+
     return (
         # The lowest seen so far has been 29% ... for a single correct file
         in_r1[1] + in_r1[1] > (in_r1[0] + in_r2[0]) * 0.25
@@ -123,6 +126,14 @@ def find_matching_pairs(
 
     >>> find_matching_pairs(fastqs, records, demultiplex=True)
     [('fastqs/demultiplexed/chr7_4-23_-_R1_.fastq.gz', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq.gz')]
+
+    >>> fastqs = ['input/CrispyCrunch/mNGplate3_unsorted_A10_TAF1B-C_S10_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A10_TAF1B-C_S10_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A11_TAF1C-C_S11_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A11_TAF1C-C_S11_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A12_TAF1D-N_S12_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A12_TAF1D-N_S12_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R2_001.fastq.gz']
+    >>> records = [{
+    ... 'guide_loc': 'chr7:4-23:-',
+    ... 'primer_seq_fwd': 'TGTACTGTCACTTGGA',
+    ... 'primer_seq_rev': 'CTCAACACCCTGACAC'}]
+    >>> find_matching_pairs(fastqs, records)
+    [('input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R2_001.fastq.gz')]
     """
     seen: Set[str] = set()
     pairs: List[Tuple[str, str]] = []
@@ -266,8 +277,8 @@ def find_matching_pair(
         return matches[0]
     else:
         raise ValueError(
-            'Cannot find matching pair in {} candidate FastQ files for primer_seq_fwd {}'.format(
-                len(list(fastq_r1s)), primer_seq_fwd))
+            'Cannot find match for primers {} in {} candidate FastQ file pairs'.format(
+                (primer_seq_fwd, primer_seq_rev), len(list(fastq_r1s)), ))
 
 
 # TODO (gdingle): move to conversions or somewhere?

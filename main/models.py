@@ -777,13 +777,13 @@ class Analysis(BaseModel):
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
     s3_bucket = models.CharField(max_length=80,
-                                 # default='jasonli-bucket',
-                                 default='ryan.leenay-bucket',
+                                 default='jasonli-bucket',
+                                 # default='ryan.leenay-bucket',
                                  help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed'
                                  )
     s3_prefix = models.CharField(max_length=160,
-                                 # default='JasonHDR/96wp1sorted-fastq/'
-                                 default='Greg_CXCR4_iPSC',
+                                 default='CrispyCrunch',
+                                 # default='Greg_CXCR4_iPSC',
                                  help_text='The S3 directory that contains the FastQ files to be analyzed'
                                  )
 
