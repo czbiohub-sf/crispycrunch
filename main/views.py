@@ -586,12 +586,9 @@ class AnalysisView(CreatePlusView):
             return obj
 
         sheet = samplesheet.from_analysis(obj)
-        # TODO (gdingle): how to show missing rows in analysis?
-        # Because primers may be saved as na
-        sheet = sheet.dropna(subset=['primer_seq_fwd'])
 
         # TODO (gdingle): create dir per download, as in seqbot
-        obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records())
+        obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records(), parallelize=True)
 
         sheet = samplesheet.from_analysis(obj)
 
@@ -639,7 +636,11 @@ class CustomAnalysisView(View):
         # fastq_data is initially a flat list. Process only on initial post
         # because find_matching_pairs is expensive.
         if isinstance(fastq_data[0], str):
-            fastq_data = find_matching_pairs(fastq_data, sheet.to_records())
+            fastq_data = find_matching_pairs(
+                fastq_data,
+                sheet.to_records(),
+                parallelize=True
+            )
 
         sheet['fastq_fwd'] = [pair[0] for pair in fastq_data]
         sheet['fastq_rev'] = [pair[1] for pair in fastq_data]

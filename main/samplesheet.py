@@ -26,6 +26,7 @@ from utils import hdr
 from utils import manuscore
 from utils import primerchecks
 from utils.chrloc import *
+from utils.validators import is_seq
 
 from crispresso.fastqs import reverse_complement
 
@@ -526,6 +527,10 @@ def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
     # sheet.analysis_id = analysis.id
     # sheet.analysis_create_time = analysis.create_time
     # sheet.analyst_name = analysis.owner.username
+
+    # Filter out NOT_FOUND
+    # TODO (gdingle): how to show missing rows in analysis?
+    sheet = sheet[sheet.apply(lambda row: is_seq(row['primer_seq_fwd']), axis=1)]
 
     sheet['s3_bucket'] = analysis.s3_bucket
     sheet['s3_prefix'] = analysis.s3_prefix
