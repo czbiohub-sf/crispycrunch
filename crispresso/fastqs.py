@@ -2,6 +2,7 @@ import doctest
 import gzip
 import logging
 import random
+import shutil
 
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -129,7 +130,7 @@ def find_matching_pairs(
     True
 
     >>> find_matching_pairs(fastqs, records, demultiplex=True)
-    [('fastqs/demultiplexed/chr7_4-23_-_R1_.fastq.gz', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq.gz')]
+    [('fastqs/demultiplexed/chr7_4-23_-_R1_.fastq', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq')]
 
     >>> fastqs = ['input/CrispyCrunch/mNGplate3_unsorted_A10_TAF1B-C_S10_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A10_TAF1B-C_S10_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A11_TAF1C-C_S11_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A11_TAF1C-C_S11_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A12_TAF1D-N_S12_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A12_TAF1D-N_S12_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R2_001.fastq.gz']
     >>> records = [{
@@ -188,7 +189,8 @@ def find_matching_pairs(
 
 
 def _demultiplex(fastqs: Iterable,
-                 records: Iterable[Mapping[str, str]],) -> Iterable[str]:
+                 records: Iterable[Mapping[str, str]],
+                 parallelize: bool = False) -> Iterable[str]:
     """
     Split fastqs files into new files by prefix or suffix.
 
@@ -199,7 +201,10 @@ def _demultiplex(fastqs: Iterable,
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
 
     >>> _demultiplex(fastqs, records)
-    ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq.gz', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq.gz']
+    ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq']
+
+    >>> _demultiplex(fastqs, records, True)
+    ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq']
 
     >>> records.append(records[0])
     >>> _demultiplex(fastqs, records)
@@ -211,37 +216,56 @@ def _demultiplex(fastqs: Iterable,
             and len({row['primer_seq_rev'] for row in records}) == len(list(records))):
         raise ValueError('primers must be unique for demultiplexing')
 
-    # TODO (gdingle): parallelize?
-    new_fastqs = defaultdict(list)  # type: ignore
+    # See _get_demux_path
+    demux_dir = (Path(list(fastqs)[0]).parent / 'demultiplexed')
+    shutil.rmtree(demux_dir, ignore_errors=True)
+    demux_dir.mkdir()
+
+    if parallelize:
+        pool = ProcessPoolExecutor()
+    else:
+        pool = None  # type: ignore
+
+    new_paths = set()  # type: ignore
+    if parallelize:
+        sets = pool.map(_demux_fastq, fastqs, (records for f in fastqs))
+        for s in sets:
+            new_paths = new_paths.union(s)
+    else:
+        for fastq in fastqs:
+            new_paths = new_paths.union(_demux_fastq(fastq, records))
+
+    if parallelize:
+        pool.shutdown(wait=True)
+
+    return sorted(new_paths)
+
+
+def _demux_fastq(fastq: str, records) -> set:
+    logging.info('Demultiplexing fastq {}...'.format(fastq))
     discarded = 0
     total = 0
-    for fastq in fastqs:
-        logging.info('Demultiplexing fastq {}...'.format(fastq))
-        for read in _get_reads(fastq):
-            line = read[1]
-            new_path = _get_demux_path(line, records, Path(fastq))
-            if new_path:
-                new_fastqs[new_path].append(read)
-            else:
-                discarded += 1
-            total += 1
-
-    logger.info('{} reads out of {} were discarded because they could not be matched by primer'.format(
-        discarded, total))
-
-    logging.info('Writing demultiplexed files...')
-    for new_fastq, reads in new_fastqs.items():
-        with gzip.open(new_fastq, 'wt') as file:
-            for read in reads:
+    new_paths = set()  # type: ignore
+    for read in _get_reads(fastq):
+        line = read[1]
+        new_path = _get_demux_path(line, records, Path(fastq), '.fastq')
+        if new_path:
+            with open(new_path, 'at') as file:
                 file.write('\n'.join(read) + '\n')
-
-    return list(new_fastqs.keys())
+            new_paths.add(new_path)
+        else:
+            discarded += 1
+        total += 1
+    logger.info('{} reads out of {} in {} were discarded because they could not be matched by primer'.format(
+        discarded, total, Path(fastq).name))
+    return new_paths
 
 
 def _get_demux_path(
     line: str,
     records: Iterable[Mapping[str, str]],
     old_path: Path,
+    suffix: str = '.fastq.gz',
 ) -> str:
     matches = 0
     read_file_marker = ''
@@ -259,7 +283,7 @@ def _get_demux_path(
         if matches:
             guide_loc = row['guide_loc'].replace(':', '_')
             new_path = '{}/demultiplexed/{}{}{}'.format(
-                old_path.parent, guide_loc, read_file_marker, '.fastq.gz')
+                old_path.parent, guide_loc, read_file_marker, suffix)
 
     if matches > 1:
         # TODO (gdingle): how to rank more than one match?
