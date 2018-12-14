@@ -28,6 +28,9 @@ See https://stackoverflow.com/questions/49112552/.
 https://bergvca.github.io/2017/10/14/super-fast-string-matching.html
 """
 
+# 60 length seen to miss only 1 in 10,000
+PRIMER_IN_READ_LIMIT = 60
+
 
 def in_fastq(fastq: str, primer_seq: str) -> Tuple[int, int]:
     """
@@ -48,8 +51,7 @@ def in_fastq(fastq: str, primer_seq: str) -> Tuple[int, int]:
     """
     seq_lines = _get_seq_lines(fastq)
     primer_matches = [line for line in seq_lines
-                      # 60 length seen to miss only 1 in 10,000
-                      if primer_seq in line[:60]]
+                      if primer_seq in line[:PRIMER_IN_READ_LIMIT]]
     return (len(seq_lines), len(primer_matches))
 
 
@@ -117,6 +119,10 @@ def find_matching_pairs(
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
     >>> find_matching_pairs(fastqs, records) == [fastqs]
     True
+
+    # TODO (gdingle): why not working... ???
+    >>> find_matching_pairs(fastqs, records, demultiplex=True)
+
     """
     seen: Set[str] = set()
     pairs: List[Tuple[str, str]] = []
@@ -127,8 +133,10 @@ def find_matching_pairs(
     else:
         pool = None  # type: ignore
 
+    # TODO (gdingle): why not working... ???
     if demultiplex:
         fastqs = _demultiplex(fastqs, records)
+        assert False, fastqs
 
     for row in records:
         pair = find_matching_pair(
@@ -160,21 +168,63 @@ def _demultiplex(fastqs: Iterable,
 
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
     >>> records = [{
+    ... 'target_loc': 'chr7:4-23:-',
     ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
     >>> _demultiplex(fastqs, records)
-    ['A1-ATL2-N-sorted-180212_S1_L001_R1_001-demultiplexed.fastq', 'A1-ATL2-N-sorted-180212_S1_L001_R2_001-demultiplexed.fastq']
+    ['fastqs/demultiplexed/chr7_4-23_-_R1_.fastq', 'fastqs/demultiplexed/chr7_4-23_-_R2_.fastq']
     """
     new_fastqs = defaultdict(list)  # type: ignore
     for fastq in fastqs:
-        path = Path(fastq)
-        new_path = path.stem + '-demultiplexed' + path.suffix
-
         for read in _get_reads(fastq):
-            # TODO (gdingle): do some work here
-            new_fastqs[new_path].append(read)
+            line = read[1]
+            # TODO (gdingle): somehow cache previously demuxed?
+            new_path = _get_demux_path(line, records, Path(fastq))
 
-    return list(new_fastqs.keys())
+            if new_path:
+                new_fastqs[new_path].append(read)
+            else:
+                logger.info('No demultiplex match for read: ' + line)
+
+    # TODO (gdingle): move write to own function?
+    # TODO (gdingle): is ret needed?
+    # TODO (gdingle): gzip for space?
+    ret = []
+    for new_fastq, reads in new_fastqs.items():
+        ret.append(new_fastq)
+        with open(new_fastq, 'w') as file:
+            for read in reads:
+                file.write('\n'.join(read) + '\n')
+
+    return ret
+
+
+def _get_demux_path(
+    line: str,
+    records: Iterable[Mapping[str, str]],
+    old_path: Path,
+) -> str:
+    matches = 0
+    read_file_marker = ''
+    new_path = ''
+    for row in records:
+        if row['primer_seq_fwd'] in line[:PRIMER_IN_READ_LIMIT]:
+            read_file_marker = '_R1_'
+            matches += 1
+
+        if row['primer_seq_rev'] in line[:PRIMER_IN_READ_LIMIT]:
+            read_file_marker = '_R2_'
+            matches += 1
+
+        target = row['target_loc'].replace(':', '_')
+        if matches:
+            new_path = '{}/demultiplexed/{}{}{}'.format(
+                old_path.parent, target, read_file_marker, old_path.suffix)
+
+    if matches > 1:
+        logger.warning('More than one match for read: ' + line)
+
+    return new_path
 
 
 def find_matching_pair(
