@@ -518,6 +518,10 @@ def from_excel(file: UploadedFile) -> DataFrame:
         sheet = pandas.read_excel(file, sheet_name=0)
     else:
         sheet = pandas.read_csv(file)
+
+    # redo column headers
+    sheet.columns = [c.replace(' ', '_').lower() for c in sheet.columns]
+
     # TODO (gdingle): trim and validate all cells?
     return sheet
 

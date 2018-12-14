@@ -633,20 +633,28 @@ class CustomAnalysisView(View):
                 'analysis': analysis,
             })
 
-        file = form.cleaned_data['file']
-        sheet = samplesheet.from_excel(file)
-        fastq_data = analysis.fastq_data
-        assert len(fastq_data), 'Fastqs must be present for a custom analysis'
+        try:
+            file = form.cleaned_data['file']
+            sheet = samplesheet.from_excel(file)
+            fastq_data = analysis.fastq_data
+            assert len(fastq_data), 'Fastqs must be present for a custom analysis'
 
-        # fastq_data is initially a flat list. Process only on initial post
-        # because find_matching_pairs is expensive.
-        if isinstance(fastq_data[0], str):
-            fastq_data = find_matching_pairs(
-                fastq_data,
-                sheet.to_records(),
-                parallelize=True,
-                demultiplex=analysis.demultiplex,
-            )
+            # fastq_data is initially a flat list. Process only on initial post
+            # because find_matching_pairs is expensive.
+            if isinstance(fastq_data[0], str):
+                fastq_data = find_matching_pairs(
+                    fastq_data,
+                    sheet.to_records(),
+                    parallelize=True,
+                    demultiplex=analysis.demultiplex,
+                )
+        except (ValidationError, ValueError) as e:
+            form.add_error('__all__', e)
+            return render(request, self.template_name, {
+                **kwargs,
+                'form': form,
+                'analysis': analysis,
+            })
 
         sheet['fastq_fwd'] = [pair[0] for pair in fastq_data]
         sheet['fastq_rev'] = [pair[1] for pair in fastq_data]
