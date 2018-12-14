@@ -1,6 +1,7 @@
 import doctest
 import gzip
 import logging
+import random
 
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -31,6 +32,9 @@ https://bergvca.github.io/2017/10/14/super-fast-string-matching.html
 # 60 length seen to miss only 1 in 10,000
 PRIMER_IN_READ_LIMIT = 60
 
+# For consistency of sampling
+random.seed('CrispyCrunch')
+
 
 def in_fastq(fastq: str, primer_seq: str) -> Tuple[int, int]:
     """
@@ -41,15 +45,15 @@ def in_fastq(fastq: str, primer_seq: str) -> Tuple[int, int]:
     >>> primer_seq = 'CGAGGAGATACAGGCGGAG'
 
     >>> in_fastq(r1, primer_seq)
-    (12022, 11790)
+    (1232, 1213)
     >>> in_fastq(r1, reverse_complement(primer_seq))
-    (12022, 0)
+    (1232, 0)
 
     >>> r1gz = 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz'
     >>> in_fastq(r1gz, primer_seq)
-    (12022, 11790)
+    (1199, 1178)
     """
-    seq_lines = _get_seq_lines(fastq)
+    seq_lines = _get_random_seq_lines(fastq)
     primer_matches = [line for line in seq_lines
                       if primer_seq in line[:PRIMER_IN_READ_LIMIT]]
     return (len(seq_lines), len(primer_matches))
@@ -160,15 +164,15 @@ def find_matching_pairs(
         primer_seq_fwd = row['primer_seq_fwd'].strip().upper()
         primer_seq_rev = row['primer_seq_rev'].strip().upper()
         match_key = (primer_seq_fwd, primer_seq_rev)
-        logger.info('Finding matching pair of files for {}'.format(match_key))
+        logger.info('Finding matching pair of files for {} ...'.format(match_key))
         pair = find_matching_pair(
-            # TODO (gdingle): revert 18
-            [f for f in fastqs if '_R1_' in f and f not in seen][:18],
-            [f for f in fastqs if '_R2_' in f and f not in seen][:18],
+            [f for f in fastqs if '_R1_' in f and f not in seen],
+            [f for f in fastqs if '_R2_' in f and f not in seen],
             primer_seq_fwd,
             primer_seq_rev,
             pool)
         if pair:
+            logger.info('Found matching pair of files {} for {}.'.format(pair, match_key))
             pairs.append(pair)
             seen.add(pair[0])
             seen.add(pair[1])
@@ -207,21 +211,25 @@ def _demultiplex(fastqs: Iterable,
             and len({row['primer_seq_rev'] for row in records}) == len(list(records))):
         raise ValueError('primers must be unique for demultiplexing')
 
-    # TODO (gdingle): parallelize
-
+    # TODO (gdingle): parallelize?
     new_fastqs = defaultdict(list)  # type: ignore
+    discarded = 0
+    total = 0
     for fastq in fastqs:
+        logging.info('Demultiplexing fastq {}...'.format(fastq))
         for read in _get_reads(fastq):
             line = read[1]
-            # TODO (gdingle): somehow cache previously demuxed?
             new_path = _get_demux_path(line, records, Path(fastq))
-
             if new_path:
                 new_fastqs[new_path].append(read)
             else:
-                logger.info('No demultiplex match for read: ' + line)
+                discarded += 1
+            total += 1
 
-    # TODO (gdingle): gzip for space?
+    logger.info('{} reads out of {} were discarded because they could not be matched by primer'.format(
+        discarded, total))
+
+    logging.info('Writing demultiplexed files...')
     for new_fastq, reads in new_fastqs.items():
         with gzip.open(new_fastq, 'wt') as file:
             for read in reads:
@@ -310,20 +318,19 @@ def reverse_complement(seq: str) -> str:
 
 
 @lru_cache(maxsize=96 * 2)
-def _get_seq_lines(fastq: str) -> List[str]:
+def _get_random_seq_lines(fastq: str, random_fraction: float = 0.1) -> List[str]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
     first_line = next(file)
     assert first_line.startswith('@'), 'Expecting fastq format, not: ' + first_line
     with file:
         # Every fourth line
-        seq_lines = [line for i, line in enumerate(file) if i % 4 == 0]
+        seq_lines = [line for i, line in enumerate(file)
+                     if i % 4 == 0 and random.random() < random_fraction]
     return seq_lines
 
 
-@lru_cache(maxsize=96 * 2)
 def _get_reads(fastq: str) -> Iterable[tuple]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
-    reads = []
     with file:
         while True:
             next_read = tuple(l.strip() for l in islice(file, 4))
@@ -333,8 +340,7 @@ def _get_reads(fastq: str) -> Iterable[tuple]:
             assert next_read[0].startswith('@'), next_read[0]
             assert next_read[1].startswith(tuple('AGCT')), next_read[1]
             assert next_read[2].startswith('+'), next_read[2]
-            reads.append(next_read)
-    return reads
+            yield next_read
 
 
 if __name__ == '__main__':
