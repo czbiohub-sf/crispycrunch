@@ -134,7 +134,16 @@ def find_matching_pairs(
     ... 'primer_seq_rev': 'CTCAACACCCTGACAC'}]
     >>> find_matching_pairs(fastqs, records)
     [('input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R2_001.fastq.gz')]
+
+    >>> records.append(records[0])
+    >>> find_matching_pairs(fastqs, records)
+    Traceback (most recent call last):
+    ...
+    ValueError: Primers should be unique for matching to fastqs
     """
+    if len({(row['primer_seq_fwd'], row['primer_seq_rev']) for row in records}) != len(list(records)):
+        raise ValueError('Primers should be unique for matching to fastqs')
+
     seen: Set[str] = set()
     pairs: List[Tuple[str, str]] = []
     match_keys: Set[tuple] = set()
@@ -148,17 +157,21 @@ def find_matching_pairs(
         fastqs = _demultiplex(fastqs, records)
 
     for row in records:
+        primer_seq_fwd = row['primer_seq_fwd'].strip().upper()
+        primer_seq_rev = row['primer_seq_rev'].strip().upper()
+        match_key = (primer_seq_fwd, primer_seq_rev)
+        logger.info('Finding matching pair of files for {}'.format(match_key))
         pair = find_matching_pair(
-            [f for f in fastqs if '_R1_' in f and f not in seen],
-            [f for f in fastqs if '_R2_' in f and f not in seen],
-            row['primer_seq_fwd'].strip().upper(),
-            row['primer_seq_rev'].strip().upper(),
+            # TODO (gdingle): revert 18
+            [f for f in fastqs if '_R1_' in f and f not in seen][:18],
+            [f for f in fastqs if '_R2_' in f and f not in seen][:18],
+            primer_seq_fwd,
+            primer_seq_rev,
             pool)
         if pair:
             pairs.append(pair)
             seen.add(pair[0])
             seen.add(pair[1])
-        match_key = (row['primer_seq_fwd'], row['primer_seq_rev'])
         if match_key in match_keys:
             logger.warning('Duplicate detected: {}. Results may be unexpected.'.format(
                 match_key))
@@ -296,7 +309,7 @@ def reverse_complement(seq: str) -> str:
     return ''.join(complement[base] for base in reversed(seq))
 
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=96 * 2)
 def _get_seq_lines(fastq: str) -> List[str]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
     first_line = next(file)
@@ -307,7 +320,7 @@ def _get_seq_lines(fastq: str) -> List[str]:
     return seq_lines
 
 
-@lru_cache(maxsize=1024)
+@lru_cache(maxsize=96 * 2)
 def _get_reads(fastq: str) -> Iterable[tuple]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
     reads = []

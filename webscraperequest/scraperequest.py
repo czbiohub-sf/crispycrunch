@@ -104,11 +104,11 @@ class CrispressoRequest(AbstractScrapeRequest):
         # TODO (gdingle): hack alert!!! we need different POST params because
         # Crispresso2 master has diverged from CC older copy
         if 'pinellolab' in CRISPRESSO_BASE_URL:
+            # NOTE: all post vars are required, even if empty
+            # 'amplicon': amplicon,
             self.data = {
                 'active_paired_samples': '',
                 'active_single_samples': '',
-                # NOTE: all post vars are required, even if empty
-                # 'amplicon': amplicon,
                 'amplicon_names': '',
                 'be_from': 'C',
                 'be_to': 'T',
