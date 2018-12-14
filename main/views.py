@@ -588,7 +588,12 @@ class AnalysisView(CreatePlusView):
         sheet = samplesheet.from_analysis(obj)
 
         # TODO (gdingle): create dir per download, as in seqbot
-        obj.fastq_data = find_matching_pairs(fastqs, sheet.to_records(), parallelize=True)
+        obj.fastq_data = find_matching_pairs(
+            fastqs,
+            sheet.to_records(),
+            parallelize=True,
+            demultiplex=obj.demultiplex,
+        )
 
         sheet = samplesheet.from_analysis(obj)
 
@@ -639,7 +644,8 @@ class CustomAnalysisView(View):
             fastq_data = find_matching_pairs(
                 fastq_data,
                 sheet.to_records(),
-                parallelize=True
+                parallelize=True,
+                demultiplex=analysis.demultiplex,
             )
 
         sheet['fastq_fwd'] = [pair[0] for pair in fastq_data]

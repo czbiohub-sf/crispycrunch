@@ -106,6 +106,7 @@ def find_matching_pairs(
         fastqs: Iterable,
         records: Iterable[Mapping[str, str]],
         parallelize: bool = False,
+        demultiplex: bool = False,
 ) -> Sequence[Tuple[str, str]]:
     """
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
@@ -124,8 +125,10 @@ def find_matching_pairs(
     else:
         pool = None  # type: ignore
 
-    for row in records:
+    if demultiplex:
+        fastqs = _demultiplex(fastqs, records)
 
+    for row in records:
         pair = find_matching_pair(
             [f for f in fastqs if '_R1_' in f and f not in seen],
             [f for f in fastqs if '_R2_' in f and f not in seen],
@@ -146,6 +149,27 @@ def find_matching_pairs(
         pool.shutdown()
 
     return pairs
+
+
+def _demultiplex(fastqs: Iterable,
+                 records: Iterable[Mapping[str, str]],) -> Iterable:
+    """
+    Split fastqs files into new files by prefix or suffix.
+
+    >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
+    >>> records = [{
+    ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
+    ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
+    >>> _demultiplex(fastqs, records)
+    ['A1-ATL2-N-sorted-180212_S1_L001_R1_001-demultiplexed.fastq', 'A1-ATL2-N-sorted-180212_S1_L001_R2_001-demultiplexed.fastq']
+    """
+    new_fastqs = []
+    for fastq in fastqs:
+        path = Path(fastq)
+        new_fastqs.append(
+            path.stem + '-demultiplexed' + path.suffix,
+        )
+    return new_fastqs
 
 
 def find_matching_pair(

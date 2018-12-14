@@ -17,7 +17,6 @@ FASTQ_SUFFIX = '.fastq.gz'
 def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
     """
     Downloads all fastq files from an s3 folder.
-
     >>> downloads = download_fastqs('jasonli-bucket', 'JasonHDR/96wp1sorted-fastq/')
     >>> downloads[0].startswith(DOWNLOAD_DIR + '/A1-')
     True
