@@ -2,8 +2,10 @@ import doctest
 import gzip
 import logging
 
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from functools import lru_cache, partial
+from itertools import islice
 from pathlib import Path
 from typing import Iterable, List, Mapping, Sequence, Set, Tuple
 
@@ -152,7 +154,7 @@ def find_matching_pairs(
 
 
 def _demultiplex(fastqs: Iterable,
-                 records: Iterable[Mapping[str, str]],) -> Iterable:
+                 records: Iterable[Mapping[str, str]],) -> Iterable[str]:
     """
     Split fastqs files into new files by prefix or suffix.
 
@@ -163,13 +165,16 @@ def _demultiplex(fastqs: Iterable,
     >>> _demultiplex(fastqs, records)
     ['A1-ATL2-N-sorted-180212_S1_L001_R1_001-demultiplexed.fastq', 'A1-ATL2-N-sorted-180212_S1_L001_R2_001-demultiplexed.fastq']
     """
-    new_fastqs = []
+    new_fastqs = defaultdict(list)  # type: ignore
     for fastq in fastqs:
         path = Path(fastq)
-        new_fastqs.append(
-            path.stem + '-demultiplexed' + path.suffix,
-        )
-    return new_fastqs
+        new_path = path.stem + '-demultiplexed' + path.suffix
+
+        for read in _get_reads(fastq):
+            # TODO (gdingle): do some work here
+            new_fastqs[new_path].append(read)
+
+    return list(new_fastqs.keys())
 
 
 def find_matching_pair(
@@ -229,6 +234,22 @@ def _get_seq_lines(fastq: str) -> List[str]:
         # Every fourth line
         seq_lines = [line for i, line in enumerate(file) if i % 4 == 0]
     return seq_lines
+
+
+@lru_cache(maxsize=1024)
+def _get_reads(fastq: str) -> Iterable[tuple]:
+    file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
+    with file:
+        while True:
+            next_read = tuple(l.strip() for l in islice(file, 4))
+            if not len(next_read) == 4:
+                # TODO (gdingle): how does fastq file end?
+                break
+            # See https://en.wikipedia.org/wiki/FASTQ_format
+            assert next_read[0].startswith('@'), next_read[0]
+            assert next_read[1].startswith(tuple('AGCT')), next_read[1]
+            assert next_read[2].startswith('+'), next_read[2]
+            yield next_read
 
 
 if __name__ == '__main__':
