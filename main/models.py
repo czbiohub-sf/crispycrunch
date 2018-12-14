@@ -791,6 +791,16 @@ class Analysis(BaseModel):
                              help_text='Data returned by external service')
     fastq_data = JSONField(default=list, blank=True)
 
+    demultiplex = models.BooleanField(
+        default=False,
+        blank=True,
+        help_text="""De-multiplex FastQ files into samples by matching primers
+            to the beginning and end of each read. This is useful if the samples
+            were *not* indexed before sequencing. The samples must each have a
+            unique pair of forward and reverse primers. Reads that don't match
+            any pair will be discarded, typically less than 5%.""",
+    )
+
     def __str__(self):
         # return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
         return '{} samples of {}'.format(
