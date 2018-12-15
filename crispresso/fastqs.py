@@ -159,7 +159,7 @@ def find_matching_pairs(
         pool = None  # type: ignore
 
     if demultiplex:
-        fastqs = _demultiplex(fastqs, records)
+        fastqs = _demultiplex(fastqs, records, parallelize)
 
     for row in records:
         primer_seq_fwd = row['primer_seq_fwd'].strip().upper()
@@ -186,6 +186,66 @@ def find_matching_pairs(
         pool.shutdown()
 
     return pairs
+
+
+def find_matching_pair(
+        fastq_r1s: Iterable,
+        fastq_r2s: Iterable,
+        primer_seq_fwd: str,
+        primer_seq_rev: str,
+        pool: ProcessPoolExecutor = None) -> Tuple[str, str]:
+
+    if pool:
+        bools = pool.map(
+            partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev),
+            fastq_r1s,
+            fastq_r2s)
+        matches = [
+            (str(r1), str(r2)) for r1, r2, is_match in zip(fastq_r1s, fastq_r2s, bools)
+            if is_match]
+    else:
+        matches = [
+            (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
+            if matches_fastq_pair(primer_seq_fwd, primer_seq_rev, r1, r2)]
+
+    if matches:
+        if len(matches) > 1:
+            logger.warning('More than one match: {}'.format(matches))
+            # Return the first match on the assumption that inputs rows and files are
+            # ordered similarly.
+            # TODO (gdingle): deal with multi matches better
+        return matches[0]
+    else:
+        raise ValueError(
+            'Cannot find match for primers {} in {} candidate FastQ file pairs'.format(
+                (primer_seq_fwd, primer_seq_rev), len(list(fastq_r1s)), ))
+
+
+@lru_cache(maxsize=96 * 2)
+def _get_random_seq_lines(fastq: str, random_fraction: float = 0.1) -> List[str]:
+    file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
+    first_line = next(file)
+    assert first_line.startswith('@'), 'Expecting fastq format, not: ' + first_line
+    with file:
+        # Every fourth line
+        seq_lines = [line for i, line in enumerate(file)
+                     if i % 4 == 0 and random.random() < random_fraction]
+    return seq_lines
+
+
+# TODO (gdingle): move to conversions or somewhere? it really doesn't need to be here
+def reverse_complement(seq: str) -> str:
+    """
+    >>> seq_in = 'AATCGGTACAAGATGGCGGA'
+    >>> seq_out = 'TCCGCCATCTTGTACCGATT'
+    >>> reverse_complement(seq_in) == seq_out
+    True
+    >>> reverse_complement(seq_out) == seq_in
+    True
+    """
+    complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A',
+                  'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
+    return ''.join(complement[base] for base in reversed(seq))
 
 
 def _demultiplex(fastqs: Iterable,
@@ -219,7 +279,7 @@ def _demultiplex(fastqs: Iterable,
     # See _get_demux_path
     demux_dir = (Path(list(fastqs)[0]).parent / 'demultiplexed')
     shutil.rmtree(demux_dir, ignore_errors=True)
-    demux_dir.mkdir()
+    demux_dir.mkdir(exist_ok=True)
 
     if parallelize:
         pool = ProcessPoolExecutor()
@@ -267,90 +327,31 @@ def _get_demux_path(
     old_path: Path,
     suffix: str = '.fastq.gz',
 ) -> str:
-    matches = 0
-    read_file_marker = ''
-    new_path = ''
+    """
+    Assign a FastQ read to a pre-determined file by the contents of the read.
+    The first primer to match the gets the read. Matching is by startswith,
+    the surest match. Tests show less than 5% discarded.
+
+    # TODO (gdingle): look at the distribution of file sizes.
+
+    NOTE: this function needs be FAST to process 96 fastqs.
+
+    """
     for row in records:
-        # TODO (gdingle): should PRIMER_IN_READ_LIMIT be stricter for demuxing?
-        if row['primer_seq_fwd'] in line[:PRIMER_IN_READ_LIMIT]:
+
+        read_file_marker = ''
+        if line.startswith(row['primer_seq_fwd']):
             read_file_marker = '_R1_'
-            matches += 1
-
-        if row['primer_seq_rev'] in line[:PRIMER_IN_READ_LIMIT]:
+        elif line.startswith(row['primer_seq_rev']):
             read_file_marker = '_R2_'
-            matches += 1
 
-        if matches:
+        if read_file_marker:
+            # TODO (gdingle): is guide_loc best filename ID?
             guide_loc = row['guide_loc'].replace(':', '_')
-            new_path = '{}/demultiplexed/{}{}{}'.format(
+            return '{}/demultiplexed/{}{}{}'.format(
                 old_path.parent, guide_loc, read_file_marker, suffix)
 
-    if matches > 1:
-        # TODO (gdingle): how to rank more than one match?
-        # TODO (gdingle): what about bias towards last match?
-        logger.warning('More than one match for read: ' + line)
-
-    return new_path
-
-
-def find_matching_pair(
-        fastq_r1s: Iterable,
-        fastq_r2s: Iterable,
-        primer_seq_fwd: str,
-        primer_seq_rev: str,
-        pool: ProcessPoolExecutor = None) -> Tuple[str, str]:
-
-    if pool:
-        bools = pool.map(
-            partial(matches_fastq_pair, primer_seq_fwd, primer_seq_rev),
-            fastq_r1s,
-            fastq_r2s)
-        matches = [
-            (str(r1), str(r2)) for r1, r2, is_match in zip(fastq_r1s, fastq_r2s, bools)
-            if is_match]
-    else:
-        matches = [
-            (str(r1), str(r2)) for r1, r2 in zip(fastq_r1s, fastq_r2s)
-            if matches_fastq_pair(primer_seq_fwd, primer_seq_rev, r1, r2)]
-
-    if matches:
-        if len(matches) > 1:
-            logger.warning('More than one match: {}'.format(matches))
-            # Return the first match on the assumption that inputs rows and files are
-            # ordered similarly.
-            # TODO (gdingle): deal with multi matches better
-        return matches[0]
-    else:
-        raise ValueError(
-            'Cannot find match for primers {} in {} candidate FastQ file pairs'.format(
-                (primer_seq_fwd, primer_seq_rev), len(list(fastq_r1s)), ))
-
-
-# TODO (gdingle): move to conversions or somewhere?
-def reverse_complement(seq: str) -> str:
-    """
-    >>> seq_in = 'AATCGGTACAAGATGGCGGA'
-    >>> seq_out = 'TCCGCCATCTTGTACCGATT'
-    >>> reverse_complement(seq_in) == seq_out
-    True
-    >>> reverse_complement(seq_out) == seq_in
-    True
-    """
-    complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A',
-                  'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
-    return ''.join(complement[base] for base in reversed(seq))
-
-
-@lru_cache(maxsize=96 * 2)
-def _get_random_seq_lines(fastq: str, random_fraction: float = 0.1) -> List[str]:
-    file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
-    first_line = next(file)
-    assert first_line.startswith('@'), 'Expecting fastq format, not: ' + first_line
-    with file:
-        # Every fourth line
-        seq_lines = [line for i, line in enumerate(file)
-                     if i % 4 == 0 and random.random() < random_fraction]
-    return seq_lines
+    return ''
 
 
 def _get_reads(fastq: str) -> Iterable[tuple]:
