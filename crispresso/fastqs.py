@@ -281,22 +281,15 @@ def _demultiplex(fastqs: Iterable,
     shutil.rmtree(demux_dir, ignore_errors=True)
     demux_dir.mkdir(exist_ok=True)
 
-    if parallelize:
-        pool = ProcessPoolExecutor()
-    else:
-        pool = None  # type: ignore
-
     new_paths = set()  # type: ignore
     if parallelize:
-        sets = pool.map(_demux_fastq, fastqs, (records for f in fastqs))
-        for s in sets:
-            new_paths = new_paths.union(s)
+        with ProcessPoolExecutor() as pool:
+            sets = pool.map(_demux_fastq, fastqs, (records for f in fastqs))
+            for s in sets:
+                new_paths = new_paths.union(s)
     else:
         for fastq in fastqs:
             new_paths = new_paths.union(_demux_fastq(fastq, records))
-
-    if parallelize:
-        pool.shutdown(wait=True)
 
     return sorted(new_paths)
 
