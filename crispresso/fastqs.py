@@ -299,25 +299,33 @@ def _demux_fastq(fastq: str, records) -> set:
     discarded = 0
     total = 0
     new_paths = set()  # type: ignore
+    files = {}  # type: ignore
     for read in _get_reads(fastq):
         line = read[1]
-        new_path = _get_demux_path(line, records, Path(fastq), '.fastq')
+        new_path = _get_demux_path(line, records, fastq, '.fastq')
         if new_path:
-            with open(new_path, 'at') as file:
-                file.write('\n'.join(read) + '\n')
+            if new_path in files:
+                file = files[new_path]
+            else:
+                file = open(new_path, 'at')
+                files[new_path] = file
+            file.write(''.join(read))  # \n already included
             new_paths.add(new_path)
         else:
             discarded += 1
         total += 1
     logger.info('{} reads out of {} in {} were discarded because they could not be matched by primer'.format(
         discarded, total, Path(fastq).name))
+    for file in files.values():
+        # TODO (gdingle): gzip everything here?
+        file.close()
     return new_paths
 
 
 def _get_demux_path(
     line: str,
     records: Iterable[Mapping[str, str]],
-    old_path: Path,
+    old_path: str,
     suffix: str = '.fastq.gz',
 ) -> str:
     """
@@ -341,8 +349,9 @@ def _get_demux_path(
         if read_file_marker:
             # TODO (gdingle): is guide_loc best filename ID?
             guide_loc = row['guide_loc'].replace(':', '_')
+            parent = '/'.join(old_path.split('/')[:-1])  # optimized for speed
             return '{}/demultiplexed/{}{}{}'.format(
-                old_path.parent, guide_loc, read_file_marker, suffix)
+                parent, guide_loc, read_file_marker, suffix)
 
     return ''
 
@@ -350,14 +359,18 @@ def _get_demux_path(
 def _get_reads(fastq: str) -> Iterable[tuple]:
     file = gzip.open(fastq, 'rt') if fastq.endswith('.gz') else open(fastq)
     with file:
+        i = 0
         while True:
-            next_read = tuple(l.strip() for l in islice(file, 4))
+            next_read = tuple(islice(file, 4))
             if not len(next_read) == 4:
                 break
-            # See https://en.wikipedia.org/wiki/FASTQ_format
-            assert next_read[0].startswith('@'), next_read[0]
-            assert next_read[1].startswith(tuple('AGCT')), next_read[1]
-            assert next_read[2].startswith('+'), next_read[2]
+            # optimized for speed
+            if i % 100 == 0:
+                # See https://en.wikipedia.org/wiki/FASTQ_format
+                assert next_read[0].startswith('@'), next_read[0]
+                assert next_read[1].startswith(tuple('AGCT')), next_read[1]
+                assert next_read[2].startswith('+'), next_read[2]
+            i += 1
             yield next_read
 
 
@@ -372,24 +385,26 @@ if __name__ == '__main__':
     #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
     #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
     #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
-    #     # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    #     # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    #     # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    #     # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
 
-    #     # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    #     # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    #     # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    #     # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
-    #     # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    #     # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    #     # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    #     # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
 
+    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+
+    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
     # )
-    # records = [{
+    # records=[{
     #     'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
-    #     'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
+    #     'primer_seq_rev': 'GTGGACGAGACGTGGTTAA',
+    #     'guide_loc': 'test'}]
     # find_matching_pairs(fastqs, records) == [fastqs]
 
     # out = timeit.timeit(
@@ -398,6 +413,17 @@ if __name__ == '__main__':
     #     globals=globals()
     # )
     # print(out, 's')
+
+    # out = timeit.timeit(
+    #     """_demultiplex(fastqs, records)""",
+    #     number=1,
+    #     globals=globals()
+    # )
+    # print(out, 's')
+
+    # import cProfile
+    # # cProfile.run("""[find_matching_pairs(fastqs, records) for i in range(100)]""", sort='tottime')
+    # cProfile.run("""[_demultiplex(fastqs, records) for i in range(1)]""", sort = 'tottime')
 
     # out = timeit.timeit(
     #     f"""find_matching_pairs(fastqs, records, True)""",
