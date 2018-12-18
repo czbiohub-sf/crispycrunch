@@ -776,11 +776,13 @@ class Analysis(BaseModel):
 
     # TODO (gdingle): switch to czb-seqbot/fastqs/180802_M05295_0148_000000000-D49T2/?region=us-east-1&tab=overview
     # or czbiohub-seqbot/fastqs/?region=us-east-1&tab=overview
-    s3_bucket = models.CharField(max_length=80,
-                                 default='jasonli-bucket',
-                                 # default='ryan.leenay-bucket',
-                                 help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed'
-                                 )
+    s3_bucket = models.CharField(
+        max_length=80,
+        default='jasonli-bucket',
+        # default='ryan.leenay-bucket',
+        help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed. If you do not have access to a Biohub or public s3 bucket, please contact {} for assistance.'.format(
+            settings.ADMIN_EMAIL)
+    )
     s3_prefix = models.CharField(max_length=160,
                                  default='CrispyCrunch',
                                  # default='Greg_CXCR4_iPSC',
@@ -798,7 +800,9 @@ class Analysis(BaseModel):
             to the beginning and end of each read. This is useful if the samples
             were *not* indexed before sequencing. The samples must each have a
             unique pair of forward and reverse primers. Reads that don't match
-            any pair will be discarded, typically less than 5%.""",
+            any pair will be discarded, typically less than 5%. Warning:
+            demultiplexing is slow! It may take up to 30 min for a full 96-well
+            plate.""",
     )
 
     def __str__(self):

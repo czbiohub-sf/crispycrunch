@@ -349,6 +349,7 @@ def _get_demux_path(
         if read_file_marker:
             # TODO (gdingle): is guide_loc best filename ID?
             guide_loc = row['guide_loc'].replace(':', '_')
+            # TODO (gdingle): pre-compute parent outside loop
             parent = '/'.join(old_path.split('/')[:-1])  # optimized for speed
             return '{}/demultiplexed/{}{}{}'.format(
                 parent, guide_loc, read_file_marker, suffix)

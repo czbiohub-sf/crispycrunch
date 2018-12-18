@@ -45,8 +45,8 @@ urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boun
 # CRISPOR_BASE_URL = 'http://crispor.tefor.net/crispor.py'
 CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
 
-# CRISPRESSO_BASE_URL = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
-CRISPRESSO_BASE_URL = 'http://crispresso.pinellolab.partners.org'
+CRISPRESSO_BASE_URL = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
+# CRISPRESSO_BASE_URL = 'http://crispresso.pinellolab.partners.org'
 
 
 class AbstractScrapeRequest:
@@ -101,82 +101,49 @@ class CrispressoRequest(AbstractScrapeRequest):
                  optional_name: str='') -> None:
         self.endpoint = CRISPRESSO_BASE_URL + '/submit'
 
-        # TODO (gdingle): hack alert!!! we need different POST params because
-        # Crispresso2 master has diverged from CC older copy
-        if 'pinellolab' in CRISPRESSO_BASE_URL:
-            # NOTE: all post vars are required, even if empty
-            # 'amplicon': amplicon,
-            self.data = {
-                'active_paired_samples': '',
-                'active_single_samples': '',
-                'amplicon_names': '',
-                'be_from': 'C',
-                'be_to': 'T',
-                'demo_used': '',
-                # TODO (gdingle): settings.ADMIN_EMAIL
-                'email': '',
-                'exons': '',
-                'fastq_se': '',
-                'hdr_seq': amplicon_seq_after_hdr,
-                'optional_name': '',
+        # NOTE: all post vars are required, even if empty
+        # 'amplicon': amplicon,
+        self.data = {
+            'active_paired_samples': '',
+            'active_single_samples': '',
+            'amplicon_names': '',
+            'be_from': 'C',
+            'be_to': 'T',
+            'demo_used': '',
+            # TODO (gdingle): settings.ADMIN_EMAIL
+            'email': '',
+            'exons': '',
+            'fastq_se': '',
+            'hdr_seq': amplicon_seq_after_hdr,
+            'optional_name': '',
 
-                'optradio_exc_l': '15',
-                'optradio_exc_r': '15',
-                'optradio_hs': '60',
-                'optradio_qc': '0',
-                'optradio_qn': '0',
-                'optradio_qs': '0',
-                'optradio_trim': '',
-                'optradio_wc': '-3',
-                'optradio_ws': '1',
+            'optradio_exc_l': '15',
+            'optradio_exc_r': '15',
+            'optradio_hs': '60',
+            'optradio_qc': '0',
+            'optradio_qn': '0',
+            'optradio_qs': '0',
+            'optradio_trim': '',
+            'optradio_wc': '-3',
+            'optradio_ws': '1',
 
-                'paired_sample_1_amplicon': amplicon,
-                'paired_sample_1_name': 'Sample_1',
-                'paired_sample_1_sgRNA': sgRNA,
+            'paired_sample_1_amplicon': amplicon,
+            'paired_sample_1_name': 'Sample_1',
+            'paired_sample_1_sgRNA': sgRNA,
 
-                'seq_design': 'paired',
-                'sgRNA': sgRNA,
+            'seq_design': 'paired',
+            'sgRNA': sgRNA,
 
-                'single_sample_1_amplicon': '',
-                'single_sample_1_fastq_se': '',
-                'single_sample_1_name': '',
-                'single_sample_1_sgRNA': '',
-            }
-            self.files = {
-                # TODO (gdingle): use acutal crispresso multi sample batch mode somehow?
-                'paired_sample_1_fastq_r1': open(fastq_r1, 'rb'),
-                'paired_sample_1_fastq_r2': open(fastq_r2, 'rb'),
-            }
-        else:
-            self.data = {
-                # NOTE: all post vars are required, even if empty
-                'amplicon': amplicon,
-                'amplicon_names': '',
-                'be_from': 'C',
-                'be_to': 'T',
-                'demo_used': '',
-                # TODO (gdingle): settings.ADMIN_EMAIL
-                'email': '',
-                'exons': '',
-                'fastq_se': '',
-                'hdr_seq': amplicon_seq_after_hdr,
-                'optional_name': '',
-                'optradio_exc_l': '15',
-                'optradio_exc_r': '15',
-                'optradio_hs': '60',
-                'optradio_qc': '0',
-                'optradio_qn': '0',
-                'optradio_qs': '0',
-                'optradio_trim': '',
-                'optradio_wc': '-3',
-                'optradio_ws': '1',
-                'seq_design': 'paired',
-                'sgRNA': sgRNA,
-            }
-            self.files = {
-                'fastq_r1': open(fastq_r1, 'rb'),
-                'fastq_r2': open(fastq_r2, 'rb'),
-            }
+            'single_sample_1_amplicon': '',
+            'single_sample_1_fastq_se': '',
+            'single_sample_1_name': '',
+            'single_sample_1_sgRNA': '',
+        }
+        self.files = {
+            # TODO (gdingle): use acutal crispresso multi sample batch mode somehow?
+            'paired_sample_1_fastq_r1': open(fastq_r1, 'rb'),
+            'paired_sample_1_fastq_r2': open(fastq_r2, 'rb'),
+        }
 
         self.request = requests.Request(  # type: ignore
             'POST',
