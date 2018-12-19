@@ -399,7 +399,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
     sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
 
-
     # TODO (gdingle): move outside of hdr primer... same concern applies to knock-in
     sheet['primer_product'] = sheet.apply(warn_primer_self_bind, axis=1)
 
@@ -561,6 +560,12 @@ def _from_analysis(analysis: Analysis, sheet: DataFrame) -> DataFrame:
     sheet['report_zip'] = [r.get('report_zip') for r in reports]
 
     sheet['report_stats'] = _drop_empty_report_stats(reports)
+
+    if 'target_input' not in sheet.columns:
+        # For custom analysis
+        sheet['target_input'] = [
+            r.get('optional_name', 'UNKNOWN') for r in reports
+        ]
 
     # TODO (gdingle): strangely, we lose the order of headers as when compared to...
     # sheet['report_stats'] = [r.get('report_stats') for r in reports]

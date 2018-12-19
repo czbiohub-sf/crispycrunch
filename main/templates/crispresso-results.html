@@ -31,10 +31,13 @@
       {% if not analysis.is_custom %}
       <th>Well Position</th>
       {% endif %}
-      {# TODO: show original target here? <th>Target</th> #}
+      <th>Target Input</th>
       <th>Zip</th>
       <th>Report</th>
       {% for stat_name in sheet.to_records.0.report_stats %}
+      Modified
+      Unmodified
+      Total
       <th title="{{ stat_name }}">{{ stat_name|truncatechars:32 }}</th>
       {% endfor %}
     </tr>
@@ -44,7 +47,7 @@
     {% if not analysis.is_custom %}
     <td>{{ row.index }}</td>
     {% endif %}
-    {# <td>{{ row.target_loc }}</td> #}
+    <td>{{ row.target_input }}</td>
     <td><a target="_blank" href="{{ row.report_zip }}" class="btn btn-primary btn-sm">
       download
     </a></td>
@@ -52,7 +55,11 @@
       open
     </a></td>
     {% for stat in row.report_stats.values %}
-    <td class="text-right">{{ stat|intcomma }}</td>
+    <td class="text-right">
+      <strong title="{{ stat|intcomma }}">
+        {% widthratio stat row.report_stats.Total 100 %}%
+      </strong>
+    </td>
     {% endfor %}
   </tr>
   {% endfor %}

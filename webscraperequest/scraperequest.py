@@ -11,6 +11,7 @@ Doctests will run slow on the first run before the cahce is warm.
 See also SampleSheetTestCase for sample return data.
 """
 
+import io
 import logging
 import re
 import time
@@ -21,6 +22,7 @@ from abc import abstractmethod
 from collections import OrderedDict
 from typing import Any, Dict
 
+import pandas
 import requests
 import requests_cache  # type: ignore
 import urllib3
@@ -101,6 +103,7 @@ class CrispressoRequest(AbstractScrapeRequest):
                  amplicon_seq_after_hdr: str='',
                  optional_name: str='') -> None:
         self.endpoint = CRISPRESSO_BASE_URL + '/submit'
+        self.optional_name = optional_name
 
         # NOTE: all post vars are required, even if empty
         # 'amplicon': amplicon,
@@ -178,6 +181,8 @@ class CrispressoRequest(AbstractScrapeRequest):
                 'report_stats': self._get_stats(stats_url),
                 'input_data': self.data,
                 'input_files': [f.name for f in self.files.values()],
+                # Keep for display of custom analysis
+                'optional_name': self.optional_name,
             }
         except Exception as e:
             # TODO (gdingle): handle more precisely
@@ -213,12 +218,17 @@ class CrispressoRequest(AbstractScrapeRequest):
         >>> tsv = '''Reference\tTotal\tUnmodified\tModified\tDiscarded\tInsertions\tDeletions\tSubstitutions\tOnly Insertions\tOnly Deletions\tOnly Substitutions\tInsertions and Deletions\tInsertions and Substitutions\tDeletions and Substitutions\tInsertions Deletions and Substitutions
         ... Reference\t14470\t12930\t1540\t0\t1537\t0\t6\t1534\t0\t3\t0\t3\t0\t0'''
         >>> CrispressoRequest._parse_tsv(tsv)
-        OrderedDict([('Total', 14470), ('Unmodified', 12930), ('Modified', 1540), ('Discarded', 0), ('Insertions', 1537), ('Deletions', 0), ('Substitutions', 6), ('Only Insertions', 1534), ('Only Deletions', 0), ('Only Substitutions', 3), ('Insertions and Deletions', 0), ('Insertions and Substitutions', 3), ('Deletions and Substitutions', 0), ('Insertions Deletions and Substitutions', 0)])
+        {'Total': {'Reference': 14470}, 'Unmodified': {'Reference': 12930}, 'Modified': {'Reference': 1540}, 'Discarded': {'Reference': 0}, 'Insertions': {'Reference': 1537}, 'Deletions': {'Reference': 0}, 'Substitutions': {'Reference': 6}, 'Only Insertions': {'Reference': 1534}, 'Only Deletions': {'Reference': 0}, 'Only Substitutions': {'Reference': 3}, 'Insertions and Deletions': {'Reference': 0}, 'Insertions and Substitutions': {'Reference': 3}, 'Deletions and Substitutions': {'Reference': 0}, 'Insertions Deletions and Substitutions': {'Reference': 0}}
+
+        >>> tsv = '''Reference\tTotal\tUnmodified\tModified\tDiscarded\tInsertions\tDeletions\tSubstitutions\tOnly Insertions\tOnly Deletions\tOnly Substitutions\tInsertions and Deletions\tInsertions and Substitutions\tDeletions and Substitutions\tInsertions Deletions and Substitutions
+        ... Reference\t58539\t44508\t14031\t0\t5137\t8694\t1198\t4169\t8664\t200\t0\t968\t30\t0
+        ... HDR\t16807\t11318\t5489\t0\t201\t4727\t662\t123\t4687\t587\t17\t52\t14\t9'''
+        >>> CrispressoRequest._parse_tsv(tsv)
+        {'Total': {'Reference': 58539, 'HDR': 16807}, 'Unmodified': {'Reference': 44508, 'HDR': 11318}, 'Modified': {'Reference': 14031, 'HDR': 5489}, 'Discarded': {'Reference': 0, 'HDR': 0}, 'Insertions': {'Reference': 5137, 'HDR': 201}, 'Deletions': {'Reference': 8694, 'HDR': 4727}, 'Substitutions': {'Reference': 1198, 'HDR': 662}, 'Only Insertions': {'Reference': 4169, 'HDR': 123}, 'Only Deletions': {'Reference': 8664, 'HDR': 4687}, 'Only Substitutions': {'Reference': 200, 'HDR': 587}, 'Insertions and Deletions': {'Reference': 0, 'HDR': 17}, 'Insertions and Substitutions': {'Reference': 968, 'HDR': 52}, 'Deletions and Substitutions': {'Reference': 30, 'HDR': 14}, 'Insertions Deletions and Substitutions': {'Reference': 0, 'HDR': 9}}
         """
-        lines = [line.split('\t')[1:] for line in tsv.split('\n')]
-        headers = [h.strip() for h in lines[0]]
-        values = [int(v.strip()) for v in lines[1]]
-        return OrderedDict(zip(headers, values))
+        df = pandas.read_csv(io.StringIO(tsv), sep='\t')
+        df = df.set_index('Reference')
+        return df.to_dict()
 
     def _get_log_params(self, report_url: str) -> str:
         logger.info('GET request to: {}'.format(report_url))
@@ -527,8 +537,8 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 
     >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's45-')
     >>> data = req.run()
-    >>> len(data['ontarget_primers']) == 2
-    True
+    >>> len(data['ontarget_primers'])
+    3
 
     >>> req.in_cache()
     True
@@ -538,14 +548,14 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
     >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's45-', hdr_dist=0)
     >>> data = req.run()
     >>> data['ontarget_primers']
-    {}
+    ['CATGCCGGAGCCGTTGTC', 'TTGGGGCCTGGCTTCCTG', 'CATGCCGGAGCCGTTGTCGACGACGAGCGCGGCGATATCATCATCCATGGTGAGCTGCGAGAATAGCCGGGCGCGCTGTGAGCCGAGGTCGCCCCCGCCCTGGCCACTTCCGGCGCGCCGAGTCCTTAGGCCGCCAGGGGGCGCCGGCGCGCGCCCAGATTGGGGACAAAGGAAGCCGGGCCGGCCGCGTTATTACCATAAAAGGCAAACACTGGTCGGAGGCGTCCCCGCGGCGCGCGGCAGGAAGCCAGGCCCCAA']
 
     Test guide #2 has HDR primers.
 
     >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's11-', hdr_dist=0)
     >>> data = req.run()
-    >>> len(data['ontarget_primers']) == 2
-    True
+    >>> len(data['ontarget_primers'])
+    3
     """
 
     def __init__(
@@ -642,7 +652,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
 if __name__ == '__main__':
     # TODO (gdingle): fix doctests which are currently broken
     import doctest  # noqa
-    doctest.testmod()
+    doctest.testmod(optionflags=doctest.FAIL_FAST)
 
     # req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl', pre_filter=5)
     # data = req.run()
