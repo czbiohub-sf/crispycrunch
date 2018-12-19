@@ -160,23 +160,29 @@ class CrispressoRequest(AbstractScrapeRequest):
         # for example: http://crispresso.pinellolab.partners.org/check_progress/P2S84K
         report_id = response.url.split('/')[-1]
 
-        self._wait_for_success(report_id)
+        try:
+            self._wait_for_success(report_id)
 
-        report_data_url = CRISPRESSO_BASE_URL + '/reports_data/CRISPRessoRun{}'.format(report_id)
-        report_files_url = '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
-        report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
-        report_url = CRISPRESSO_BASE_URL + '/view_report/' + report_id
-        stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
+            report_data_url = CRISPRESSO_BASE_URL + \
+                '/reports_data/CRISPRessoRun{}'.format(report_id)
+            report_files_url = '{}/CRISPResso_on_{}/'.format(report_data_url, report_id)
+            report_zip = '{}/CRISPResso_Report_{}.zip'.format(report_data_url, report_id)
+            report_url = CRISPRESSO_BASE_URL + '/view_report/' + report_id
+            stats_url = report_files_url + 'CRISPResso_quantification_of_editing_frequency.txt'
 
-        return {
-            'report_url': report_url,
-            'report_zip': report_zip,
-            'log_params': self._get_log_params(report_url),
-            'report_files': [report_files_url + file for file in self.report_files],
-            'report_stats': self._get_stats(stats_url),
-            'input_data': self.data,
-            'input_files': [f.name for f in self.files.values()],
-        }
+            return {
+                'report_url': report_url,
+                'report_zip': report_zip,
+                'log_params': self._get_log_params(report_url),
+                'report_files': [report_files_url + file for file in self.report_files],
+                'report_stats': self._get_stats(stats_url),
+                'input_data': self.data,
+                'input_files': [f.name for f in self.files.values()],
+            }
+        except Exception as e:
+            # TODO (gdingle): handle more precisely
+            _cache.delete(self.cache_key)
+            raise e
 
     def _wait_for_success(self, report_id: str, retries: int = 3 * 96) -> None:
         """
