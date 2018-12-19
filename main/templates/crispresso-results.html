@@ -34,12 +34,14 @@
       <th>Target Input</th>
       <th>Zip</th>
       <th>Report</th>
-      {% for stat_name in sheet.to_records.0.report_stats %}
-      Modified
-      Unmodified
-      Total
-      <th title="{{ stat_name }}">{{ stat_name|truncatechars:32 }}</th>
-      {% endfor %}
+      <th>Total</th>
+      <th>Unmodified</th>
+      <th>NHEJ</th>
+      {% if analysis.experiment.is_hdr %}
+      <th>HDR</th>
+      <th>Imperfect HDR</th>
+      {% endif %}
+      <th>Discarded</th>
     </tr>
   </thead>
   {% for row in sheet.to_records %}
@@ -54,13 +56,26 @@
     <td><a target="_blank" href="{{ row.report_url }}" class="btn btn-outline-primary btn-sm">
       open
     </a></td>
-    {% for stat in row.report_stats.values %}
     <td class="text-right">
-      <strong title="{{ stat|intcomma }}">
-        {% widthratio stat row.report_stats.Total 100 %}%
-      </strong>
+      {{row.report_stats.Total.overall|intcomma}}
     </td>
-    {% endfor %}
+    <td class="text-right">
+      {% widthratio row.report_stats.Unmodified.Reference row.report_stats.Total.overall 100 %}%
+    </td>
+    <td class="text-right">
+      {% widthratio row.report_stats.Modified.Reference row.report_stats.Total.overall 100 %}%
+    </td>
+    {% if analysis.experiment.is_hdr %}
+    <td class="text-right">
+      {% widthratio row.report_stats.Unmodified.HDR row.report_stats.Total.overall 100 %}%
+    </td>
+    <td class="text-right">
+      {% widthratio row.report_stats.Modified.HDR row.report_stats.Total.overall 100 %}%
+    </td>
+    {% endif %}
+    <td class="text-right">
+      {% widthratio row.report_stats.Discarded.overall row.report_stats.Total.overall 100 %}%
+    </td>
   </tr>
   {% endfor %}
 </table>
@@ -83,7 +98,7 @@
     <tr>
       <td>{{ files.0 }}</td>
       <td>{{ files.1 }}</td>
-      <td title={{ input.amplicon }}>{{ input.amplicon|truncatechars:64 }}</td>
+      <td title={{ input.amplicon }}>{{ input.paired_sample_1_amplicon|truncatechars:64 }}</td>
       <td>{{ input.sgRNA }}</td>
       <td>{{ input.hdr_seq|truncatechars:32 }}</td>
     </tr>
