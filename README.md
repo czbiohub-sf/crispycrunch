@@ -20,9 +20,11 @@ CrispyCrunch calls out to several bioinformatics web services.
 
 Currently, CrispyCrunch calls out to mirrors for Crispor and Crispresso:
 * [Crispor mirror](http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py)
-* [Crispresso mirror](http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com/)
+* [Crispresso mirror](http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com:81/)
 
 *NOTE:* The Crispor mirror is modified to support HDR primer design. See [this PR](https://github.com/maximilianh/crisporWebsite/pull/21).
+
+*NOTE:* The Crispresso mirror is running in a Docker container on the same machine as Crispor. Docker service is modified on the machine to store all its data in `/mnt/data/docker`. The code of `CRISPRessoCORE.py` was modified from the public image to fix a bug in HDR stats. The number of Celery workers was increased from the default of 1 to 3 for better parallelism.
 
 ## Tech stack
 

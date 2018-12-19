@@ -184,17 +184,16 @@ class CrispressoRequest(AbstractScrapeRequest):
             _cache.delete(self.cache_key)
             raise e
 
-    def _wait_for_success(self, report_id: str, retries: int = 3 * 96) -> None:
+    def _wait_for_success(self, report_id: str, retries: int = 20) -> None:
         """
-        Poll for SUCCESS. Typically took 90 secs in testing.
+        Poll for SUCCESS. Typically took 300s secs in testing.
 
-        Crispresso2 appears to support running only 1 report in parallel, so in
-        the worst case, 96 reports will take approx 3 hours.
+        As of this writing, Crispresso2 supports running 3 workers in parallel,
+        so in the worst case, 96 reports will take approx 3 hours.
         """
         total = 0
         while not self._check_report_status(report_id) and retries >= 0:
             amount = 30
-            # amount = 90 // (retries + 1)  # backoff
             time.sleep(amount)
             retries -= 1
             total += amount
