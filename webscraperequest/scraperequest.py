@@ -127,7 +127,9 @@ class CrispressoRequest(AbstractScrapeRequest):
             'optradio_qc': '0',
             'optradio_qn': '0',
             'optradio_qs': '0',
-            'optradio_trim': '',
+            # TODO (gdingle): make option in analysis form
+            # Default of Biohub
+            'optradio_trim': 'TruSeq3-PE.fa',
             'optradio_wc': '-3',
             'optradio_ws': '1',
 

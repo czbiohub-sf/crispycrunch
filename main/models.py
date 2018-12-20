@@ -805,6 +805,8 @@ class Analysis(BaseModel):
             plate.""",
     )
 
+    # TODO (gdingle): add adapter trim option for adapters such as TruSeq3-PE
+
     def __str__(self):
         # return 'Analysis({}, {} ...)'.format(self.s3_bucket, self.s3_prefix)
         return '{} samples of {}'.format(
