@@ -91,7 +91,7 @@ ALLOWED_HOSTS = [
     # https://serverfault.com/questions/640809/aws-ec2-and-django-allowed-hosts
     # TODO (gdingle): will this work with both string host and IPs?
     # 'crispycrunch.us-west-2.elasticbeanstalk.com',
-    # 'crispycrunch.ds.czbiohub.org',
+    # 'crispycrunch.czbiohub.org',
     # '54.218.30.243',
     # 'ec2-54-218-30-243.us-west-2.compute.amazonaws.com',
 ]
@@ -258,7 +258,7 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SES_REGION_NAME = 'us-west-2'
 AWS_SES_REGION_ENDPOINT = 'email.us-west-2.amazonaws.com'
 
-SERVER_EMAIL = 'no-reply@crispycrunch.ds.czbiohub.org'
+SERVER_EMAIL = 'no-reply@crispycrunch.czbiohub.org'
 ADMINS = [
     # First admin is used as point of contact throughout site
     # All admins receive error emails.

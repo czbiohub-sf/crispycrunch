@@ -8,7 +8,7 @@
 
 ## Introduction
 
-We hereby announce the general availability of new a tool for CRISPR scientists––[CrispyCrunch](http://crispycrunch.ds.czbiohub.org)! We invite you to jump in and [try it out](http://crispycrunch.ds.czbiohub.org), or take a look at our live examples: experiment or analysis. (NOTE: live examples are still forthcoming)
+We hereby announce the general availability of new a tool for CRISPR scientists––[CrispyCrunch](http://crispycrunch.czbiohub.org)! We invite you to jump in and [try it out](http://crispycrunch.czbiohub.org), or take a look at our live examples: experiment or analysis. (NOTE: live examples are still forthcoming)
 
 <!-- TODO: create demo account and reports  -->
 In the rest of this article, we'll explain the [thinking behind the tool](#guiding-principles), its [key features](#why-not-existing-tool-x-y-or-z), [how it works](#optimal-mutation-in-depth), and [how to use it](#how-to-use-crispycrunch).

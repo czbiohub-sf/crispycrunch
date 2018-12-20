@@ -1,7 +1,7 @@
 # CrispyCrunch
 Web app for CRISPR experiment setup and analysis. Fill in a 96-well plate and analyze it as a whole.
 
-See it live at https://crispycrunch.ds.czbiohub.org.
+See it live at https://crispycrunch.czbiohub.org.
 
 ## Background
 
@@ -81,7 +81,7 @@ Deploy to Amazon Elasticbeanstalk.
 
 ```eb deploy```
 
-Wait for deployment to finish, then view the live site at http://crispycrunch.ds.czbiohub.org/.
+Wait for deployment to finish, then view the live site at http://crispycrunch.czbiohub.org/.
 
 For more info, see https://realpython.com/deploying-a-django-app-and-postgresql-to-aws-elastic-beanstalk/ and https://hashedin.com/blog/5-gotchas-with-elastic-beanstalk-and-django/ .
 
@@ -94,11 +94,11 @@ See https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environments-cfg-soft
 
 # Admin
 
-To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/ or http://crispycrunch.ds.czbiohub.org/admin/.
+To inspect the state of the app, use the built-in Django admin interface at http://localhost:8000/admin/main/ or http://crispycrunch.czbiohub.org/admin/.
 
 A default `admin` user is created on first installation. **Change the password** of that first superuser on first deployment.
 
-You can give any other user admin or superuser status here: https://crispycrunch.ds.czbiohub.org/admin/auth/user/ .
+You can give any other user admin or superuser status here: https://crispycrunch.czbiohub.org/admin/auth/user/ .
 
 To inspect the source of fastq files, open https://console.aws.amazon.com/s3/buckets/czb-seqbot/.
 
@@ -125,5 +125,5 @@ https://console.aws.amazon.com/cloudwatch/home?region=us-west-2#s=Alarms&alarm=a
 
 And you should receive emails of Django errors if you are the owner of `ADMIN_EMAIL`. They are throttled with https://github.com/krisys/django-error-email-throttle .
 
-You can see a table of error counts at https://crispycrunch.ds.czbiohub.org/admin/error_email_throttle/
+You can see a table of error counts at https://crispycrunch.czbiohub.org/admin/error_email_throttle/
 
