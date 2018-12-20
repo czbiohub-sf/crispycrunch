@@ -34,14 +34,14 @@
       <th>Target Input</th>
       <th>Zip</th>
       <th>Report</th>
-      <th>Total</th>
-      <th>Unmodified</th>
-      <th>NHEJ</th>
+      <th class="text-right">Total</th>
+      <th class="text-right">Unmodified</th>
+      <th class="text-right">NHEJ</th>
       {% if analysis.experiment.is_hdr %}
-      <th>HDR</th>
-      <th>Imperfect HDR</th>
+      <th class="text-right">HDR</th>
+      <th class="text-right">Imperfect HDR</th>
       {% endif %}
-      <th>Discarded</th>
+      <th class="text-right">Discarded</th>
     </tr>
   </thead>
   {% for row in sheet.to_records %}
