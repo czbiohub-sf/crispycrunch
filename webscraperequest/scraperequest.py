@@ -129,7 +129,9 @@ class CrispressoRequest(AbstractScrapeRequest):
             'optradio_qs': '0',
             # TODO (gdingle): make option in analysis form
             # Default of Biohub
-            'optradio_trim': 'TruSeq3-PE.fa',
+            # TODO (gdingle): why getting There was a problem with the trimming step ?
+            'optradio_trim': '',
+            # 'optradio_trim': 'TruSeq3-PE.fa',
             'optradio_wc': '-3',
             'optradio_ws': '1',
 
