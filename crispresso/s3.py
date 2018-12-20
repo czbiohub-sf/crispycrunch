@@ -32,7 +32,9 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
     )
     response = s3.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=1000)
     paths = []
-    with ThreadPoolExecutor() as pool:
+    # Default size of boto thread pool is 10
+    # Avoid "Connection pool is full, discarding connection"
+    with ThreadPoolExecutor(10) as pool:
         for key, size in _get_fastqs(response):
             new_dir = Path(DOWNLOAD_DIR) / Path(key).parent
             new_dir.mkdir(parents=True, exist_ok=True)
@@ -42,6 +44,8 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
                 continue
             else:
                 pool.submit(
+                    # TODO (gdingle): create new client? see
+                    # https://boto3.amazonaws.com/v1/documentation/api/latest/guide/resources.html#multithreading
                     s3.download_file,
                     bucket, key, str(new_filepath),
                 )
