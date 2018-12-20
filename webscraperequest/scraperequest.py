@@ -188,10 +188,10 @@ class CrispressoRequest(AbstractScrapeRequest):
                 # Keep for display of custom analysis
                 'optional_name': self.optional_name,
             }
-        except Exception as e:
+        except Exception:
             # TODO (gdingle): handle more precisely
             _cache.delete(self.cache_key)
-            raise e
+            raise
 
     def _wait_for_success(self, report_id: str, retries: int = 20) -> None:
         """
@@ -249,11 +249,11 @@ class CrispressoRequest(AbstractScrapeRequest):
         report_status = requests.get(status_url).json()
         if report_status['state'] == 'FAILURE':
             raise RuntimeError('Crispresso on {}: {}'.format(report_id, report_status['message']))
-        elif report_status['state'] == 'SUCCESS':
-            return True
-        elif report_status['state'] == 'PENDING':
+        elif report_status['state'] in ('SUCCESS', 'PENDING'):
             # Sometimes pending status is never set to success though the report exists.
             # The bug was reported to Luca Pinello.
+            # Also it seems that there could be a race condition on SUCCESS
+            # in reading the report so check it here to be safe.
             report_url = CRISPRESSO_BASE_URL + '/view_report/' + report_id
             response = _cached_session.get(report_url)
             if response.status_code == 200:

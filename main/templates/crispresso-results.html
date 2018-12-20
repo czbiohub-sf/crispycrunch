@@ -32,9 +32,7 @@
       <th>Well Position</th>
       {% endif %}
       <th>Target Input</th>
-      <th>Zip</th>
-      <th>Report</th>
-      <th class="text-right">Total</th>
+      <th class="text-right">Total Reads</th>
       <th class="text-right">Unmodified</th>
       <th class="text-right">NHEJ</th>
       {% if analysis.experiment.is_hdr %}
@@ -42,6 +40,7 @@
       <th class="text-right">Imperfect HDR</th>
       {% endif %}
       <th class="text-right">Discarded</th>
+      <th class="text-right">Full Report</th>
     </tr>
   </thead>
   {% for row in sheet.to_records %}
@@ -50,12 +49,6 @@
     <td>{{ row.index }}</td>
     {% endif %}
     <td>{{ row.target_input }}</td>
-    <td><a target="_blank" href="{{ row.report_zip }}" class="btn btn-primary btn-sm">
-      download
-    </a></td>
-    <td><a target="_blank" href="{{ row.report_url }}" class="btn btn-outline-primary btn-sm">
-      open
-    </a></td>
     <td class="text-right">
       {{row.report_stats.Total.overall|intcomma}}
     </td>
@@ -75,6 +68,14 @@
     {% endif %}
     <td class="text-right">
       {% widthratio row.report_stats.Discarded.overall row.report_stats.Total.overall 100 %}%
+    </td>
+    <td class="text-right">
+      <a target="_blank" href="{{ row.report_zip }}" class="btn btn-primary btn-sm">
+      download
+      </a>
+      <a target="_blank" href="{{ row.report_url }}" class="btn btn-outline-primary btn-sm">
+        open
+      </a>
     </td>
   </tr>
   {% endfor %}
