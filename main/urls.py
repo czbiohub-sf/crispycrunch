@@ -91,4 +91,6 @@ urlpatterns = [
          login_required(views.IlluminaSheetView.as_view())),
     path('primer-selection/<int:id>/hdr-order-form',
          login_required(views.UltramerOrderFormView.as_view())),
+    path('analysis/example-custom-sheet',
+         views.ExampleCustomAnalysisSheetView.as_view()),
 ]

@@ -240,7 +240,8 @@ class GuideDesignView(CreatePlusView):
                 conversions.chr_loc_to_gene,
                 genome=guide_design.genome)
 
-            def func(target): return func2(func1(target))  # noqa
+            def func(target):  # type: ignore
+                return func2(func1(target))
 
         elif all(is_chr(t) for t in targets):
             func = functools.partial(
@@ -906,6 +907,35 @@ class IlluminaSheetView(View):
         response['Content-Disposition'] = 'attachment; filename="{}.csv"'.format(filename)
 
         return response
+
+
+class ExampleCustomAnalysisSheetView(View):
+    """
+    Produces a example Excel sheet for customization and upload to CrispyCrunch.
+    """
+
+    def get(self, request, *args, **kwargs):
+        title = 'CrispyCrunch custom analysis'
+
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = title  # Excel limits to 30 chars
+
+        headers = [
+            ('A', 'target_input', 'ENST00000617316'),
+            ('B', 'guide_seq', 'GACAGCGCTGAACTTCAGTT'),
+            ('C', 'primer_seq_fwd', 'GGAGGAATGAGCAGCA'),
+            ('D', 'primer_seq_rev', 'AGCCATATGAAAGAGA'),
+            ('E', 'primer_product', 'GGAGGAATGAGCAGCAGACATGGGAGACGGATGAGTCTTTTAATAGAAAAACACACGTGCAACAGTATCAACACACATCTCTCGCAATGCTCACAGCGCTGAACTTTAACCACTTCCTGGACCTTGAAACAAAACTTCCAATCCGCCACCCATCATATCGGTAAAGGCCTTTTGCCACTCCTTGAAGTTGAGCTCGGTGTTCTTCACCTTGGGGGGTGGCCTGTGAGAGGAAGATAGGTGATGAAGGAGGGTCCCCAGGATCATGGCACTCGGGGTGCAAGGGACAGAGATGTCTGTCTTGGTGTATTGCTGGGCCCCTGCTCACCTGTACACTCCCACGACCACGGCATGGTCTCTTTCATATGGCT'),
+            # TODO (gdingle): rename to amplicon?
+            ('F', 'primer_product_wt', 'GGAGGAATGAGCAGCAGACATGGGAGACGGATGAGTCTTTTAATAGAAAAACACACGTGCAACAGTATCAACACACATCTCTCGCAATCCTGACAGCGCTGAACTTCAGTTCTTCACCTTGGGGGGTGGCCTGTGAGAGGAAGATAGGTGATGAAGGAGGGTCCCCAGGATCATGGCACTCGGGGTGCAAGGGACAGAGATGTCTGTCTTGGTGTATTGCTGGGCCCCTGCTCACCTGTACACTCCCACGACCACGGCATGGTCTCTTTCATATGGCT'),
+        ]
+        for cell, header, value in headers:
+            ws[cell + '1'] = header
+            ws[cell + '2'] = value
+
+        excel_file = openpyxl.writer.excel.save_virtual_workbook(wb)
+        return _excel_download_response(excel_file, title)
 
 
 def _excel_download_response(excel_file: BytesIO, title: str) -> HttpResponse:
