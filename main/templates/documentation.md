@@ -1,3 +1,5 @@
+<!-- TODO: incorportate final add gene changes below -->
+
 # CrispyCrunch: High-throughput design and analysis of CRISPR+HDR experiments
 
 <p align="center">
@@ -96,6 +98,8 @@ With these constraints in mind, we implemented the following algorithm for optim
 
 3) *Silently* mutate codons in the guide sequence, one by one, from the PAM inwards. After each mutation, check the CFD score. If it is below 0.01, stop mutating. (Note: the most common synonym in the human genome is chosen for a silent mutation.)
 
+
+<!-- TODO: incorportate M Leonetti's changes below -->
 
 ## How to use CrispyCrunch
 
