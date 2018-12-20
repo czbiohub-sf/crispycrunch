@@ -780,14 +780,19 @@ class Analysis(BaseModel):
         max_length=80,
         default='jasonli-bucket',
         # default='ryan.leenay-bucket',
-        help_text='The Amazon S3 bucket that contains the FastQ files to be analyzed. If you do not have access to a Biohub or public s3 bucket, please contact {} for assistance.'.format(
+        help_text='''The Amazon S3 bucket that contains the FastQ files to be
+        analyzed. If you do not have access to a Biohub or public s3 bucket,
+        please contact {} for assistance.'''.format(
             settings.ADMIN_EMAIL)
     )
-    s3_prefix = models.CharField(max_length=160,
-                                 default='CrispyCrunch',
-                                 # default='Greg_CXCR4_iPSC',
-                                 help_text='The S3 directory that contains the FastQ files to be analyzed'
-                                 )
+    s3_prefix = models.CharField(
+        max_length=160,
+        default='CrispyCrunch',
+        # default='Greg_CXCR4_iPSC',
+        help_text='''The S3 directory that contains the FastQ files to be
+        analyzed. Files are assumed to be paired-end reads––two files, R1 and
+        R2, per sample.''',
+    )
 
     results_data = JSONField(default=list, blank=True,
                              help_text='Data returned by external service')
