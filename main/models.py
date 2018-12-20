@@ -791,7 +791,7 @@ class Analysis(BaseModel):
         # default='Greg_CXCR4_iPSC',
         help_text='''The S3 directory that contains the FastQ files to be
         analyzed. Files are assumed to be paired-end reads––two files, R1 and
-        R2, per sample.''',
+        R2, per sample (unless demultiplexing).''',
     )
 
     results_data = JSONField(default=list, blank=True,

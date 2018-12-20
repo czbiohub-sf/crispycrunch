@@ -1,4 +1,5 @@
 import boto3  # type: ignore # noqa
+from botocore.config import Config
 import doctest
 import os
 
@@ -24,8 +25,12 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
     >>> all(d.endswith(FASTQ_SUFFIX) for d in downloads)
     True
     """
+
     s3 = boto3.client(
         's3',
+        config=Config(**{
+            'connect_timeout': 5,
+            'read_timeout': 300}),
         # See https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html
         # aws_access_key_id='',
         # aws_secret_access_key='',
@@ -71,4 +76,5 @@ if __name__ == '__main__':
     # aws s3 ls s3://jasonli-bucket/JasonHDR/96wp1sorted-fastq/
     # print(download_fastqs('jasonli-bucket', 'JasonHDR/96wp1sorted-fastq/', False))
     # print(download_fastqs('jasonli-bucket', 'CrispyCrunch/', False))
+    # print(download_fastqs('donor6-1', 'fastq_files/', False))
     doctest.testmod()
