@@ -118,6 +118,23 @@ psql -h RDS_HOSTNAME -U RDS_USERNAME RDS_DB_NAME
 
 Hint: Look in `/opt/python/current/env` for secrets.
 
+To create pre-authenticaed URLs for sharing using https://github.com/aaugustin/django-sesame:
+
+```
+# local
+eb ssh
+# remote
+cd /opt/python/current/
+source env
+source /opt/python/run/venv/bin/activate
+cd app && python manage.py shell
+# python shell
+>>> from django.contrib.auth.models import User
+>>> user = User.objects.get(username='demo')
+>>> from sesame import utils
+>>> utils.get_query_string(user)
+```
+
 # Monitoring
 
 There should be at least one downtime alert setup here:
