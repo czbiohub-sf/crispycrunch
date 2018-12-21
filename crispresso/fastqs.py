@@ -123,7 +123,7 @@ def find_matching_pairs(
     """
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
     >>> records = [{
-    ... 'guide_loc': 'chr7:4-23:-',
+    ... 'target_input': 'chr7:4-23:-',
     ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
     >>> find_matching_pairs(fastqs, records) == [fastqs]
@@ -134,7 +134,7 @@ def find_matching_pairs(
 
     >>> fastqs = ['input/CrispyCrunch/mNGplate3_unsorted_A10_TAF1B-C_S10_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A10_TAF1B-C_S10_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A11_TAF1C-C_S11_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A11_TAF1C-C_S11_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A12_TAF1D-N_S12_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A12_TAF1D-N_S12_R2_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R1_001.fastq.gz', 'input/CrispyCrunch/mNGplate3_unsorted_A1_POLR1A-C_S1_R2_001.fastq.gz']
     >>> records = [{
-    ... 'guide_loc': 'chr7:4-23:-',
+    ... 'target_input': 'chr7:4-23:-',
     ... 'primer_seq_fwd': 'TGTACTGTCACTTGGA',
     ... 'primer_seq_rev': 'CTCAACACCCTGACAC'}]
     >>> find_matching_pairs(fastqs, records)
@@ -256,7 +256,7 @@ def _demultiplex(fastqs: Iterable,
 
     >>> fastqs = ('fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq', 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq')
     >>> records = [{
-    ... 'guide_loc': 'chr7:4-23:-',
+    ... 'target_input': 'chr7:4-23:-',
     ... 'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
     ... 'primer_seq_rev': 'GTGGACGAGACGTGGTTAA'}]
 
@@ -300,9 +300,26 @@ def _demux_fastq(fastq: str, records) -> set:
     total = 0
     new_paths = set()  # type: ignore
     files = {}  # type: ignore
+
+    parent = '/'.join(fastq.split('/')[:-1])
+    primer_seq_fwd_d = dict((row['primer_seq_fwd'], row['target_input'].replace(':', '_'))
+                            for row in records)
+    primer_seq_rev_d = dict((row['primer_seq_rev'], row['target_input'].replace(':', '_'))
+                            for row in records)
+    primer_len = len(records[0]['primer_seq_fwd'])
+    assert primer_len == len(records[0]['primer_seq_rev'])
+
     for read in _get_reads(fastq):
-        line = read[1]
-        new_path = _get_demux_path(line, records, fastq, '.fastq')
+        # TODO (gdingle): remove me if no longer needed
+        # new_path = _get_demux_path(line, records, fastq, '.fastq')
+        new_path = _get_demux_path2(
+            read[1],
+            primer_seq_fwd_d,
+            primer_seq_rev_d,
+            primer_len,
+            parent,
+        )
+
         if new_path:
             if new_path in files:
                 file = files[new_path]
@@ -314,11 +331,13 @@ def _demux_fastq(fastq: str, records) -> set:
         else:
             discarded += 1
         total += 1
+
     logger.info('{} reads out of {} in {} were discarded because they could not be matched by primer'.format(
         discarded, total, Path(fastq).name))
     for file in files.values():
-        # TODO (gdingle): gzip everything here?
+        # TODO (gdingle): gzip everything here? or too slow to read after?
         file.close()
+
     return new_paths
 
 
@@ -347,12 +366,39 @@ def _get_demux_path(
             read_file_marker = '_R2_'
 
         if read_file_marker:
-            # TODO (gdingle): is guide_loc best filename ID?
-            guide_loc = row['guide_loc'].replace(':', '_')
+            # TODO (gdingle): is target_input best filename ID?
+            target_input = row['target_input'].replace(':', '_')
             # TODO (gdingle): pre-compute parent outside loop
             parent = '/'.join(old_path.split('/')[:-1])  # optimized for speed
             return '{}/demultiplexed/{}{}{}'.format(
-                parent, guide_loc, read_file_marker, suffix)
+                parent, target_input, read_file_marker, suffix)
+
+    return ''
+
+
+def _get_demux_path2(
+        line: str,
+        primer_seq_fwd_d: dict,
+        primer_seq_rev_d: dict,
+        primer_len: int,
+        parent: str,
+        suffix: str = '.fastq') -> str:
+    """
+    Dict-based approach. 2x faster in testing.
+    """
+
+    read_file_marker = ''
+    target_input = primer_seq_fwd_d.get(line[:primer_len])
+    if target_input:
+        read_file_marker = '_R1_'
+    else:
+        target_input = primer_seq_rev_d.get(line[:primer_len])
+        if target_input:
+            read_file_marker = '_R2_'
+
+    if read_file_marker:
+        return '{}/demultiplexed/{}{}{}'.format(
+            parent, target_input, read_file_marker, suffix)
 
     return ''
 
@@ -366,7 +412,7 @@ def _get_reads(fastq: str) -> Iterable[tuple]:
             if not len(next_read) == 4:
                 break
             # optimized for speed
-            if i % 100 == 0:
+            if i % 1000 == 0:
                 # See https://en.wikipedia.org/wiki/FASTQ_format
                 assert next_read[0].startswith('@'), next_read[0]
                 assert next_read[1].startswith(tuple('AGCT')), next_read[1]
@@ -379,34 +425,52 @@ if __name__ == '__main__':
     doctest.testmod(optionflags=doctest.FAIL_FAST)
     # print(reverse_complement('CGGGCAGCGGGTCCATCGCG'))
 
-    # import timeit
+    import timeit
+    import cProfile
 
-    # fastqs = (
-    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    #     'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    #     'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+    fastqs = (
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
 
-    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
 
-    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
 
-    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
-    # 'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
-    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
-    # 'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
-    # )
-    # records=[{
-    #     'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
-    #     'primer_seq_rev': 'GTGGACGAGACGTGGTTAA',
-    #     'guide_loc': 'test'}]
-    # find_matching_pairs(fastqs, records) == [fastqs]
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq',
+        'fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R1_001.fastq',
+        'fastqs/C12-CLTA-N-sorted-180212_S36_L001_R2_001.fastq',
+    )
+    records = [
+        {
+            'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG1',
+            'primer_seq_rev': 'GTGGACGAGACGTGGTTAA1',
+            'target_input': 'no1'
+        },
+        {
+            'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG2',
+            'primer_seq_rev': 'GTGGACGAGACGTGGTTAA2',
+            'target_input': 'no2'
+        },
+        {
+            'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG3',
+            'primer_seq_rev': 'GTGGACGAGACGTGGTTAA3',
+            'target_input': 'no3'
+        },
+        {
+            'primer_seq_fwd': 'CGAGGAGATACAGGCGGAG',
+            'primer_seq_rev': 'GTGGACGAGACGTGGTTAA',
+            'target_input': 'test'
+        },
+    ]
 
     # out = timeit.timeit(
     #     """find_matching_pairs(fastqs, records)""",
@@ -414,6 +478,7 @@ if __name__ == '__main__':
     #     globals=globals()
     # )
     # print(out, 's')
+    # cProfile.run("""[find_matching_pairs(fastqs, records) for i in range(100)]""", sort='tottime')
 
     # out = timeit.timeit(
     #     """_demultiplex(fastqs, records)""",
@@ -422,13 +487,12 @@ if __name__ == '__main__':
     # )
     # print(out, 's')
 
-    # import cProfile
-    # # cProfile.run("""[find_matching_pairs(fastqs, records) for i in range(100)]""", sort='tottime')
-    # cProfile.run("""[_demultiplex(fastqs, records) for i in range(1)]""", sort = 'tottime')
+    # cProfile.run("""[_demultiplex(fastqs, records) for i in range(1)]""", sort='tottime')
 
-    # out = timeit.timeit(
-    #     f"""find_matching_pairs(fastqs, records, True)""",
-    #     number=100,
-    #     globals=globals()
+    # import demultiplex  # type: ignore
+    # ret = demultiplex.get_demux_path(
+    #     'CGAGGAGATACAGGCGGAG',
+    #     records,
+    #     'fastqs/original.fastq',
     # )
-    # print(out, 's')
+    # print(ret)
