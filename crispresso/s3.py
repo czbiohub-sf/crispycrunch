@@ -1,7 +1,8 @@
 import boto3  # type: ignore # noqa
-from botocore.config import Config
 import doctest
 import os
+
+from botocore.config import Config # type: ignore
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -76,5 +77,5 @@ if __name__ == '__main__':
     # aws s3 ls s3://jasonli-bucket/JasonHDR/96wp1sorted-fastq/
     # print(download_fastqs('jasonli-bucket', 'JasonHDR/96wp1sorted-fastq/', False))
     # print(download_fastqs('jasonli-bucket', 'CrispyCrunch/', False))
-    # print(download_fastqs('donor6-1', 'fastq_files/', False))
+    # print(download_fastqs('donor6-1', 'fastq_fildes/', False))
     doctest.testmod()
