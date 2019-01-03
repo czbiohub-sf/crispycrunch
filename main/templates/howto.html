@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<p>
+  {# TODO (gdingle): fill in link to addgene post #}
+  This guide will show you how to use CrispyCrunch to setup and analyze a CRISPR experiment. For more background, read this <a target="_blank" href="https://blog.addgene.org/CrispyCrunch">blog post</a> on addgene.org.
+</p>
+
+<h3 id="step1createanewexperiment">Step 1: Create a new experiment</h3>
+
+<p>Create a new <em>experiment</em> by giving it a name. This is the name CrispyCrunch will use to refer to your batch of CRISPR edits.</p>
+
+<h3 id="step2designguides">Step 2: Design guides</h3>
+
+<p>Design your guide RNAs by inputting the <em>target regions</em> (i.e. the genes you would like to edit). Targets can be input as Ensembl transcript IDs (ENSTxxx), gene names, chromosome locii, or raw FASTA sequences. Each type of input will be translated to other types for versatility.</p>
+
+<p align="center">
+  <img src="../static/screenshots/guide-design.png" width="600">
+</p>
+
+<p>Optionally override the default <em>genome</em>, <em>guides per target</em> and other settings.</p>
+
+<p>On submission, you may need to wait up to 30 minutes as CrispyCrunch gets candidate guides for each target from Crispor. After all guides are returned, you will have a chance to review them and make modifications.</p>
+
+<p align="center">
+  <img src="../static/screenshots/guide-design-progress.png" width="600">
+</p>
+
+<h3 id="step3designdonordna">Optional Step 3: Design donor DNA</h3>
+
+<p>Optional: Design a donor template for insertion by HDR (Homology Directed Repair).</p>
+
+<p>Inserts can be make just after the <a href="https://en.wikipedia.org/wiki/Start_codon">start codon</a> or just before the <a href="https://en.wikipedia.org/wiki/Stop_codon">stop codon</a> of a gene. Specify a custom sequence to be inserted, and the desired length of the homolgy arms.</p>
+
+<!-- TODO: change me if HDR settings change -->
+
+<p align="center">
+  <img src="../static/screenshots/hdr-design.png" width="600">
+</p>
+
+<h3 id="step4designprimers">Step 4: Design primers</h3>
+
+<p>To verify the genomic sequence post-editing, each target locus can be PCR-amplified from genomic DNA fro deep-sequencing analysis. Specify <a href="http://primer3.sourceforge.net/primer3_manual.htm#PRIMER_PRODUCT_OPT_TM">optimal temperature</a> and <a href="http://primer3.sourceforge.net/primer3_manual.htm#PRIMER_PRODUCT_SIZE_RANGE">maximum amplicon length</a>. These values are passed down to Primer3 to design PCR primers.</p>
+
+<p align="center">
+  <img src="../static/screenshots/primer-design.png" width="600">
+</p>
+
+<p>On submission, you may need to wait up to 10 minutes as CrispyCrunch gets primers for each guide from Crispor. After all primers are returned, you will have a chance to review them and make modifications.</p>
+
+<h3 id="step5reviewandorderreagents">Step 5: Review and order reagents</h3>
+
+<p>On the summary page, you can see all information gathered so far, and you can download pre-filled excel order forms ready for submission to <a href="https://www.idtdna.com">IDT</a> or other vendors. You can order guides, primers and HDR donor templates in this way.</p>
+
+<p align="center">
+  <img src="../static/screenshots/experiment-summary.png" width="600">
+</p>
+
+<h3 id="step6wetlab">Step 6: Wet lab</h3>
+
+<p>After a few weeks, once your reagents have arrived, the experiments are ready to be performed. Do what you know how to do!</p>
+
+<p align="center">
+  <img src="../static/screenshots/wet-lab.png" width="400">
+</p>
+
+<p>If you'd like to characterize the targeted loci post-editing, <a href="https://en.wikipedia.org/wiki/DNA_sequencing#Next-generation_methods">deep sequence</a> your cells and gather the resulting <a href="https://en.wikipedia.org/wiki/FASTQ_format">FASTQ</a> files and upload them to a publicly accessible <a href="https://docs.aws.amazon.com/AmazonS3/latest/user-guide/what-is-s3.html" target="_blank">Amazon S3 bucket</a>. If you don't have such an S3 bucket, please contact <a href="mailto:{{ settings.ADMIN_EMAIL }}">{{ settings.ADMIN_EMAIL }}</a> for alternatives.</p>
+
+<h3 id="step7analysis">Optional Step 7: Analysis</h3>
+
+<p>Optional: Choose the <em>experiment</em> you want to analyze. Upload your sequencing files to your <a href="https://docs.aws.amazon.com/AmazonS3/latest/user-guide/what-is-s3.html" target="_blank">S3 bucket</a> if you haven't already. Point CrispyCrunch to the S3 folder that contains from sequencing files associated with the selected experiment.</p>
+
+<!-- TODO: change screen when upload possible -->
+
+<p align="center">
+  <img src="../static/screenshots/analysis.png" width="600">
+</p>
+
+<p>CrispyCrunch will automatically identify the correct pair of <a href="https://en.wikipedia.org/wiki/FASTQ_format">FASTQ</a> files for each sample by comparing the primers in each sequencing sample to the known primers of the experiment.</p>
+
+<p>On submission, you may need to wait up to 45 minutes as CrispyCrunch sends each pair of FASTQ files to Crispresso for analysis. After all reports are returned, you will get a summary page with links to each detailed report.</p>
+
+<p align="center">
+  <img src="../static/screenshots/results-summary.png" width="600">
+</p>
+
+<p>Crispresso quantifies repair outcomes––both <a href="https://en.wikipedia.org/wiki/Non-homologous_end_joining">NHEJ</a> and <a href="https://en.wikipedia.org/wiki/Homology_directed_repair">HDR</a>––in a variety of ways that are useful for ensuring that your CRISPR edits occurred as expected.</p>
+
+<p align="center">
+  <img src="../static/screenshots/repair-outcomes.png" width="600">
+</p>
+
+<p align="center">
+  <img src="../static/screenshots/repair-rows.png" width="600">
+</p>
+
+<h3 id="questions">Questions?</h3>
+
+Stuck somewhere? Something still doesn't make sense? We'd be happy to help. Send an email to <a href="mailto:{{ settings.ADMIN_EMAIL }}">{{ settings.ADMIN_EMAIL }}</a> . We're happy to help.
+
+{% endblock %}
