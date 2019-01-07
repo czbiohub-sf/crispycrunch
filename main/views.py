@@ -740,9 +740,13 @@ class OrderFormView(DetailView):
                 # TODO (gdingle): is this a good name for each sequence?
                 row = sheet.loc[well_pos]
                 ws['B' + index] = '{} {}'.format(
-                    row['_guide_id'], seq_key,
+                    row['_guide_id'], ''.join(k for k in seq_key),
                 )
-                ws['C' + index] = row[seq_key]
+                # TODO (gdingle): bad polymorphism, I know :/
+                if isinstance(seq_key, tuple):
+                    ws['C' + index] = ''.join(row[k] for k in seq_key)
+                else:
+                    ws['C' + index] = row[seq_key]
 
         return openpyxl.writer.excel.save_virtual_workbook(wb)
 
@@ -764,7 +768,10 @@ class GuideOrderFormView(OrderFormView):
 class PrimerOrderFormView(OrderFormView):
 
     model = PrimerSelection
-    seq_keys = ('primer_seq_fwd', 'primer_seq_rev')
+    seq_keys = (
+        ('_primer_adapt_seq_fwd', 'primer_seq_fwd'),
+        ('_primer_adapt_seq_rev', 'primer_seq_rev'),
+    )
 
 
 class UltramerOrderFormView(OrderFormView):

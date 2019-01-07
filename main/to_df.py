@@ -99,5 +99,8 @@ def ps_to_df(ps: 'models.PrimerSelection') -> DataFrame:
             'primer_seq_fwd': primers[0] if NOT_FOUND not in primers else NOT_FOUND,
             'primer_seq_rev': primers[1] if NOT_FOUND not in primers else NOT_FOUND,
             'primer_product': primers[2] if NOT_FOUND not in primers else NOT_FOUND,
+            '_primer_adapt_seq_fwd': ps.primer_design.adapter_seq,
+            # TODO (gdingle): revcomp or something?
+            '_primer_adapt_seq_rev': ps.primer_design.adapter_seq,
         }, index=[guide_id]))
     return df

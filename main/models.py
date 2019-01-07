@@ -693,6 +693,7 @@ class GuideSelection(BaseModel):
 
 
 class PrimerDesign(BaseModel):
+
     guide_selection = models.ForeignKey(
         GuideSelection, on_delete=models.CASCADE)
     primer_temp = models.IntegerField(
@@ -712,6 +713,18 @@ class PrimerDesign(BaseModel):
             MinValueValidator(100),
             MaxValueValidator(800),
         ])
+
+    # See https://www.idtdna.com/pages/products/next-generation-sequencing/adapters
+    adapter_seq = models.CharField(
+        max_length=160,
+        verbose_name='Adapter sequence',
+        help_text="""The DNA sequence that is prepended to each primer in 5' to
+            3' direction for deep sequencing (NGS). The default is the Illumina
+            TruSeq universal adapter.""",
+        default='AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT',
+        validators=[validate_seq],
+    )
+
     primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')
 
     def __str__(self):

@@ -395,7 +395,9 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
     # TODO (gdingle): maybe rename these to amplicons somethings?
     # Need pre-HDR for crispresso
-    sheet['primer_product_wt'] = sheet['primer_product'].copy()
+    if guide_design.is_hdr:
+        sheet['primer_product_wt'] = sheet['primer_product'].copy()
+
     sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
 
