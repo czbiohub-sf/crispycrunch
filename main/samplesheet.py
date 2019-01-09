@@ -65,6 +65,11 @@ def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
     if guide_design.is_hdr:
         sheet = _set_hdr_scores(sheet, guide_design, sheet)
 
+    # As original input
+    sheet = sheet.sort_values('target_input')
+    # Needed for order forms
+    sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
+
     return sheet
 
 
@@ -281,7 +286,6 @@ def from_primer_selection(primer_selection: PrimerSelection,
             lambda row: set_ultramer(row, guide_design.hdr_homology_arm_length),
             axis=1)
 
-    sheet.insert(0, 'well_pos', _well_positions(size=len(sheet)))
     # TODO (gdingle): is there a better way to make _guide_id to re-appear?
     sheet = sheet.reset_index()
     # TODO (gdingle): is this wanted?

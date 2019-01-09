@@ -535,9 +535,6 @@ class ExperimentSummaryView(View):
         """Modify sheet for optimal rendering"""
         sheet = sheet.loc[:, [not c.startswith('_') for c in sheet.columns]]
 
-        # As original input
-        sheet = sheet.sort_values('target_input')
-
         # Remove redundant info in case of genes
         if all(sheet['target_gene'] == sheet['target_input']):
             sheet['target_gene'] = None
@@ -736,14 +733,16 @@ class OrderFormView(DetailView):
             for i, seq_key in enumerate(self.seq_keys):
                 # TODO (gdingle): what to do if empty?
                 index = str((j * len(self.seq_keys)) + i + 2)
-                ws['A' + index] = well_pos
                 # TODO (gdingle): is this a good name for each sequence?
                 row = sheet.loc[well_pos]
+                ws['A' + index] = row['well_pos']
                 ws['B' + index] = '{} {}'.format(
                     row['_guide_id'], ''.join(k for k in seq_key),
                 )
                 # TODO (gdingle): bad polymorphism, I know :/
                 if isinstance(seq_key, tuple):
+                    # TODO (gdingle): how to avoid values such as
+                    # 'AGACGTGTGCTCTTCCGATCTnot found' ?
                     ws['C' + index] = ''.join(row[k] for k in seq_key)
                 else:
                     ws['C' + index] = row[seq_key]
