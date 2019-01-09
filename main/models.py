@@ -715,13 +715,20 @@ class PrimerDesign(BaseModel):
         ])
 
     # See https://www.idtdna.com/pages/products/next-generation-sequencing/adapters
-    adapter_seq = models.CharField(
+    adapter_seq_left = models.CharField(
         max_length=160,
-        verbose_name='Adapter sequence',
-        help_text="""The DNA sequence that is prepended to each primer in 5' to
-            3' direction for deep sequencing (NGS). The default is the Illumina
-            TruSeq universal adapter.""",
-        default='AATGATACGGCGACCACCGAGATCTACACTCTTTCCCTACACGACGCTCTTCCGATCT',
+        verbose_name='Left adapter sequence',
+        help_text="""The DNA sequence that is prepended to the left (forward)
+            primer in 5' to 3' direction for deep sequencing (NGS).""",
+        default='CTACACGACGCTCTTCCGATCT',
+        validators=[validate_seq],
+    )
+    adapter_seq_right = models.CharField(
+        max_length=160,
+        verbose_name='Right adapter sequence',
+        help_text="""The DNA sequence that is prepended to the right (reverse)
+            primer in 5' to 3' direction for deep sequencing (NGS).""",
+        default='AGACGTGTGCTCTTCCGATCT',
         validators=[validate_seq],
     )
 

@@ -6,7 +6,6 @@ django-debug-toolbar
 django-ses
 django-sesame
 django-settings-export
-django-silk
 Django>=2
 git+https://github.com/krisys/django-error-email-throttle.git@master
 httmock
