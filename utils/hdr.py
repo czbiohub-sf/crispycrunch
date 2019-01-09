@@ -1026,7 +1026,8 @@ def mutate_silently(
         else:
             return codon.upper()  # erase lowercase masking
 
-    @functools.lru_cache(maxsize=1024 * 1024)
+    # TODO (gdingle): make this work with hashable input
+    # @functools.lru_cache(maxsize=1024 * 1024)
     def _select_syn(codon: str, syns: list) -> str:
         """
         Selects the most different by base pairs, or the most frequent in
