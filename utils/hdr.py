@@ -504,7 +504,7 @@ class HDR:
         'ATGGCTGAGCTGGAcCCcTTt'
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.guide_mutated
-        'ATGGCcGAaCTcGAcCCcTTt'
+        'ATGGCTGAGtTaGAcCCcTTt'
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
         >>> hdr.target_mutation_score = 50.0
@@ -517,10 +517,10 @@ class HDR:
         'ATGGCcGAaCTGGATCCGTTC'
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.guide_mutated
-        'ATGGCcGAaCTcGAcCCGTTC'
+        'ATGGCcGAatTaGATCCGTTC'
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.guide_mutated
-        'ATGGCcGAaCTcGAcCCcTTt'
+        'ATGGCcGAatTaGAcCCcTTt'
 
         Permutations.
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
@@ -543,7 +543,7 @@ class HDR:
         >>> hdr.guide_seq_aligned
         'atCCGGAGCCCGCCCCGCCCCCGAGcc'
         >>> hdr.guide_mutated
-        'ATtaGGtcCCCGCCCCGCCCCCGAGCC'
+        'ATtaGaAGCCCGCCCCGCCCCCGAGCC'
 
         use_cfd_score
         >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
@@ -983,6 +983,7 @@ def mutate_silently(
         'ACG': 'THR',
         'GCG': 'ALA',
         'CGT': 'ARG',
+        'ATA': 'ILE',
     }
     synonymous_index = dict(
         (codon, aa)
@@ -1016,8 +1017,7 @@ def mutate_silently(
         if skip_stop_codon and codon in ['TAG', 'TGA', 'TAA']:
             return codon
         elif len(syns):
-            fractions = tuple((syn_fractions[syn], syn) for syn in syns)
-            top = max(fractions)[1]
+            top = _select_syn(codon, syns)
             lowered = ''.join([
                 c.upper() if c.upper() == top[i] else top[i].lower()
                 for i, c in enumerate(codon)
@@ -1025,6 +1025,32 @@ def mutate_silently(
             return lowered
         else:
             return codon.upper()  # erase lowercase masking
+
+    @functools.lru_cache(maxsize=1024 * 1024)
+    def _select_syn(codon: str, syns: list) -> str:
+        """
+        Selects the most different by base pairs, or the most frequent in
+        the genome.
+
+        >>> syns = ['TCT', 'TCG', 'TCA', 'TCC', 'AGC', 'AGT']
+        >>> _select_syn('TCT', syns)
+        'AGC'
+        """
+        codon = codon.upper()
+        diffs = [(sum([
+            codon[0] != syn[0],
+            codon[1] != syn[1],
+            codon[2] != syn[2],
+        ]), syn) for syn in syns]
+
+        if all(diffs[0][0] == s for s, syn in diffs):
+            # no differences, use old method
+            fractions = tuple((syn_fractions[syn], syn) for syn in syns)
+            top = max(fractions)[1]
+        else:
+            top = max(diffs)[1]
+
+        return top
 
     def _all_permutations(guide_seq) -> Iterator:
         """This will return increasing numbers of mutations, from right to left,
