@@ -364,6 +364,7 @@ class HDR:
         >>> hdr.mutated
         'TGATggCAAATTTGTCCATAGCTGAAG'
         """
+        # TODO (gdingle): calculate CFD once first
         if self.pam_outside_cds:
             # Skip other kinds of mutations because PAM mutation is enough
             return self._pam_mutated

@@ -6,6 +6,7 @@ import doctest
 import logging
 import re
 
+import pymysql
 import requests
 import requests_cache  # type: ignore
 
@@ -160,6 +161,41 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
     return match[0]
 
 
+def enst_to_gene2(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
+    """
+    Gets NCBI gene associated with with an ENST transcript ID by mysql query
+    of UCSC database. This was found to be much faster than enst_to_gene. Try:
+
+    $ mysql --user=genome --host=genome-mysql.cse.ucsc.edu -A -D hg19
+
+    >>> enst_to_gene2('ENST00000398844')
+    'SEC24A'
+    >>> enst_to_gene2('ENST00000617316')
+    Traceback (most recent call last):
+    ...
+    OSError: Gene symbol not found for ENST00000617316
+    """
+
+    # For unknown reasons, the latest UCSC db does not have the xref table
+    # needed. mm10 is ok.
+    db = 'hg19' if genome == 'hg38' else genome
+
+    connection = pymysql.connect(
+        host='genome-mysql.cse.ucsc.edu',
+        user='genome',
+        db=db,
+        connect_timeout=timeout,
+        read_timeout=timeout)
+
+    with connection.cursor() as cursor:
+        sql = "SELECT value FROM ensemblToGeneName WHERE name = %s"
+        status = cursor.execute(sql, (enst,))
+    if not status:
+        raise IOError('Gene symbol not found for {}'.format(enst))
+    else:
+        return cursor.fetchone()[0]
+
+
 def enst_to_gene(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
     """
     Gets NCBI gene associated with with an ENST transcript ID.
@@ -191,9 +227,11 @@ def enst_to_gene_or_unknown(enst: str, genome: str = 'hg38') ->str:
     Suppresses not found exceptions.
     >>> enst_to_gene_or_unknown('ENST00000617316')
     'UNKNOWN'
+    >>> enst_to_gene_or_unknown('ENST00000278840')
+    'FADS2'
     """
     try:
-        return enst_to_gene(enst, genome, timeout=4)
+        return enst_to_gene2(enst, genome, timeout=4)
     except requests.exceptions.Timeout:
         return 'TIMEOUT'
     except IOError as e:

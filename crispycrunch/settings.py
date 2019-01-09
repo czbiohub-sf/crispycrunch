@@ -38,6 +38,7 @@ if 'RDS_DB_NAME' in os.environ:  # prod
                 # TODO (gdingle): this is not working for most common email error :(
                 # TODO (gdingle): switch to sentry? or airbrake?
                 # see https://github.com/krisys/django-error-email-throttle/blob/18b61824d716e887173a224ef696a77cceae98ee/error_email_throttle/handler.py#L58
+                # TODO (gdingle): keep AdminEmailHandler?
                 # 'class': 'error_email_throttle.handler.AdminEmailThrottler',
                 'class': 'django.utils.log.AdminEmailHandler',
                 'include_html': True,
