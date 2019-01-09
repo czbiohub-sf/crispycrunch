@@ -95,7 +95,7 @@ class HDR:
             self.guide_strand_same = self._guide_strand_same()
 
     def __repr__(self):
-        return "HDR('{}', '{}', '{}', {}, '{}', '{}' {})".format(
+        return "HDR('{}', '{}', '{}', {}, {}, '{}')".format(
             self.target_seq,
             self.hdr_seq,
             self.hdr_tag,
@@ -273,6 +273,15 @@ class HDR:
         >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
         'atCCGGAGCCCGCCCCGCCCCCGAGcc'
+
+        Adjusting for guide at extreme left edge.
+        >>> hdr = HDR('GATGGCGCACCTGATGGTCGAGGAAGAAAAAAGAAGCTGAAACTATGA', 'NNN', 'stop_codon',
+        ... -28, True, '')
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.guide_seq_aligned
+        'GATGGCGCACCTGATGGTCGAGGaaga'
+        >>> hdr.guide_mutated
+        'GATGGCGCACCTGAcGGcaGgGGAAGA'
         """
         cut_at = self.cut_at
         codon_offset = abs(self.hdr_dist % 3)
@@ -292,6 +301,10 @@ class HDR:
             else:
                 shift = 3 - codon_offset if codon_offset else 0
             right = cut_at + 6 + shift
+            # for guides on the left edge of the target region, shift a codon
+            if right - length < 0:
+                right += 3
+                shift += 3
             guide_seq = self.target_seq[right - length:right]
             if length == 27:
                 guide_seq = _mark_outside(guide_seq[::-1], shift)[::-1]
@@ -301,6 +314,10 @@ class HDR:
             else:
                 shift = -codon_offset
             left = cut_at - 6 + shift
+            # for guides on the right edge of the target region, shift a codon
+            if left + length > len(self.target_seq):
+                left -= 3
+                shift -= 3
             guide_seq = self.target_seq[left:left + length]
             if length == 27:
                 guide_seq = _mark_outside(guide_seq, shift)
