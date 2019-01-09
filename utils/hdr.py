@@ -975,6 +975,15 @@ def mutate_silently(
         0.12, 'GTA': 0.11, 'CCG': 0.11, 'CGA': 0.11, 'GCG': 0.11, 'CGT': 0.08,
         'TTA': 0.07, 'CTA': 0.07, 'TCG': 0.06,
     }
+    # Rare codons in human sequences (defined by: frequency less than 7.0e-3 AND
+    # less than half of median usage for that amino acid):
+    blacklist = {
+        'TCG': 'SER',
+        'CCG': 'PRO',
+        'ACG': 'THR',
+        'GCG': 'ALA',
+        'CGT': 'ARG',
+    }
     synonymous_index = dict(
         (codon, aa)
         for aa, codons in synonymous.items()
@@ -994,6 +1003,8 @@ def mutate_silently(
         syns = list(synonymous[synonymous_index[codon.upper()]])
         # Remove self codon
         syns.remove(codon.upper())
+        # Filter out blacklist
+        syns = [syn for syn in syns if not blacklist.get(syn)]
 
         # Skip mutations that affect lowercase masked base pairs
         for syn in syns.copy():

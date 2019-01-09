@@ -64,6 +64,10 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
 
     >>> fetch_ensembl_transcript('ATL3').description
     'Reverse complement of chromosome:GRCh38:11:63624087:63671612:-1'
+
+    >>> fs = fetch_ensembl_transcript('ENST00000398844').features
+    >>> len([f for f in fs if f.type == 'exon'])
+    23
     """
     base_url = "http://rest.ensembl.org"
 
