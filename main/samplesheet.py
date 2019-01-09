@@ -37,10 +37,14 @@ NOT_FOUND = 'not found'
 # TODO (gdingle): change defaults in module
 hdr.HDR.guide_seq_aligned_length = 27
 hdr.HDR.use_cfd_score = True
+
+# NOTE: the following settings have noticeable effects on perf in the common
+# case of a 96 well plate. Slowdowns noted inline.
 hdr.HDR.stop_mutating_at_first_success = True  # 10x slowdown
 hdr.HDR.compare_all_positions = True  # 50x slowdown
 hdr.HDR.mutate_all_permutations = True  # 100x slowdown
-hdr.HDR.target_mutation_score = 0.01  # 5x per factor 10
+# Threshold decided by extensive testing by Manuel Leonetti
+hdr.HDR.target_mutation_score = 0.03  # 5x slowdown per factor of 10
 
 
 def from_guide_selection(guide_selection: GuideSelection) -> DataFrame:
