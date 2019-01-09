@@ -7,6 +7,7 @@ Protospacex: automated guide design for Cas9 knock-in experiments.
 The code here returns different regions of interest for HDR from a ENST transcript.
 """
 import logging
+import time
 
 from functools import lru_cache
 # lru_cache appears to reduce page time by 10s for 96 well plate!
@@ -40,7 +41,9 @@ _cached_session.mount('https://', adapter)
 
 
 @lru_cache(maxsize=1024)
-def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
+def fetch_ensembl_transcript(
+        ensembl_transcript_id: str,
+        is_retry: bool = False) -> SeqRecord:
     """Fetch the requested Ensembl transcript.
 
     Get the requested Ensembl transcript, together with exon and
@@ -143,6 +146,13 @@ def fetch_ensembl_transcript(ensembl_transcript_id: str) -> SeqRecord:
     except requests.exceptions.HTTPError:
         log.error("Ensembl sequence REST query returned error "
                   "{}".format(response.text))
+        # You have exceeded the limit of 15 requests per second; please reduce your concurrent connections
+        if not is_retry and \
+                response.text.strip().startswith('You have exceeded the limit of'):
+            log.warn('Waiting 4 seconds then retrying fetch_ensembl_transcript')
+            time.sleep(4)
+            return fetch_ensembl_transcript(ensembl_transcript_id, is_retry=True)
+
         raise ValueError(response.text)
 
     response_data = response.json()

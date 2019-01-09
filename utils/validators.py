@@ -16,7 +16,7 @@ except ImportError:
 # See https://www.genenames.org/about/guidelines
 # And see https://www.biostars.org/p/60118/ .
 # Also covers mouse genes... which are lowercase
-GENE_REGEX = r'^[A-Za-z0-9-]{3,8}$|^C[0-9XY]+orf[0-9]+$'
+GENE_REGEX = r'^[A-Za-z0-9-]{3,9}$|^C[0-9XY]+orf[0-9]+$'
 
 
 def validate_fastq(filename: str) -> None:
@@ -143,6 +143,8 @@ def validate_chr_or_seq_or_enst_or_gene(value: str) -> None:
 def validate_gene(value: str) -> None:
     """
     >>> validate_gene('ATL2') is None
+    True
+    >>> validate_gene('ARHGAP11A') is None
     True
     >>> validate_gene('atl 2')
     Traceback (most recent call last):
