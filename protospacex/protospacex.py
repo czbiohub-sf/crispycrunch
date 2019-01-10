@@ -249,10 +249,10 @@ def get_cds_seq(
     >>> len(get_cds_seq('ENST00000221801', -1, length=30))
     30
 
-    No length change.
+    No length change. Intron/exon junction.
 
     >>> get_cds_seq('ENST00000221801', -1, length=-1)
-    'GCCACCCCCCAAGGTGAAGAACTGA'
+    'gccaCCCCCCAAGGTGAAGAACTGA'
 
     Too short.
     >>> get_cds_seq('ENST00000262033', length=-1)
@@ -302,12 +302,14 @@ def _get_cds_seq_and_codon_at(
         cds_seq = _get_seq_from_surrounding(record, start, end)
     else:
         cds_seq = record.seq[start:end]
+        # TODO (gdingle): do for above also somehow... how to deal with out of range?
+        cds_seq = _lowercase_exon_boundaries(cds_seq, record, start)
 
     if cds_index == 0:
         target_codons = ['ATG']
     elif cds_index == -1:
         target_codons = ['TAG', 'TGA', 'TAA']
-    assert cds_seq[codon_at:codon_at + 3] in target_codons, (
+    assert cds_seq[codon_at:codon_at + 3].upper() in target_codons, (
         str(cds_seq), codon_at)
 
     if length != -1:
@@ -320,6 +322,35 @@ def _get_cds_seq_and_codon_at(
         return '', 0
 
     return str(cds_seq), codon_at
+
+
+def _lowercase_exon_boundaries(
+        cds_seq: str,
+        record: SeqRecord,
+        start: int = 0,
+        bound_len: int = 4) -> str:
+    """
+    >>> seq = Seq('AAGGTGAAGAACTGAAGTTCAGCGCTGTCA', IUPACUnambiguousDNA())
+    >>> features = [SeqFeature(location=FeatureLocation(15, 15), type='exon')]
+    >>> record = SeqRecord(seq, features=features)
+    >>> _lowercase_exon_boundaries(str(seq), record)
+    'AAGGTGAAGAActgaagttCAGCGCTGTCA'
+    >>> features[0].location = FeatureLocation(0, 0)
+    >>> _lowercase_exon_boundaries(str(seq), record)
+    'aaggTGAAGAACTGAAGTTCAGCGCTGTCA'
+    >>> features[0].location = FeatureLocation(0, 32)
+    >>> _lowercase_exon_boundaries(str(seq), record)
+    'aaggTGAAGAACTGAAGTTCAGCGCTGTca'
+    """
+    exons = [f.location for f in record.features if f.type == 'exon']
+    for exon in exons:
+        for exon_boundary in [exon.start - start, exon.end - start]:
+            left = max(0, exon_boundary - bound_len)
+            right = min(len(cds_seq), exon_boundary + bound_len)
+            cds_seq = cds_seq[:left] \
+                + cds_seq[left:right].lower() \
+                + cds_seq[right:]
+    return cds_seq
 
 
 def get_cds_chr_loc(
