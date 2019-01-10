@@ -123,8 +123,8 @@ class HDR:
         """
 
         cut_at = self.cut_at
-        pam1 = self.target_seq[cut_at + 3:cut_at + 6]
-        pam2 = self.target_seq[cut_at - 6:cut_at - 3]
+        pam1 = self.target_seq[cut_at + 3:cut_at + 6].upper()
+        pam2 = self.target_seq[cut_at - 6:cut_at - 3].upper()
         is_for = pam1.endswith('GG')
         is_rev = pam2.startswith('CC')
         assert is_for or is_rev, (pam1, pam2)
@@ -137,7 +137,7 @@ class HDR:
         if self._codon_at != -1:
             return self._codon_at
         for i, codon in enumerate(_left_to_right_codons(self.target_seq)):
-            if codon in self.boundary_codons:
+            if codon.upper() in self.boundary_codons:
                 return i * 3
 
         assert False
@@ -149,67 +149,27 @@ class HDR:
         return cut_at
 
     @property
-    def junction(self) -> tuple:
-        """
-        Returns the intron/exon junction range on the intron side relative
-        to the target sequence. Exclusive range: (start, end].
-
-        Jason Li says: The exon-proximal side of the junction is relatively
-        unimportant to the intron-proximal (exon-distal) side of each
-        junction, meaning we only want to avoid the 3 nts on the intron side
-        of things.
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCC')
-        >>> hdr.junction
-        (20, 23)
-
-        >>> hdr = HDR('NNNNNNTAANNNNNN', hdr_dist=0, hdr_tag='stop_codon',
-        ... cds_seq='TAA', guide_strand_same=True)
-        >>> hdr.junction
-        (3, 6)
-
-        >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
-        >>> hdr.junction
-        ()
-        """
-        index = self.target_seq.find(self.cds_seq)
-        if index == -1:
-            # assume target region does not go outside CDS
-            return tuple([])
-        if self.hdr_tag == 'start_codon':
-            # Assumes junction is towards middle of gene
-            index = index + len(self.cds_seq)
-            return (index, index + 3)
-        else:
-            return (index - 3, index)
-
-    @property
     def cut_in_junction(self) -> bool:
         """
-        Determines whether the cut location is inside an intron/exon junction.
+        Determines whether the cut location is inside an intron/exon junction,
+        as previously marked out by lowercasing.
 
         Cut in junction.
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCC')
-        >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
-        (20, (20, 23), True)
+        >>> hdr = HDR('GCCATGGCTGAGCTGGAtccgttCGGC', hdr_dist=14)
+        >>> (hdr.cut_at, hdr.cut_in_junction)
+        (20, True)
 
         Cut just after junction.
-        >>> hdr = HDR('CCNNNNTAANNNNNN', hdr_dist=0, hdr_tag='stop_codon',
-        ... cds_seq='TAA', guide_strand_same=True)
-        >>> (hdr.cut_at, hdr.junction, hdr.cut_in_junction)
-        (6, (3, 6), False)
+        >>> hdr = HDR('CCNNNNtaannnnnn', hdr_dist=0, hdr_tag='stop_codon', guide_strand_same=True)
+        >>> (hdr.cut_at, hdr.cut_in_junction)
+        (6, False)
 
         No junction to cut.
-        >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        >>> hdr = HDR('ATGNGG', hdr_dist=-3)
         >>> hdr.cut_in_junction
         False
         """
-        junction = self.junction
-        if not junction:
-            return False
-        return self.cut_at >= junction[0] and self.cut_at < junction[1]
+        return self.target_seq[self.cut_at - 1].islower()
 
     @property
     def guide_seq(self):
@@ -292,7 +252,8 @@ class HDR:
         def _mark_outside(guide_seq: str, shift: int) -> str:
             shift = abs(shift)
             return guide_seq[:shift].lower() \
-                + guide_seq[shift:shift + 23] + guide_seq[shift + 23:].lower()
+                + guide_seq[shift:shift + 23].upper() \
+                + guide_seq[shift + 23:].lower()
 
         # TODO (gdingle): refactor this somehow... :(
         if self.guide_strand_same:
@@ -387,7 +348,7 @@ class HDR:
             return self._pam_mutated
 
         try:
-            start = self.target_seq.index(self.guide_seq_aligned.upper())
+            start = self.target_seq.upper().index(self.guide_seq_aligned.upper())
         except (ValueError, AssertionError):
             logging.warn('Cannot find {}bp length around guide {} in target_seq {}'.format(
                 self.guide_seq_aligned_length,
@@ -399,7 +360,7 @@ class HDR:
             # See https://trello.com/c/EC3VVyOn/56-rare-failures-on-27bp-around-guides-for-mutation
             self.guide_seq_aligned_length = 21
             self.use_cfd_score = False
-            start = self.target_seq.index(self.guide_seq_aligned)
+            start = self.target_seq.upper().index(self.guide_seq_aligned.upper())
 
         mutated = self.guide_mutated
 
@@ -425,7 +386,7 @@ class HDR:
         """
         before, pam, after = (
             self.target_seq[:self.pam_at],
-            self.target_seq[self.pam_at:self.pam_at + 3],
+            self.target_seq[self.pam_at:self.pam_at + 3].upper(),
             self.target_seq[self.pam_at + 3:]
         )
         assert len(pam) == 3
@@ -732,36 +693,33 @@ class HDR:
         Determines whether there is a mutation inside an intron/exon junction.
 
         # TODO (gdingle): use mutation masking here instead of warning?
+        # Then we would need to preserve lowercasing in guide_seq_aligned
         # See https://trello.com/c/HoEcAlVj/54-filter-out-mutations-in-intron-exon-junction
 
-        Mutation just inside 3 bp window.
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCCG')
-        >>> hdr.target_mutation_score = 50.0
-        >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
-        ('GCCATGGCTGAGCTGGATCCGTTtGGC', (21, 24), True)
+        Mutation in junction.
+        >>> hdr = HDR('CATATGatccggagCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr.guide_seq_aligned
+        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
+        >>> hdr.guide_mutated
+        'ATtaGaAGCCCGCCCCGCCCCCGAGCC'
+        >>> hdr.mutation_in_junction
+        True
 
-        Mutation just outside 3 bp window.
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14,
-        ... cds_seq='ATGGCTGAGCTGGATCC')
-        >>> hdr.target_mutation_score = 50.0
-        >>> (hdr.mutated, hdr.junction, hdr.mutation_in_junction)
-        ('GCCATGGCTGAGCTGGATCCGTTtGGC', (20, 23), False)
-
-        >>> hdr = HDR('ATGNGG', cds_seq='ATGNNNNNN', hdr_dist=-3)
+        No junction.
+        >>> hdr = HDR('CATATGATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
+        >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.mutation_in_junction
         False
         """
-        junction = self.junction
-        if not junction:
+        if all(u.isupper() for u in self.target_seq):
             return False
-        junction_seq = self.mutated[junction[0]:junction[1]]
-        assert len(junction_seq) <= 3
-        # Lowercase means mutated
-        if any(c.lower() == c for c in junction_seq):
-            return True
-        else:
-            return False
+        # TODO (gdingle): another perf problem!!! :(
+        for i, c in enumerate(self.mutated):
+            u = self.target_seq[i]
+            if u.islower() and u.upper() != c.upper():
+                return True
+        return False
 
     @property
     def should_mutate(self) -> bool:

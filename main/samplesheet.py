@@ -190,12 +190,19 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         lambda row: get_insert(row['target_loc'], row['_hdr_tag']),
         axis=1,
     )
-    sheet['hdr_inserted'] = sheet.apply(
-        lambda row:
-        '' if not row['guide_seq'] else
-        _get_hdr_row(row).inserted,
-        axis=1,
-    )
+
+    def insert(row):
+        if not row['guide_seq']:
+            return ''
+
+        row_hdr = _get_hdr_row(row)
+
+        if row_hdr.cut_in_junction:
+            return 'cut in intron/exon junction: ' + row_hdr.inserted
+
+        return row_hdr.inserted
+
+    sheet['hdr_inserted'] = sheet.apply(insert, axis=1)
 
     # TODO (gdingle): override hdr_inserted when good enough
     def mutate(row):
@@ -210,22 +217,17 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             return ''
 
         row_hdr = _get_hdr_row(row)
+        mutated = row_hdr.inserted_mutated
 
         # TODO (gdingle): remove me if no longer needed because of cdf score
-        if row_hdr.inserted_mutated == row_hdr.inserted:
+        if mutated == row_hdr.inserted:
             return 'not needed'
-
-        if not row_hdr.junction:
-            return row_hdr.inserted_mutated
-
-        if row_hdr.cut_in_junction:
-            return 'cut in intron/exon junction: ' + row_hdr.inserted_mutated
 
         # Lowercase means mutated
         if row_hdr.mutation_in_junction:
-            return 'mutation in intron/exon junction: ' + row_hdr.inserted_mutated
+            return 'mutation in intron/exon junction: ' + mutated
 
-        return row_hdr.inserted_mutated
+        return mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
     sheet['_hdr_mutate_score'] = sheet.apply(
@@ -240,7 +242,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
             guide_seq = row_hdr.guide_seq
         else:
             guide_seq = reverse_complement(row_hdr.guide_seq)
-        assert guide_seq == row['guide_seq'] + row['guide_pam']
+        assert guide_seq.upper() == row['guide_seq'] + row['guide_pam']
 
     sheet.apply(check_hdr_guide_match, axis=1)
 

@@ -539,8 +539,8 @@ def get_ultramer_seq(
     ult_seq = record.seq[start:end]
 
     if start < 0 or end > len(record.seq):
-        log.warning('Transcript {} is not large enough: {}. Fetching sequence.'.format(
-            ensembl_transcript_id, len(ult_seq)))
+        log.warning('Transcript {} does not contain ({}, {}). Fetching sequence.'.format(
+            ensembl_transcript_id, start, end))
         ult_seq = _get_seq_from_surrounding(record, start, end)
         assert len(ult_seq) == length, (len(ult_seq), length)
 
