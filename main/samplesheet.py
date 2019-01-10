@@ -20,7 +20,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
 from main.models import Analysis, GuideDesign, GuideSelection, PrimerSelection
-from protospacex import get_cds_codon_at, get_cds_seq, get_ultramer_seq
+from protospacex import get_cds_codon_at, get_ultramer_seq
 from utils import conversions
 from utils import hdr
 from utils import manuscore
@@ -171,13 +171,10 @@ def _set_hdr_scores(sheet: DataFrame, guide_design: GuideDesign, guides: DataFra
 
 def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame) -> DataFrame:
 
-    # HACK ALERT! Get the CDS seq to check for mutation on exon boundary.
+    # HACK ALERT! Get the codon_at to be sure.
     # It's another instance of IO, but should be cached always, first in sqlite
     # then in local mem.
     # TODO (gdingle): return more info from protospacex, and store throughout
-    sheet['_seq_cds'] = sheet.apply(
-        lambda row: get_cds_seq(row['target_input'], row['_cds_index'], -1),
-        axis=1)
     sheet['_seq_codon_at'] = sheet.apply(
         lambda row: get_cds_codon_at(
             row['target_input'],
@@ -256,7 +253,6 @@ def _get_hdr_row(row) -> hdr.HDR:
         row['_hdr_tag'],
         row['hdr_dist'],
         row['_guide_strand_same'],
-        row['_seq_cds'],
         row['_seq_codon_at']
     )
 
@@ -344,7 +340,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same'],
-            row['_seq_cds'],
             # TODO (gdingle): make this work with more thought
             # row['_seq_codon_at']
         )
@@ -497,7 +492,6 @@ def set_ultramer(row, hdr_homology_arm_length: int):
         row['_hdr_tag'],
         row['hdr_dist'],
         row['_guide_strand_same'],
-        row['_seq_cds'],
         codon_at)
     try:
         ultramer_mutated = uhdr.inserted_mutated

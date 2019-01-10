@@ -28,8 +28,7 @@ class HDR:
 
     The target sequence must be codon aligned so the target codon can be found!
 
-    The CDS sequence is needed to avoid the intron/exon junctions. It must also
-    contain the target codon like the target sequence.
+    The intron/exon junctions should be denoted by lowercase in the target seq.
 
     target_mutation_score is the minimum MIT score needed to stop silent mutation.
 
@@ -61,15 +60,12 @@ class HDR:
             hdr_tag: str = 'start_codon',
             hdr_dist: int = 0,
             guide_strand_same: bool = None,
-            cds_seq: str = '',
             codon_at: int = -1) -> None:
 
         _validate_seq(target_seq)
         self.target_seq = target_seq
         _validate_seq(hdr_seq)
         self.hdr_seq = hdr_seq
-        _validate_seq(cds_seq)
-        self.cds_seq = cds_seq
 
         assert hdr_tag in ('start_codon', 'stop_codon')
         self.hdr_tag = hdr_tag
@@ -101,7 +97,6 @@ class HDR:
             self.hdr_tag,
             self.hdr_dist,
             self.guide_strand_same,
-            self.cds_seq,
         )
 
     def _guide_strand_same(self) -> bool:
@@ -236,7 +231,7 @@ class HDR:
 
         Adjusting for guide at extreme left edge.
         >>> hdr = HDR('GATGGCGCACCTGATGGTCGAGGAAGAAAAAAGAAGCTGAAACTATGA', 'NNN', 'stop_codon',
-        ... -28, True, '')
+        ... -28, True)
         >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
         'GATGGCGCACCTGATGGTCGAGGaaga'
