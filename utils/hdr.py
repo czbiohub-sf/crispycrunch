@@ -230,8 +230,7 @@ class HDR:
         'atCCGGAGCCCGCCCCGCCCCCGAGcc'
 
         Adjusting for guide at extreme left edge.
-        >>> hdr = HDR('GATGGCGCACCTGATGGTCGAGGAAGAAAAAAGAAGCTGAAACTATGA', 'NNN', 'stop_codon',
-        ... -28, True)
+        >>> hdr = HDR('GATGGCGCACCTGATGGTCGAGGAAGAAAAAAGAAGCTGAAACTATGA', 'NNN', 'stop_codon', -28, True)
         >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.guide_seq_aligned
         'GATGGCGCACCTGATGGTCGAGGaaga'
@@ -565,14 +564,12 @@ class HDR:
                 #  6s of 18s request is spent in this generator!
                 #  10M calls == slow! See
                 #  https://ilovesymposia.com/2015/12/10/the-cost-of-a-python-function-call/
-                # TODO (gdingle): use cython?
                 # TODO (gdingle): we probably only need to check all positions on the first pass...
                 # see https://trello.com/c/lXeGRUjN/62-mutation-when-mutation-not-needed#comment-5c002431f9ce9703f03020b2
-                score = max([
-                    hit_score_func(test_seq)
+                score, _ = max([
+                    (hit_score_func(test_seq), test_seq)
                     for test_seq
                     in self._test_sequences(len(mutated), left, right)])
-
             else:
                 score = hit_score_func(
                     self.guide_seq_aligned.upper()[left:right],
@@ -599,7 +596,7 @@ class HDR:
 
     @functools.lru_cache(1024 * 1024)
     def _test_sequences(self, length, left, right) -> list:
-        seqs = []  # type: ignore
+        seqs = [self.guide_seq]
         for i in range(0, len(self.inserted) - length + 1):
             test_seq = self.inserted[i:i + length].upper()[left:right]
             test_seq2 = cfdscore._revcom(test_seq)
@@ -904,7 +901,6 @@ def mutate_silently(
     >>> it = mutate_silently('tCCAGGTAGTGCCGCGCTGCCTGCacc', all_permutations=True)
     >>> next(it)
     'TCCAGGTAGTGCCGCGCTGCCTGCACC'
-
     """
     synonymous = {
         'CYS': ['TGT', 'TGC'],

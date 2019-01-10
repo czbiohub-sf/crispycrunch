@@ -506,9 +506,10 @@ class ExperimentSummaryView(View):
         except (PrimerSelection.DoesNotExist, IndexError):
             raise Http404('Experiment summary does not exist')
 
+        ms = request.GET.get('ms')
         sheet = samplesheet.from_primer_selection(primer_selection,
                                                   # TODO (gdingle): temp remove me,
-                                                  float(request.GET.get('ms', 0.01)),
+                                                  float(ms) if ms else None,
                                                   False)
         sheet = self._prepare_sheet(sheet)
 

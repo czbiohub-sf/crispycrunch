@@ -310,7 +310,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
         if row['target_loc'].strand == '-':
             primer_product = reverse_complement(primer_product)
 
-        guide_offset = primer_product.find(guide_seq_aligned)
+        guide_offset = primer_product.upper().find(guide_seq_aligned.upper())
 
         if guide_offset == -1:
             logger.warning('Could not find guide {} in primer {} for target {}'.format(
