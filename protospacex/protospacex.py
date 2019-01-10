@@ -258,7 +258,11 @@ def get_cds_seq(
     >>> get_cds_seq('ENST00000262033', length=-1)
     ''
     >>> get_cds_seq('ENST00000295682', -1, length=72)
-    'GCCAAGGTCACAGGCAAGAGCAAGAAGAGAAACTGACCCTGAATGTTCAATAAAGTTGATTCTTTGTAGCTC'
+    'GCCAAGGTCACAGGCAAGAGCAAGAAGAGAAACTGACCCTGAATGTTCAATAAAGTTGATTCTTtgtagctc'
+
+    Same intron/exon position as in get_ultramer_seq.
+    >>> get_cds_seq('ENST00000258648', length=72)
+    'CTCTGCgcgtgcgcCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAG'
     """
     return _get_cds_seq_and_codon_at(
         ensembl_transcript_id,
@@ -302,8 +306,9 @@ def _get_cds_seq_and_codon_at(
         cds_seq = _get_seq_from_surrounding(record, start, end)
     else:
         cds_seq = record.seq[start:end]
-        # TODO (gdingle): do for above also somehow... how to deal with out of range?
-        cds_seq = _lowercase_exon_boundaries(cds_seq, record, start)
+
+    # TODO (gdingle): verify this always works
+    cds_seq = _lowercase_exon_boundaries(cds_seq, record, start)
 
     if cds_index == 0:
         target_codons = ['ATG']
@@ -341,15 +346,20 @@ def _lowercase_exon_boundaries(
     >>> features[0].location = FeatureLocation(0, 32)
     >>> _lowercase_exon_boundaries(str(seq), record)
     'aaggTGAAGAACTGAAGTTCAGCGCTGTca'
+
+    Negative start shifts exons right.
+    >>> _lowercase_exon_boundaries(str(seq), record, -4)
+    'aaggtgaaGAACTGAAGTTCAGCGCTGTCA'
     """
     exons = [f.location for f in record.features if f.type == 'exon']
     for exon in exons:
         for exon_boundary in [exon.start - start, exon.end - start]:
             left = max(0, exon_boundary - bound_len)
             right = min(len(cds_seq), exon_boundary + bound_len)
-            cds_seq = cds_seq[:left] \
-                + cds_seq[left:right].lower() \
-                + cds_seq[right:]
+            if right >= left:
+                cds_seq = cds_seq[:left] \
+                    + cds_seq[left:right].lower() \
+                    + cds_seq[right:]
     return cds_seq
 
 
@@ -486,7 +496,7 @@ def get_ultramer_seq(
     'TCTTCTTGTGCGCTGTTGTCGACCCCGACCAGCCCCTTCCAACCCAGTCATCATGTCCCAGCCGGGAATACCGGCCTCCGGCGGCGCCCCAGCCAGCCTCCAGGCCCAGA'
 
     >>> get_ultramer_seq('ENST00000411809')[0]
-    'GGTCCGTGGGGAGCAGGAGAGGGAGGCGGCGGACCGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAAAGCGTGAGTATCGGGGGGCA'
+    'GGTCCGTGGGGAGCAGGAGAGGGAGGCGGCGGACCGTCCCGCGCGGGGCACGATGTTGAACATGTGGAAGGTGCGCGAGCTGGTGGACAaagcgtgaGTATCGGGGGGCA'
 
     Stop codon.
 
@@ -497,14 +507,14 @@ def get_ultramer_seq(
     'TGGAACTGTGCAACCCAAGCAAGATGCCTTTGCAAATTTCGCCAATTTTAGCAAATAAGAGATTGTAAAAGAAGCAGATTGAATGAAGAATTTTTAGCTGTGCAGATAGG'
 
     >>> get_ultramer_seq('ENST00000221801', -1)[0]
-    'GACCCTCCTTCATCACCTATCTTCCTCTCACAGGCCACCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTG'
+    'GACCCTCCTTCATCACCTATCTTCCTCTCacaggccaCCCCCCAAGGTGAAGAACTGAAGTTCAGCGCTGTCAGGATTGCGAGAGATGTGTGTTGATACTGTTGCACGTG'
 
     Not enough in the transcript for the ultramer.
     >>> get_ultramer_seq('ENST00000258648')[0]
-    'CACCTGCGTCAGCTCGCTCTGCGCGTGCGCCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGGGAG'
+    'CACCTGCGTCAGCTCGCTCTGCgcgtgcgcCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAGCGGCTGGGAGGCGGTTTGGGAG'
 
     >>> get_ultramer_seq('ENST00000267113')[0]
-    'GGCAACCTCCAGCCAGTCCCTGGGTCGGGCGGATCCTCCCAGAGGTGGCACAATGGAGCGATCTCCAGGAGAGGGCCCCAGCCCCAGCCCCATGGACCAGCCCTCTGCTC'
+    'ggcAACCTCCAGCCAGTCCCTGGGTCGGGCGGATCCTCCCAGAGGTGGCACAATGGAGCGATCTCCAGGAGAGGGCCCCAGCCCCAGCCCCATGGACCAGCCCTCTGCTC'
     """
 
     record = fetch_ensembl_transcript(ensembl_transcript_id)
@@ -534,11 +544,15 @@ def get_ultramer_seq(
         ult_seq = _get_seq_from_surrounding(record, start, end)
         assert len(ult_seq) == length, (len(ult_seq), length)
 
+    # TODO (gdingle): verify this is consistent with get_cds_seq
+    ult_seq = _lowercase_exon_boundaries(ult_seq, record, start)
+
     codon_at = codon_at - start  # make relative to
+    test_codon = ult_seq[codon_at:codon_at + 3].upper()
     if cds_index == 0:
-        assert ult_seq[codon_at:codon_at + 3] == 'ATG', (start, end, codon_at, ult_seq)
+        assert test_codon == 'ATG', (start, end, codon_at, ult_seq)
     elif cds_index == -1:
-        assert ult_seq[codon_at:codon_at + 3] in ['TAG', 'TGA', 'TAA']
+        assert test_codon in ['TAG', 'TGA', 'TAA']
 
     return str(ult_seq), codon_at
 
@@ -694,3 +708,4 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
     # fetch_ensembl_transcript('ENST00000398844').description
+    # print(get_ultramer_seq('ENST00000221801', -1)[0])
