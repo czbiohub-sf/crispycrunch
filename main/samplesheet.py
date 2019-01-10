@@ -259,7 +259,9 @@ def _get_hdr_row(row) -> hdr.HDR:
 
 def from_primer_selection(primer_selection: PrimerSelection,
                           # TODO (gdingle): temp ... remove me
-                          target_mutation_score=None) -> DataFrame:
+                          target_mutation_score: float = None,
+                          # Perf optimization
+                          fetch_ultramers: bool = True) -> DataFrame:
     guide_selection = primer_selection.primer_design.guide_selection
     sheet = from_guide_selection(guide_selection)
 
@@ -280,11 +282,12 @@ def from_primer_selection(primer_selection: PrimerSelection,
             sheet,
             guide_design,
             primer_selection.primer_design.max_amplicon_length)
-        sheet['_hdr_ultramer'] = sheet.apply(
-            lambda row: set_ultramer(row, guide_design.hdr_homology_arm_length),
-            axis=1)
+        if fetch_ultramers:
+            sheet['_hdr_ultramer'] = sheet.apply(
+                lambda row: set_ultramer(row, guide_design.hdr_homology_arm_length),
+                axis=1)
 
-    # TODO (gdingle): is there a better way to make _guide_id to re-appear?
+            # TODO (gdingle): is there a better way to make _guide_id to re-appear?
     sheet = sheet.reset_index()
     # TODO (gdingle): is this wanted?
     # sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
