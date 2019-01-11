@@ -227,9 +227,10 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         return mutated
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
-    sheet['_hdr_mutate_score'] = sheet.apply(
-        lambda row: round(_get_hdr_row(row)._mutated_score, 4),
-        axis=1)
+    # TODO (gdingle): still maintain this?
+    # sheet['_hdr_mutate_score'] = sheet.apply(
+    #     lambda row: round(_get_hdr_row(row)._mutated_score, 4),
+    #     axis=1)
 
     def check_hdr_guide_match(row):
         if not row['guide_seq']:

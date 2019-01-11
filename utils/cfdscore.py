@@ -415,6 +415,10 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
     0.01913357577630766
     >>> cfd_score('CCAGGTAGTGCCGCGCTGCCTGC', 'CCAGCCAGTCCCACTCCAGCTCC', guide_strand_same=False)
     0.0
+
+    sub-optimal
+    >>> cfd_score('GAGCAGCATGGAGCCGGCGGCcG'.upper(), 'AGGAAGTGGTGAGCCGGCGGCGG')
+    0.01946858212975458
     """
     if guide_strand_same is False:
         wt = _revcom(wt)
@@ -433,7 +437,8 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
 
     if wt_pam and sg_pam:
         # wild type PAM may differ from NGG if it was broken up by HDR insertion
-        # In this case, we return the lower score.
+        # In this case, we take the lower on the assumption that a match
+        # is even less likely to non-NGG.
         return min(
             calc_cfd(wt.upper(), sg.upper(), wt_pam[-2:].upper()),
             calc_cfd(wt.upper(), sg.upper(), sg_pam[-2:].upper()),

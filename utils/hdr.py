@@ -524,20 +524,7 @@ class HDR:
         >>> hdr.guide_seq_aligned
         'CCGGAGCCCGCCCCGCCCCCGAGccgc'
         >>> hdr.guide_mutated
-        'CCcGAaCCtGCtCCcCCtCCctcCCGC'
-
-        # TODO (gdingle): what to do about this?
-        Strange case of off-target.
-        # ACCACCTCCT|CCAGCCAGTCCCACTCCAGCTCC|ATGATCT|CCAGGTAGTGCCGCGCTGCCTGC|ACCTAGTGTGCAGAGGGGACGGCCGCCCCTCCT
-        >>> hdr = HDR('ACCACCTCCTCCAGCCAGTCCCACTCCAGCTCCATGATCTCCAGGTAGTGCCGCGCTGCCTGCACCTAGTGTGCAGAGGGGACGGCCGCCCCTCCT', hdr_dist=1, guide_strand_same=False, hdr_tag='stop_codon', hdr_seq='ggtggcggattggaagttttgtttcaaggtccaggaagtggtaccgagctcaacttcaaggagtggcaaaaggcctttaccgatatgatg')
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.use_cfd_score = True
-        >>> hdr.mutate_all_permutations = True
-        >>> hdr.guide_seq_aligned
-        'tCCAGGTAGTGCCGCGCTGCCTGCacc'
-        >>> hdr.target_mutation_score = 0.01
-        >>> hdr.guide_mutated
-        'TCtAGGTAGTGCCGCGCTGCCTGCACC'
+        'CCcGAaCCtGCtCCcCCtCCGAGCCGC'
         """
 
         candidates = []
@@ -551,7 +538,7 @@ class HDR:
                 assert right - left == 23, 'Must include pam for cfdscore'
                 hit_score_func = functools.partial(
                     cfdscore.cfd_score,
-                    sg=mutated.upper()[left:right],
+                    mutated.upper()[left:right],
                     guide_strand_same=self.guide_strand_same)
             else:
                 hit_score_func = functools.partial(
@@ -596,7 +583,7 @@ class HDR:
 
     @functools.lru_cache(1024 * 1024)
     def _test_sequences(self, length, left, right) -> list:
-        seqs = [self.guide_seq]
+        seqs = []  # type: ignore
         for i in range(0, len(self.inserted) - length + 1):
             test_seq = self.inserted[i:i + length].upper()[left:right]
             test_seq2 = cfdscore._revcom(test_seq)
