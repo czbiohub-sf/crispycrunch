@@ -74,8 +74,6 @@ def mit_hit_score(
         seq1 = seq1[::-1]
         seq2 = seq2[::-1]
 
-    assert(len(seq1) == len(seq2)), (seq1, seq2)
-
     if include_pam:
         assert len(seq1) == 23
         max_dist = 22

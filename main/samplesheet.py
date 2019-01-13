@@ -36,12 +36,8 @@ NOT_FOUND = 'not found'
 
 # TODO (gdingle): change defaults in module
 hdr.HDR.guide_seq_aligned_length = 27
-hdr.HDR.use_cfd_score = True
-
 # NOTE: the following settings have noticeable effects on perf in the common
 # case of a 96 well plate. Slowdowns noted inline.
-hdr.HDR.stop_mutating_at_first_success = True  # 10x slowdown
-hdr.HDR.compare_all_positions = True  # 50x slowdown
 hdr.HDR.mutate_all_permutations = True  # 100x slowdown
 # Threshold decided by extensive testing by Manuel Leonetti
 hdr.HDR.target_mutation_score = 0.03  # 5x slowdown per factor of 10
@@ -216,8 +212,7 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         row_hdr = _get_hdr_row(row)
         mutated = row_hdr.inserted_mutated
 
-        # TODO (gdingle): remove me if no longer needed because of cdf score
-        if mutated == row_hdr.inserted:
+        if mutated.upper() == row_hdr.inserted.upper():
             return 'not needed'
 
         # Lowercase means mutated
@@ -228,9 +223,9 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
 
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
     # TODO (gdingle): still maintain this?
-    # sheet['_hdr_mutate_score'] = sheet.apply(
-    #     lambda row: round(_get_hdr_row(row)._mutated_score, 4),
-    #     axis=1)
+    sheet['hdr_mutate_score'] = sheet.apply(
+        lambda row: round(_get_hdr_row(row)._mutated_score, 4),
+        axis=1)
 
     def check_hdr_guide_match(row):
         if not row['guide_seq']:
@@ -305,38 +300,27 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             # previous warning
             return primer_product
 
-        guide_seq_aligned = _get_hdr_row(row).guide_seq_aligned.upper()
+        size = 45  # tested on a plate of 93... can't be bigger or smaller
+        assert size % 3 == 0
+        anchor_seq = _get_hdr_row(row).anchor_seq(size).upper()
+        assert len(anchor_seq) == size * 2, (anchor_seq, len(anchor_seq))
 
         # Crispor returns primer products by strand. Normalize to positive strand.
         if row['target_loc'].strand == '-':
             primer_product = reverse_complement(primer_product)
 
-        guide_offset = primer_product.upper().find(guide_seq_aligned.upper())
+        anchor_offset = primer_product.upper().find(anchor_seq.upper())
 
-        if guide_offset == -1:
-            logger.warning('Could not find guide {} in primer {} for target {}'.format(
-                row['guide_seq'], primer_product, row['target_loc']))
-            return 'guide not found: ' + primer_product
+        if anchor_offset == -1:
+            logger.warning('Could not find anchor {} in primer {} for target {}'.format(
+                row['anchor_seq'], primer_product, row['target_loc']))
+            return 'anchor not found: ' + primer_product
 
-        start = guide_offset % 3
-
-        # TODO (gdingle): HACK ALERT!!! We need to get the guide and the insert
-        # position back out of the primer_product returned from Crispor. They
-        # are somewhere near the middle, by design, but we can't know exactly
-        # where. And because the target codon can appear
-        # in frame but outside the CCDS, we can't simply search for it.
-        # We start near the middle to minimize the chance of false positive.
-        # The start is a multiple of 3 less than the min homology len,
-        # and larger than the largest observed misidentification.
-        # TODO (gdingle): parameterize homology arm length
-        # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length
-        # TODO (gdingle): use row['_seq_codon_at'] somehow
-        # or use something like hdr_arm_len - len(guide_seq_aligned)
-        start += 90
-
-        before, primer_product_aligned = \
-            primer_product[:start], primer_product[start:]
-        assert before + primer_product_aligned == primer_product
+        before, primer_product_aligned, after = \
+            (primer_product[:anchor_offset],
+                primer_product[anchor_offset:anchor_offset + len(anchor_seq)],
+                primer_product[anchor_offset + len(anchor_seq):])
+        assert before + primer_product_aligned + after == primer_product
 
         phdr = hdr.HDR(
             primer_product_aligned,
@@ -344,22 +328,19 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_hdr_tag'],
             row['hdr_dist'],
             row['_guide_strand_same'],
-            # TODO (gdingle): make this work with more thought
-            # row['_seq_codon_at']
+            size,
         )
+        hdr_primer_product = phdr.inserted_mutated
 
         try:
-            # TODO (gdingle): remove me if no longer needed because of cdf score
-            # if phdr.should_mutate:
             hdr_primer_product = phdr.inserted_mutated
-            # else:
-            # hdr_primer_product = phdr.inserted
         except AssertionError:
             return 'error in applying HDR to primer: ' + primer_product
 
-        assert len(before) + len(hdr_primer_product) == len(primer_product) + \
+        assert len(before) + len(hdr_primer_product) + len(after) == len(primer_product) + \
             len(row['_hdr_seq'])
-        return before + hdr_primer_product
+
+        return before + hdr_primer_product + after
 
     def warn_hdr_primer(row) -> str:
         """

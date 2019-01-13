@@ -7,6 +7,7 @@ https://github.com/czbiohub/packer-images/blob/master/assets/crispr-primer/crisp
 """
 
 # TODO (gdingle): how are tags determined? are they always the same?
+# TODO (gdingle): this should correspond to the user selected adapters, no?
 LEFT_ADAPTER_TAG = 'CTCTTTCCCTACACGACGCTCTTCCGATCT'
 RIGHT_ADAPTER_TAG = 'CTGGAGTTCAGACGTGTGCTCTTCCGATCT'
 

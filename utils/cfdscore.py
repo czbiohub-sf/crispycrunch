@@ -419,6 +419,10 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
     sub-optimal
     >>> cfd_score('GAGCAGCATGGAGCCGGCGGCcG'.upper(), 'AGGAAGTGGTGAGCCGGCGGCGG')
     0.01946858212975458
+
+    problem case ENST00000368809
+    >>> cfd_score('GTcGTcCACATGAAGCAGAAGGG', 'GTAGTACACATGAAGCAGAA')
+    0.8047619054428573
     """
     if guide_strand_same is False:
         wt = _revcom(wt)

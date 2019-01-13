@@ -37,17 +37,12 @@ class HDR:
 
     # TODO (gdingle): review whether we still need all these configs
     # TODO (gdingle): write tests that don't rely on defaults which change
-    guide_seq_aligned_length = 21
+    guide_seq_aligned_length = 27
     # Instead of MIT score
-    use_cfd_score = False
-    # When mutating, compare mutated 20-mer guide to all 20-mer sequences in
-    # target_seq after inserting the hdr_seq.
-    compare_all_positions = True
-    # When mutating, stop mutating at the first score that is below the
-    # target_mutation_score. This may leave out some closer matches.
-    stop_mutating_at_first_success = True
+    use_cfd_score = True
     # Try mutate all codons, not just linearly.
-    mutate_all_permutations = False
+    # TODO (gdingle): change to default True
+    mutate_all_permutations = True
 
     # Default based on analysis of
     # https://genomebiology.biomedcentral.com/articles/10.1186/s13059-016-1012-2
@@ -74,6 +69,7 @@ class HDR:
         self.hdr_dist = hdr_dist
 
         # TODO (gdingle): refactor _target_codon_at
+        assert codon_at < len(target_seq)
         self._codon_at = codon_at
         if hdr_tag == 'start_codon':
             self.boundary_codons = set(['ATG'])
@@ -91,12 +87,13 @@ class HDR:
             self.guide_strand_same = self._guide_strand_same()
 
     def __repr__(self):
-        return "HDR('{}', '{}', '{}', {}, {}, '{}')".format(
+        return "HDR('{}', '{}', '{}', {}, {}, {})".format(
             self.target_seq,
             self.hdr_seq,
             self.hdr_tag,
             self.hdr_dist,
             self.guide_strand_same,
+            self._codon_at,
         )
 
     def _guide_strand_same(self) -> bool:
@@ -184,101 +181,21 @@ class HDR:
             guide_seq = self.target_seq[cut_at - 17:cut_at + 6]
         else:
             guide_seq = self.target_seq[cut_at - 6:cut_at + 17]
-        assert len(guide_seq) == 23
+        assert len(guide_seq) == 23, cut_at
         return guide_seq
 
-    @property
-    def guide_seq_aligned(self) -> str:
+    def anchor_seq(self, size: int = 9) -> str:
         """
-        Returns subset of guide sequence aligned to codons.
+        Returns a codon-aligned sequence around the codon for finding the codon
+        again in a primer sequence, which should itself be somewhat centered
+        around the codon.
 
-        Extra base pairs are removed from the PAM side, because that is
-        where we want to mutate whole codons.
-
-        If guide_seq_aligned_length is 27, extra bp are included.
-
-        GCCATG|GCTGAGCTGGATCC|GTT|CGGC
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
-        >>> hdr.guide_seq
-        'ATGGCTGAGCTGGATCCGTTCGG'
-        >>> hdr.guide_seq_aligned
-        'ATGGCTGAGCTGGATCCGTTC'
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
-        >>> hdr.guide_seq
-        'CCATGGCTGAGCTGGATCCGTTC'
-        >>> hdr.guide_seq_aligned
-        'ATGGCTGAGCTGGATCCGTTC'
-
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGG', hdr_dist=15)
-        >>> hdr.guide_seq
-        'TGGCTGAGCTGGATCCGTTCGGG'
-        >>> hdr.guide_seq_aligned
-        'GCTGAGCTGGATCCGTTCGGG'
-
-        Length 27.
-        >>> hdr = HDR('ATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGT', hdr_dist=9, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCG'
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGccgt'
-
-        >>> hdr = HDR('ATGATCCGGAGCCCGCCCCGCCCCCGAGCCG', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
-
-        Adjusting for guide at extreme left edge.
-        >>> hdr = HDR('GATGGCGCACCTGATGGTCGAGGAAGAAAAAAGAAGCTGAAACTATGA', 'NNN', 'stop_codon', -28, True)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'GATGGCGCACCTGATGGTCGAGGaaga'
-        >>> hdr.guide_mutated
-        'GATGGCGCACCTGAcGGcaGgGGAAGA'
+        >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
+        >>> hdr.anchor_seq()
+        'CCTTGGCTGATGTGGATC'
         """
-        cut_at = self.cut_at
-        codon_offset = abs(self.hdr_dist % 3)
-        length = self.guide_seq_aligned_length
-        assert length in (21, 27)
-
-        @functools.lru_cache(1024 * 1024)
-        def _mark_outside(guide_seq: str, shift: int) -> str:
-            shift = abs(shift)
-            return guide_seq[:shift].lower() \
-                + guide_seq[shift:shift + 23].upper() \
-                + guide_seq[shift + 23:].lower()
-
-        # TODO (gdingle): refactor this somehow... :(
-        if self.guide_strand_same:
-            if length == 21:
-                shift = -codon_offset
-            else:
-                shift = 3 - codon_offset if codon_offset else 0
-            right = cut_at + 6 + shift
-            # for guides on the left edge of the target region, shift a codon
-            if right - length < 0:
-                right += 3
-                shift += 3
-            guide_seq = self.target_seq[right - length:right]
-            if length == 27:
-                guide_seq = _mark_outside(guide_seq[::-1], shift)[::-1]
-        else:
-            if length == 21:
-                shift = 3 - codon_offset if codon_offset else 0
-            else:
-                shift = -codon_offset
-            left = cut_at - 6 + shift
-            # for guides on the right edge of the target region, shift a codon
-            if left + length > len(self.target_seq):
-                left -= 3
-                shift -= 3
-            guide_seq = self.target_seq[left:left + length]
-            if length == 27:
-                guide_seq = _mark_outside(guide_seq, shift)
-
-        assert len(guide_seq) == length, (length, len(guide_seq))
-        return guide_seq
+        codon_at = self._target_codon_at()
+        return self.target_seq[codon_at - size:codon_at + size]
 
     @property
     def inserted(self) -> str:
@@ -287,25 +204,20 @@ class HDR:
         >>> hdr.inserted
         'GCCATGnnnGCTGAGCTGGATCCGTTCGGC'
         """
-        return self._inserted(False)
+        return (
+            self.target_seq[:self.insert_at] +
+            self.hdr_seq.lower() +
+            self.target_seq[self.insert_at:])
 
     @property
     def inserted_mutated(self) -> str:
         """
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'NNN', hdr_dist=14)
-        >>> hdr.target_mutation_score = 50.0
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'TTT', hdr_dist=14)
+        >>> hdr.target_mutation_score = 0.01
         >>> hdr.inserted_mutated
-        'GCCATGnnnGCTGAGCTGGATCCGTTtGGC'
+        'GCCATGTTTGCTGAGCTGGAcCCcTTtGGC'
         """
-        return self._inserted(True)
-
-    @functools.lru_cache(1024 * 1024)
-    def _inserted(self, mutate: bool = False) -> str:
-        target_seq = self.mutated if mutate else self.target_seq
-        return (
-            target_seq[:self.insert_at] +
-            self.hdr_seq.lower() +
-            target_seq[self.insert_at:])
+        return self._mutate(do_insert=True)[0]
 
     @property
     def mutated(self) -> str:
@@ -315,9 +227,9 @@ class HDR:
         mutated silently.
 
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
-        >>> hdr.target_mutation_score = 50.0
+        >>> hdr.target_mutation_score = 0.5
         >>> hdr.mutated
-        'GCCATGGCTGAGCTGGATCCGTTtGGC'
+        'GCCATGGCTGAGCTGGATCCcTTtGGC'
 
         PAM is outside.
         >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
@@ -336,33 +248,7 @@ class HDR:
         >>> hdr.mutated
         'TGATggCAAATTTGTCCATAGCTGAAG'
         """
-        # TODO (gdingle): use CFD score instead of should_mutate
-        if self.pam_outside_cds and self.should_mutate:
-            # Skip other kinds of mutations because PAM mutation is enough
-            return self._pam_mutated
-
-        try:
-            start = self.target_seq.upper().index(self.guide_seq_aligned.upper())
-        except (ValueError, AssertionError):
-            logging.warn('Cannot find {}bp length around guide {} in target_seq {}'.format(
-                self.guide_seq_aligned_length,
-                self.guide_seq,
-                self.target_seq,))
-            # Fallback
-            # TODO (gdingle): when can we expect this to happen? when target_seq
-            # is too small? other edge cases?
-            # See https://trello.com/c/EC3VVyOn/56-rare-failures-on-27bp-around-guides-for-mutation
-            self.guide_seq_aligned_length = 21
-            self.use_cfd_score = False
-            start = self.target_seq.upper().index(self.guide_seq_aligned.upper())
-
-        mutated = self.guide_mutated
-
-        return ''.join((
-            self.target_seq[:start],
-            mutated,
-            self.target_seq[start + len(mutated):],
-        ))
+        return self._mutate(do_insert=False)[0]
 
     @property
     def _pam_mutated(self) -> str:
@@ -394,277 +280,160 @@ class HDR:
         assert len(combined) == len(self.target_seq)
         return combined
 
-    def _inserted_mutated2(self) -> str:
+    def _mutate(self, do_insert: bool = True) -> tuple:
         """
         Returns the target_seq with inserted hdr_seq after optimal mutation.
-        # TODO (gdingle): rename once good to replace guide_mutated
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'aaa', hdr_dist=14)
-        >>> hdr.guide_seq_aligned_length = 27
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', 'aaa', hdr_dist=14)
         >>> hdr.guide_seq
         'ATGGCTGAGCTGGATCCGTTCGG'
 
         >>> hdr.target_mutation_score = 0.5
-        >>> hdr._inserted_mutated2()
-        'GCCATGaaaGCTGAGCTGGATCCGTTCGGC'
+        >>> hdr.inserted
+        'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
+        >>> hdr._mutate()[0]
+        'GCCATGAAAGCTGAGCTGGATCCGTTCGGCTAT'
 
-        >>> hdr.target_mutation_score = 0.01
-        >>> hdr._inserted_mutated2()
-        'GCCATGaaaGCTGAGCTGGATCCcTTCGGC'
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.inserted
+        'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
+        >>> hdr._mutate()[0]
+        'GCCATGAAAGCTGAGCTGGATCCcTTtGGCTAT'
 
-        # TODO (gdingle): other proper tests
+        >> hdr.inserted_mutated # legacy function result
+        'GCCATGaaaGCTGAGCTGGATCCcTTtGGCTAT'
+
+        # No insert
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr._mutate()[0]
+        'GCCATGGCTGAGCTGGAcCCcTTtGGCTAT'
+
+        # Mutates insert
+        >>> hdr = HDR('GCCGCTGAGCTGGATCCGATGTTCGG', 'TTCGG', hdr_dist=-1)
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.guide_seq
+        'GCTGAGCTGGATCCGATGTTCGG'
+        >>> hdr.inserted
+        'GCCGCTGAGCTGGATCCGATGttcggTTCGG'
+        >>> hdr._mutate()[0]
+        'GCCGCTGAGCTGGATCCcATGTTtGGTTCGG'
+
+        # MIT-score, 21bp
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGG', hdr_dist=14)
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.use_cfd_score = False
+        >>> hdr._mutate()[0]
+        'GCCATGGCTGAGCTGGATCCcTTtGG'
+
+        Test fallback.
+        >>> hdr._mutate()[0]
+        'GCCATGGCTGAGCTGGATCCcTTtGG'
+
+        Problem case.
+        >>> hdr = HDR('GGGTCTGTTTGTCGAAGAATAACTATCACAGAATGTGGACAGATATAAAATCATTGTTGTTCATAGAAAATTTCATCTGTATAAGCAGTTGGATTG', '', 'stop_codon', -13, True, 45)
+        >>> hdr.target_mutation_score = 0.03
+        >>> hdr.guide_seq
+        'AGAATAACTATCACAGAATGTGG'
+        >>> hdr.mutated
+        'GGGTCTGTTTGTCGAAGAATtACaATCACAGAATGTGGACAGATATAAAATCATTGTTGTTCATAGAAAATTTCATCTGTATAAGCAGTTGGATTG'
         """
+        if self.pam_outside_cds and self.should_mutate:
+            # Skip other kinds of mutations because PAM mutation is enough
+            seq = self._pam_mutated
+            if do_insert:
+                seq = (seq[:self.insert_at]
+                       + self.hdr_seq.upper()
+                       + seq[self.insert_at:])
+            return seq, 0
+
         length = self.guide_seq_aligned_length
-        inserted = list(self.inserted)  # To mutate string in place
-        for i in range(0, len(inserted) - length + 1):
-            # TODO (gdingle): test revcomp as well
-            test_seq = ''.join(inserted[i:i + 23])
-            assert len(test_seq) == 23
+
+        ret_seq = list(self.target_seq.upper())  # To mutate string in place
+
+        if do_insert:
+            ret_seq = (ret_seq[:self.insert_at]
+                       + list(self.hdr_seq.upper())
+                       + ret_seq[self.insert_at:])
+
+        if len(ret_seq) < length:
+            logging.warning('Cannot find {}bp for mutation in target_seq {}. Falling back to 21bp.'.format(
+                self.guide_seq_aligned_length,
+                self.target_seq,))
+            length = 21
+        test_length = min(len(self.guide_seq), length)
+        assert test_length >= 20, self.guide_seq
+
+        # TODO (gdingle): remove MIT score?
+        if self.use_cfd_score:
             hit_score_func = functools.partial(
                 cfdscore.cfd_score,
-                test_seq,
+                sg=self.guide_seq.upper(),
                 guide_strand_same=self.guide_strand_same)
+        else:
+            hit_score_func = functools.partial(
+                mitscore.mit_hit_score,
+                self.guide_seq.upper(),
+                guide_strand_same=self.guide_strand_same,
+                include_pam=test_length == 23)
 
-            codon_offset = i % 3
-            left = i - codon_offset
-            right = i - codon_offset + length
-            mutate_seq = ''.join(inserted[left:right])
-            # mask outside of 23bp of guide seq
-            # TODO (gdingle): keep lowercasing mask of insert seq?
-            mutate_seq = (
-                mutate_seq[:codon_offset].lower() +
-                mutate_seq[codon_offset:codon_offset + 23] +
-                mutate_seq[codon_offset + 23:].lower()
-            )
-            assert len(mutate_seq) == length, len(mutate_seq)
-            for mutated in mutate_silently(
-                mutate_seq,
-                self.guide_strand_same,
-                all_permutations=self.mutate_all_permutations
-            ):
-                # note: no change on first pass
-                score = hit_score_func(mutated[codon_offset:codon_offset + 23])
-                if score <= self.target_mutation_score:
-                    inserted[left:right] = mutated
-                    break
-        # TODO (gdingle): hack alert... relowercase anything different because
-        # mutate_silently will upper or lowercase all on *each* iteration
-        lower_mutations = [c.lower() if inserted[i] != self.inserted[i] else c.upper()
-                           for i, c in enumerate(inserted)]
-        return ''.join(lower_mutations)
+        max_score = 0.0
+        max_seq = ''
 
-    @property
-    def guide_mutated(self) -> str:
-        return self._guide_mutated[0]
+        # Iterate over codons
+        for left in range(0, len(ret_seq) - length + 1, 3):
+            right = left + length
+            # Iterate within 27bp
+            for start in range(0, 5):
+                mutate_seq = ''.join(ret_seq[left:right])
+                end = start + test_length
+                if test_length == 23:
+                    # mask outside of 23bp of guide seq
+                    mutate_seq = (
+                        mutate_seq[:start].lower() +
+                        mutate_seq[start:end] +
+                        mutate_seq[end:].lower()
+                    )
+                assert len(mutate_seq) == length, len(mutate_seq)
 
-    @property
-    def _guide_mutated(self) -> tuple:
-        """
-        Silently mutates codons in the guide sequence, going from the PAM side inwards.
+                mutated, score = _best_mutation(
+                    mutate_seq,
+                    self.guide_strand_same,
+                    self.mutate_all_permutations,
+                    start,
+                    end,
+                    hit_score_func,
+                    self.target_mutation_score)
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
-        >>> hdr.target_mutation_score = 50.0
-        >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATCCGTTt'
+                for k, c in enumerate(mutated):
+                    if c.upper() != self.inserted[left + k].upper():
+                        ret_seq[left + k] = c.lower()
 
-        Varying target score.
-        >>> hdr.target_mutation_score = 1
-        >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATCCcTTt'
-        >>> hdr.target_mutation_score = 0.1
-        >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGAcCCcTTt'
-        >>> hdr.target_mutation_score = 0.01
-        >>> hdr.guide_mutated
-        'ATGGCTGAGtTaGAcCCcTTt'
+                max_score = max(score, max_score)
+                if score == max_score:
+                    max_seq = mutated[start:end]
 
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
-        >>> hdr.target_mutation_score = 50.0
-        >>> hdr.guide_mutated
-        'ATGGCcGAGCTGGATCCGTTC'
+        # TODO (gdingle): this doesn't always make sense
+        if max_score > self.target_mutation_score:
+            logger.warning('Unable to mutate enough. Max score {}, target score {}, max seq {}, guide seq {}'.format(
+                max_score, self.target_mutation_score, max_seq, self.guide_seq))
 
-        Varying target score.
-        >>> hdr.target_mutation_score = 1
-        >>> hdr.guide_mutated
-        'ATGGCcGAaCTGGATCCGTTC'
-        >>> hdr.target_mutation_score = 0.1
-        >>> hdr.guide_mutated
-        'ATGGCcGAatTaGATCCGTTC'
-        >>> hdr.target_mutation_score = 0.01
-        >>> hdr.guide_mutated
-        'ATGGCcGAatTaGAcCCcTTt'
+        return ''.join(ret_seq), max_score, max_seq
 
-        Permutations.
-        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=1)
-        >>> hdr.stop_mutating_at_first_success = True
-        >>> hdr.mutate_all_permutations = True
-        >>> hdr.target_mutation_score = 1
-        >>> hdr.guide_mutated
-        'ATGGCcGAaCTGGATCCGTTC'
-
-        27bp guide.
-        >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGccgc'
-        >>> hdr.guide_mutated
-        'CCcGAaCCtGCtCCGCCCCCGAGCCGC'
-
-        >>> hdr = HDR('CATATGATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
-        >>> hdr.guide_mutated
-        'ATtaGaAGCCCGCCCCGCCCCCGAGCC'
-
-        use_cfd_score
-        >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.use_cfd_score = True
-        >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGccgc'
-        >>> hdr.guide_mutated
-        'CCcGAaCCtGCtCCcCCtCCGAGCCGC'
-        """
-
-        candidates = []
-        left, right = self._guide_offsets
-        for mutated in mutate_silently(
-            self.guide_seq_aligned,
-            self.guide_strand_same,
-            all_permutations=self.mutate_all_permutations
-        ):
-            if self.use_cfd_score:
-                assert right - left == 23, 'Must include pam for cfdscore'
-                hit_score_func = functools.partial(
-                    cfdscore.cfd_score,
-                    mutated.upper()[left:right],
-                    guide_strand_same=self.guide_strand_same)
-            else:
-                hit_score_func = functools.partial(
-                    mitscore.mit_hit_score,
-                    mutated.upper()[left:right],
-                    guide_strand_same=self.guide_strand_same,
-                    include_pam=(right - left == 23))
-
-            if self.compare_all_positions:
-                #  6s of 18s request is spent in this generator!
-                #  10M calls == slow! See
-                #  https://ilovesymposia.com/2015/12/10/the-cost-of-a-python-function-call/
-                # TODO (gdingle): we probably only need to check all positions on the first pass...
-                # see https://trello.com/c/lXeGRUjN/62-mutation-when-mutation-not-needed#comment-5c002431f9ce9703f03020b2
-                score, _ = max([
-                    (hit_score_func(test_seq), test_seq)
-                    for test_seq
-                    in self._test_sequences(len(mutated), left, right)])
-            else:
-                score = hit_score_func(
-                    self.guide_seq_aligned.upper()[left:right],
-                )
-
-            if self.stop_mutating_at_first_success:
-                if score <= self.target_mutation_score:
-                    return mutated, score
-            else:
-                candidates.append((score, mutated))
-
-        if candidates:
-            filtered = [(s, c) for s, c in candidates
-                        if s <= self.target_mutation_score]
-            if filtered:
-                # minimize the number of changes below cutoff
-                changes = [(sum(l.islower() for l in c), c, s) for s, c in filtered]
-                return min(changes)[1], min(changes)[2]
-
-        # TODO (gdingle): if nothing reaches target mutation,
-        # should we return the most mutated or the input unchanged?
-        # See https://trello.com/c/GAO2snqy/52-try-all-possible-mutations
-        return mutated, score
-
-    @functools.lru_cache(1024 * 1024)
-    def _test_sequences(self, length, left, right) -> list:
-        seqs = []  # type: ignore
-        for i in range(0, len(self.inserted) - length + 1):
-            test_seq = self.inserted[i:i + length].upper()[left:right]
-            test_seq2 = cfdscore._revcom(test_seq)
-            seqs += [test_seq, test_seq2]
-        return seqs
-
-    # TODO (gdingle): do we still want to maintain this ?
     @property
     def _mutated_score(self) -> float:
         """
-        >>> hdr = HDR('ATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
-        >>> hdr.target_mutation_score = 50.0
-        >>> hdr.guide_mutated
-        'ATGGCTGAGCTGGATCCGTTt'
+        >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
+        >>> hdr.target_mutation_score = 0.1
+        >>> hdr.mutated
+        'GCCATGGCTGAGCTGGAcCCcTTtGGCTAT'
         >>> hdr._mutated_score
-        41.7
-
-        Verify compare_all_positions returns same for normal input.
-        >>> hdr.compare_all_positions = True
-        >>> hdr._mutated_score
-        41.7
-        >>> hdr.compare_all_positions = False
-        >>> hdr._mutated_score
-        41.7
-
-        Artifical compare_all_positions example. The mutated seq was copied into
-        target seq. compare_all_positions then causes more mutation.
-        >>> hdr = HDR('ATGAAAAAAAAAAAAAAAAAAGG' + 'ATGAAAAAAAAAAAAAAgAAg', hdr_dist=14)
-        >>> hdr.compare_all_positions = False
-        >>> hdr.guide_mutated
-        'ATGAAAAAAAAAAAgAAgAAg'
-        >>> hdr._mutated_score
-        0.06084376104417672
-        >>> hdr.compare_all_positions = True
-        >>> hdr.guide_mutated
-        'ATGAAgAAgAAgAAgAAgAAg'
-        >>> hdr._mutated_score
-        0.1183136295180723
+        0.1
         """
         if self.pam_outside_cds:
             return 0
 
-        return self._guide_mutated[1]
-
-    @property
-    def _guide_offsets(self) -> tuple:
-        """
-        This is a silly way to get back the position of the 23bp guide within
-        the aligned guide. TODO: store this info better.
-
-        >>> hdr = HDR('CATATGCATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=9, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'CCGGAGCCCGCCCCGCCCCCGAGccgc'
-        >>> hdr._guide_offsets
-        (0, 23)
-
-        >>> hdr = HDR('CATATGATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
-        >>> hdr._guide_offsets
-        (2, 25)
-        """
-        if self.guide_seq_aligned_length == 27:
-            # Skip lowercase mask
-            guide_cs = [i for i, c in enumerate(self.guide_seq_aligned)
-                        if c.isupper()]
-            assert len(guide_cs) == 23, len(guide_cs)
-            left, right = min(guide_cs), max(guide_cs) + 1
-            assert right - left == 23, (left, right, right - left)
-            if self.guide_strand_same:
-                pam = self.guide_seq_aligned[right - 3:right]
-                assert 'GG' in pam, (pam, self.guide_seq, self.guide_seq_aligned)
-            else:
-                pam = self.guide_seq_aligned[left:left + 3]
-                assert 'CC' in pam, (pam, self.guide_seq, self.guide_seq_aligned)
-        else:
-            # No good way to find PAM in 21bp
-            left, right = 0, len(self.guide_seq_aligned)
-        return left, right
+        return self._mutate()[1]
 
     @property
     def mutation_in_junction(self) -> bool:
@@ -677,17 +446,15 @@ class HDR:
 
         Mutation in junction.
         >>> hdr = HDR('CATATGatccggagCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
-        >>> hdr.guide_seq_aligned
-        'atCCGGAGCCCGCCCCGCCCCCGAGcc'
-        >>> hdr.guide_mutated
-        'ATtaGaAGCCCGCCCCGCCCCCGAGCC'
+        >>> hdr.guide_seq
+        'ccggagCCCGCCCCGCCCCCGAG'
+        >>> hdr.mutated
+        'CATATGATtCGGAGCCCGCCCCGCCCCCGAGCCGCAT'
         >>> hdr.mutation_in_junction
         True
 
         No junction.
         >>> hdr = HDR('CATATGATCCGGAGCCCGCCCCGCCCCCGAGCCGCAT', hdr_dist=8, guide_strand_same=False)
-        >>> hdr.guide_seq_aligned_length = 27
         >>> hdr.mutation_in_junction
         False
         """
@@ -1046,7 +813,6 @@ def mutate_silently(
 
     if all_permutations:
         yield from _all_permutations(guide_seq)
-
     else:
         yield from _pam_inwards(guide_seq)
 
@@ -1090,6 +856,37 @@ def _left_to_right_codons(seq: str) -> Iterator[str]:
     for i in range(0, len(seq), 3):
         codon = seq[i:i + 3]
         yield codon
+
+
+@functools.lru_cache(1024 * 1024)
+def _best_mutation(
+    mutate_seq: str,
+    guide_strand_same: bool,
+    all_permutations: bool,
+    start: int,
+    end: int,
+    hit_score_func: functools.partial,
+    target_mutation_score: float,
+) -> tuple:
+    for mutated in mutate_silently(
+        mutate_seq,
+        guide_strand_same,
+        True,
+        all_permutations
+    ):
+        # note: no change on first pass
+        assert len(mutated) == len(mutate_seq), len(mutated)
+        if end - start == 23:
+            mutated_test_seq = mutated[start:end].upper()
+        else:
+            mutated_test_seq = mutated.upper()
+
+        score = hit_score_func(mutated_test_seq)
+
+        if score <= target_mutation_score:
+            return mutated, score
+
+    return mutated, score
 
 
 if __name__ == '__main__':
