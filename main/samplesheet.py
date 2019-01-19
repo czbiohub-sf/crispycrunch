@@ -351,14 +351,14 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             # previous warning
             return primer_product
 
-        if row['_hdr_seq'] not in primer_product.upper():
+        if row['_hdr_seq'].upper() not in primer_product.upper():
             return 'no HDR insertion: ' + primer_product
 
         plen = len(primer_product)
         if plen > max_amplicon_length:
             return f'too long, {plen}bp: {primer_product}'
 
-        arms = primer_product.upper().split(row['_hdr_seq'])
+        arms = primer_product.upper().split(row['_hdr_seq'].upper())
         larm, rarm = len(arms[0]), len(arms[1])
         # TODO (gdingle): parameterize homology arm length
         # see https://trello.com/c/IjLCcfch/55-parameterize-homology-arm-length

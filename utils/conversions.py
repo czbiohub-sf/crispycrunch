@@ -173,7 +173,10 @@ def enst_to_gene2(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
     >>> enst_to_gene2('ENST00000617316')
     Traceback (most recent call last):
     ...
-    OSError: Gene symbol not found for ENST00000617316
+    requests.exceptions.HTTPError: 404 Client Error: Not Found for url: http://togows.org/search/ncbi-gene/ENST00000617316/1,50.json
+
+    >>> enst_to_gene2('ENST00000642444')
+    'GSTP1'
     """
 
     # For unknown reasons, the latest UCSC db does not have the xref table
@@ -191,7 +194,11 @@ def enst_to_gene2(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
         sql = "SELECT value FROM ensemblToGeneName WHERE name = %s"
         status = cursor.execute(sql, (enst,))
     if not status:
-        raise IOError('Gene symbol not found for {}'.format(enst))
+        # Fall back on v1, which is slower, but apparently more accurate.
+        # See for example enst_to_gene('ENST00000642444', timeout=8)
+        # TODO (gdingle): better solution
+        return enst_to_gene(enst, genome=genome, timeout=timeout * 2)
+        # raise IOError('Gene symbol not found for {}'.format(enst))
     else:
         return cursor.fetchone()[0]
 
@@ -206,6 +213,11 @@ def enst_to_gene(enst: str, genome: str = 'hg38', timeout=4.0) -> str:
     Traceback (most recent call last):
     ...
     requests.exceptions.HTTPError: 404 Client Error: Not Found for url: http://togows.org/search/ncbi-gene/ENST00000617316/1,50.json
+
+    # TODO (gdingle):
+    # This is not found by enst_to_gene2
+    >>> enst_to_gene('ENST00000642444', timeout=8)
+    'GSTP1'
     """
     url = 'http://togows.org/search/ncbi-gene/{}/1,50.json'.format(enst)
     response = _cached_session.get(url, timeout=timeout / 2)
