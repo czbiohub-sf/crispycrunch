@@ -215,7 +215,7 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'TTT', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.inserted_mutated
-        'GCCATGTTTGCTGAGCTGGAcCCcTTtGGC'
+        'GCCATGTTTGCTGAGCTGGAcCCcTTCGGC'
         """
         return self._mutate(do_insert=True)[0]
 
@@ -229,7 +229,7 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.5
         >>> hdr.mutated
-        'GCCATGGCTGAGCTGGATCCcTTtGGC'
+        'GCCATGGCTGAGCTGGATCCcTTCGGC'
 
         PAM is outside.
         >>> hdr = HDR('CCTTGGCTGATGTGGATCCGTTCGGC', hdr_dist=-12)
@@ -298,7 +298,7 @@ class HDR:
         >>> hdr.inserted
         'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
         >>> hdr._mutate()[0]
-        'GCCATGAAAGCTGAGCTGGATCCcTTtGGCTAT'
+        'GCCATGAAAGCTGAGCTGGATCCcTTCGGCTAT'
 
         >> hdr.inserted_mutated # legacy function result
         'GCCATGaaaGCTGAGCTGGATCCcTTtGGCTAT'
@@ -307,7 +307,7 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.1
         >>> hdr._mutate()[0]
-        'GCCATGGCTGAGCTGGAcCCcTTtGGCTAT'
+        'GCCATGGCTGAGCTGGAcCCGTTCGGCTAT'
 
         # Mutates insert
         >>> hdr = HDR('GCCGCTGAGCTGGATCCGATGTTCGG', 'TTCGG', hdr_dist=-1)
@@ -317,26 +317,14 @@ class HDR:
         >>> hdr.inserted
         'GCCGCTGAGCTGGATCCGATGttcggTTCGG'
         >>> hdr._mutate()[0]
-        'GCCGCTGAGCTGGATCCcATGTTtGGTTCGG'
+        'GCCGCTGAGCTGGATCCcATGTTCGGTTCGG'
 
-        # MIT-score, 21bp
+        # Test fallback, 21bp
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGG', hdr_dist=14)
-        >>> hdr.target_mutation_score = 0.1
-        >>> hdr.use_cfd_score = False
+        >>> hdr.target_mutation_score = 0.01
+        >>> hdr.use_cfd_score = True
         >>> hdr._mutate()[0]
-        'GCCATGGCTGAGCTGGATCCcTTtGG'
-
-        Test fallback.
-        >>> hdr._mutate()[0]
-        'GCCATGGCTGAGCTGGATCCcTTtGG'
-
-        Problem case.
-        >>> hdr = HDR('GGGTCTGTTTGTCGAAGAATAACTATCACAGAATGTGGACAGATATAAAATCATTGTTGTTCATAGAAAATTTCATCTGTATAAGCAGTTGGATTG', '', 'stop_codon', -13, True, 45)
-        >>> hdr.target_mutation_score = 0.03
-        >>> hdr.guide_seq
-        'AGAATAACTATCACAGAATGTGG'
-        >>> hdr.mutated
-        'GGGTCTGTTTGTCGAAGAATtACaATCACAGAATGTGGACAGATATAAAATCATTGTTGTTCATAGAAAATTTCATCTGTATAAGCAGTTGGATTG'
+        'GCCATGGCTGAGCTGGAcCCcTTCGG'
         """
         if self.pam_outside_cds and self.should_mutate:
             # Skip other kinds of mutations because PAM mutation is enough
@@ -426,9 +414,9 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.mutated
-        'GCCATGGCTGAGCTGGAcCCcTTtGGCTAT'
+        'GCCATGGCTGAGCTGGAcCCGTTCGGCTAT'
         >>> hdr._mutated_score
-        0.1
+        0.066666667
         """
         if self.pam_outside_cds:
             return 0

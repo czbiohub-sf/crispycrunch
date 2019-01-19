@@ -319,13 +319,15 @@ class GuideSelectionView(CreatePlusView):
     form_class = GuideSelectionForm
     success_url = '/main/guide-selection/{id}/primer-design/'
 
-    def _get_top_guides(self, guide_design, min_score=10) -> dict:
+    def _get_top_guides(self, guide_design, min_score=10, max_hdr_dist=40) -> dict:
         """
         Filters all guides returned by Crispor down to those that have a score
         greater than min_score, then takes top guides by special ranking
         if HDR, else by score.
 
         Doench min_score = 10 is the same value used by Benchling.
+
+        max_hdr_dist is based on effective limits of HDR.
         """
         # TODO (gdingle): figure out why guide_seqs not always there!
         selected_guides = dict(
@@ -344,6 +346,7 @@ class GuideSelectionView(CreatePlusView):
         )
         sheet = samplesheet.from_guide_selection(guide_selection)
         sheet = sheet.loc[sheet['guide_score'] >= min_score, :]
+        sheet = sheet.loc[sheet['hdr_dist'] <= max_hdr_dist, :]
         if not len(sheet):
             # TODO (gdingle): handle zero guides case better
             raise ValueError('No good guides found for any targets')

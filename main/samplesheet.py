@@ -16,7 +16,6 @@ import pandas
 
 from pandas import DataFrame
 
-from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
 from main.models import Analysis, GuideDesign, GuideSelection, PrimerSelection
@@ -471,18 +470,18 @@ def set_ultramer(row, hdr_homology_arm_length: int):
     except ValueError:
         return NOT_FOUND
 
-    uhdr = hdr.HDR(
-        ultramer_seq,
-        row['_hdr_seq'],
-        row['_hdr_tag'],
-        row['hdr_dist'],
-        row['_guide_strand_same'],
-        codon_at)
-    try:
-        ultramer_mutated = uhdr.inserted_mutated
-    except Exception:
-        # TODO (gdingle): figure out why!
-        return 'error in ultramer: please contact ' + settings.ADMIN_EMAIL
+    # TODO (gdingle): cache somehow
+    to_sub = _get_hdr_row(row).inserted_mutated
+
+    offset = codon_at - row['_seq_codon_at']
+    assert offset >= 0, (codon_at, row['_seq_codon_at'])
+
+    ultramer_mutated = (
+        ultramer_seq[:offset]
+        + to_sub
+        + ultramer_seq[offset + len(to_sub) - len(row['_hdr_seq']):]
+    )
+    assert len(ultramer_seq) == len(ultramer_mutated) - len(row['_hdr_seq'])
 
     # TODO (gdingle): non-IDT ultramers?
     # assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
