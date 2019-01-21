@@ -352,7 +352,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             return primer_product
 
         if row['_hdr_seq'].upper() not in primer_product.upper():
-            return 'no HDR insertion: ' + primer_product
+            # This can happen if hdr_seq is mutated
+            return primer_product
 
         plen = len(primer_product)
         if plen > max_amplicon_length:
