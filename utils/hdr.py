@@ -322,9 +322,20 @@ class HDR:
         # Test fallback, 21bp
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGG', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.01
-        >>> hdr.use_cfd_score = True
         >>> hdr._mutate()[0]
         'GCCATGGCTGAGCTGGAcCCcTTCGG'
+
+        # Mutate PAM only
+        >>> hdr = HDR('CTCAGAAGATGATGACTGAAAGGGACTCGGGACT', 'atg', 'stop_codon', 9, True, 15)
+        >>> hdr.guide_seq
+        'GATGATGACTGAAAGGGACTCGG'
+        >>> hdr.target_mutation_score = 0.03
+        >>> hdr.should_mutate
+        True
+        >>> hdr.pam_outside_cds
+        True
+        >>> hdr._mutate()[0]
+        'CTCAGAAGATGATGAATGCTGAAAGGGACTCccGACT'
         """
         if self.pam_outside_cds and self.should_mutate:
             # Skip other kinds of mutations because PAM mutation is enough
@@ -461,7 +472,7 @@ class HDR:
         """
         Determines whether a guide should be mutated depending on the cut to
         insert distance and the guide orientation. The rule is: mutate if more
-        than 14bp of the PAM-side of protospacer will be intact after insertion.
+        than Xbp of the PAM-side of protospacer will be intact after insertion.
 
         1a. 14bp or more intact on PAM side, positive guide.
         GCC|ATG|GCTGAGCTGGATCC|GTT|CGG|C
@@ -471,9 +482,9 @@ class HDR:
         True
 
         1b. Less than 14bp intact on PAM side, positive guide.
-        GCC|ATG|GCTGAGCT|GTT|CGG|C
+        GCC|ATG|GCTGA|GTT|CGG|C
             codon           cut pam
-        >>> hdr = HDR('GCCATGGCTGAGCTGTTCGGC', hdr_dist=8)
+        >>> hdr = HDR('GCCATGGAGCTGTTCGGC', hdr_dist=5)
         >>> hdr.should_mutate
         False
 
@@ -513,7 +524,9 @@ class HDR:
             intact = self.insert_at - guide_left
 
         # intact <= -3 means the insert is outside the guide + pam
-        return intact <= -3 or intact >= 14
+        # return intact <= -3 or intact >= 14
+        # modified to be more lenient
+        return intact <= -3 or intact >= 11
 
     @property
     def pam_at(self) -> int:
