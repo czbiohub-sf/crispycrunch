@@ -612,8 +612,9 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
             raise RuntimeError('Crispor exceptions.ValueError')
 
         if 'Error:' in soup.get_text():
-            raise RuntimeError('Crispor error: {}'.format(
-                soup.get_text().split('Error:')[1].strip()))
+            _cache.delete(self.cache_key)
+            raise ValueError('Crispor error: {}'.format(
+                soup.get_text().split('Error:')[1].strip().split('\n')[0]))
 
         return dict(
             pam_id=self.pam_id,
@@ -659,8 +660,7 @@ if __name__ == '__main__':
 
     # req = CrisporGuideRequestByBatchId('tZgMsg3spbVL3Irgvhvl', pre_filter=5)
     # data = req.run()
-    # print(data['guide_seqs'])
 
-    # req = CrisporPrimerRequest('oI0f65TEwlZdrH9NMAat', 's97-')
+    # req = CrisporPrimerRequest('UAzy2Z3c79doQGeSfbyS', 's49+')
     # data = req.run()
     # print(data)
