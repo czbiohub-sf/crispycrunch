@@ -25,6 +25,13 @@ if 'RDS_DB_NAME' in os.environ:  # prod
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
+        'formatters': {
+            'verbose': {
+                'format': '{levelname} {asctime} [{name}.{funcName}:{lineno}] {message}',
+                'style': '{',
+                'datefmt': '%Y-%m-%d %H:%M:%S'
+            },
+        },
         'handlers': {
             'logfile': {
                 'level': 'DEBUG',
@@ -32,6 +39,7 @@ if 'RDS_DB_NAME' in os.environ:  # prod
                 'filename': '/opt/python/log/django.log',
                 'maxBytes': 1024 * 1024,
                 'backupCount': 10,
+                'formatter': 'verbose',
             },
             'mail_admins': {
                 'level': 'ERROR',
