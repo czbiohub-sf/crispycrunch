@@ -329,7 +329,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             row['_guide_strand_same'],
             size,
         )
-        hdr_primer_product = phdr.inserted_mutated
 
         try:
             hdr_primer_product = phdr.inserted_mutated
