@@ -43,13 +43,12 @@ if 'RDS_DB_NAME' in os.environ:  # prod
             },
             'mail_admins': {
                 'level': 'ERROR',
-                # TODO (gdingle): this is not working for most common email error :(
                 # TODO (gdingle): switch to sentry? or airbrake?
                 # see https://github.com/krisys/django-error-email-throttle/blob/18b61824d716e887173a224ef696a77cceae98ee/error_email_throttle/handler.py#L58
                 # TODO (gdingle): keep AdminEmailHandler?
-                # 'class': 'error_email_throttle.handler.AdminEmailThrottler',
-                'class': 'django.utils.log.AdminEmailHandler',
-                'include_html': True,
+                'class': 'error_email_throttle.handler.AdminEmailThrottler',
+                # 'class': 'django.utils.log.AdminEmailHandler',
+                'include_html': False,
             },
         },
         'loggers': {
@@ -133,6 +132,7 @@ MIDDLEWARE = [
     'django.middleware.http.ConditionalGetMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     # For access to demo account: https://github.com/aaugustin/django-sesame
     'sesame.middleware.AuthenticationMiddleware',
@@ -265,13 +265,18 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SES_REGION_NAME = 'us-west-2'
 AWS_SES_REGION_ENDPOINT = 'email.us-west-2.amazonaws.com'
 
-SERVER_EMAIL = 'no-reply@crispycrunch.czbiohub.org'
 ADMINS = [
     # First admin is used as point of contact throughout site
     # All admins receive error emails.
+    # Make sure you verify here: https://us-west-2.console.aws.amazon.com/ses/home?region=us-west-2#verified-senders-email:
     ('Greg Dingle', 'gdingle@chanzuckerberg.com'),
 ]
 ADMIN_EMAIL = ADMINS[0][1]
+
+# Amazon SES requires a valid email address for sending.
+# SERVER_EMAIL = 'no-reply@crispycrunch.czbiohub.org'
+SERVER_EMAIL = ADMIN_EMAIL
+
 
 SETTINGS_EXPORT = [
     'ADMIN_EMAIL',
