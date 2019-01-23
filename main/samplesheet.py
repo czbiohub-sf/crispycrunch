@@ -18,7 +18,7 @@ from pandas import DataFrame
 
 from django.core.files.uploadedfile import UploadedFile
 
-from main.models import Analysis, GuideDesign, GuideSelection, PrimerSelection
+from main.models import Analysis, GuideDesign, GuideSelection, PrimerDesign, PrimerSelection
 from protospacex import get_cds_codon_at, get_ultramer_seq
 from utils import conversions
 from utils import hdr
@@ -280,13 +280,17 @@ def from_primer_selection(primer_selection: PrimerSelection,
         sheet = _set_hdr_primer(
             sheet,
             guide_design,
-            primer_selection.primer_design.max_amplicon_length)
+            primer_selection.primer_design)
         if fetch_ultramers:
             sheet['_hdr_ultramer'] = sheet.apply(
                 lambda row: set_ultramer(row, guide_design.hdr_homology_arm_length),
                 axis=1)
 
-            # TODO (gdingle): is there a better way to make _guide_id to re-appear?
+    # Do this warning last because it is least important
+    sheet['primer_product'] = sheet.apply(
+        lambda row: _warn_primer_self_bind(row, primer_selection.primer_design), axis=1)
+
+    # TODO (gdingle): is there a better way to make _guide_id to re-appear?
     sheet = sheet.reset_index()
     # TODO (gdingle): is this wanted?
     # sheet.insert(1, 'well_num', range(1, len(sheet) + 1))
@@ -294,7 +298,28 @@ def from_primer_selection(primer_selection: PrimerSelection,
     return sheet
 
 
-def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_length: int):
+def _warn_primer_self_bind(row, primer_design: PrimerDesign) -> DataFrame:
+    primer_product = row['primer_product']
+
+    if ' ' in primer_product:
+        # previous warning
+        return primer_product
+
+    if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
+        return 'self binding: ' + primer_product
+
+    if primerchecks.is_self_binding_with_adapters(
+        row['primer_seq_fwd'],
+        row['primer_seq_rev'],
+        primer_design.adapter_seq_right,
+        primer_design.adapter_seq_left,
+    ):
+        return 'binds to adapters: ' + primer_product
+
+    return primer_product
+
+
+def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, primer_design: PrimerDesign):
 
     def get_primer_product(row):
         primer_product = row['primer_product']
@@ -359,7 +384,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
             return primer_product
 
         plen = len(primer_product)
-        if plen > max_amplicon_length:
+        if plen > primer_design.max_amplicon_length:
             return f'too long, {plen}bp: {primer_product}'
 
         arms = primer_product.upper().split(row['_hdr_seq'].upper())
@@ -371,21 +396,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
         return primer_product
 
-    def warn_primer_self_bind(row) -> DataFrame:
-        primer_product = row['primer_product']
-
-        if ' ' in primer_product:
-            # previous warning
-            return primer_product
-
-        if primerchecks.is_self_binding(row['primer_seq_fwd'], row['primer_seq_rev']):
-            return 'self binding: ' + primer_product
-
-        if primerchecks.is_self_binding_with_adapters(row['primer_seq_fwd'], row['primer_seq_rev']):
-            return 'binds to adapters: ' + primer_product
-
-        return primer_product
-
     # TODO (gdingle): maybe rename these to amplicons somethings?
     # Need pre-HDR for crispresso
     if guide_design.is_hdr:
@@ -393,9 +403,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, max_amplicon_le
 
     sheet['primer_product'] = sheet.apply(get_primer_product, axis=1)
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
-
-    # TODO (gdingle): move outside of hdr primer... same concern applies to knock-in
-    sheet['primer_product'] = sheet.apply(warn_primer_self_bind, axis=1)
 
     return sheet
 

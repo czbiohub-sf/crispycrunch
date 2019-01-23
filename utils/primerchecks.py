@@ -51,7 +51,12 @@ def is_self_binding(left_primer: str, right_primer: str) -> bool:
     return False
 
 
-def is_self_binding_with_adapters(left_primer: str, right_primer: str) -> bool:
+def is_self_binding_with_adapters(
+    left_primer: str,
+    right_primer: str,
+    right_adapter_tag: str = RIGHT_ADAPTER_TAG,
+    left_adapter_tag: str = LEFT_ADAPTER_TAG,
+) -> bool:
     """
     >>> left_primer = 'ACAT'
     >>> right_primer = 'ACAT'
@@ -74,9 +79,9 @@ def is_self_binding_with_adapters(left_primer: str, right_primer: str) -> bool:
     """
     last_4_left_com = complementary_sequence(left_primer[-4:])
     last_4_right_rcom = complementary_sequence(right_primer[::-1][:4])
-    if last_4_left_com in (RIGHT_ADAPTER_TAG + right_primer)[::-1]:
+    if last_4_left_com in (right_adapter_tag + right_primer)[::-1]:
         return True
-    if last_4_right_rcom in (LEFT_ADAPTER_TAG + left_primer):
+    if last_4_right_rcom in (left_adapter_tag + left_primer):
         return True
     return False
 
