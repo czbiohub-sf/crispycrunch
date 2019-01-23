@@ -1,8 +1,14 @@
 import math
-from functools import lru_cache
 
+# TODO (gdingle): re-enable after calibration
+# from functools import lru_cache
 
-@lru_cache(maxsize=1024 * 1024)
+_specificity_weight_low = 45
+_specificity_weight_high = 65
+_dist_weight_variance = 55
+
+# TODO (gdingle): re-enable after calibration
+# @lru_cache(maxsize=1024 * 1024)
 def manu_score(specificity_score: float, hdr_dist: int) -> float:
     """
     Composite score to optimize guide selection by Manuel Leonetti.
@@ -35,16 +41,19 @@ def _specificity_weight(specificity_score: float):
     >>> _specificity_weight(80)
     1
     """
+    low = _specificity_weight_low
+    high = _specificity_weight_high
+
     assert specificity_score >= 0 and specificity_score <= 100
-    if specificity_score <= 45:
+    if specificity_score <= low:
         return 0
-    elif specificity_score >= 65:
+    elif specificity_score >= high:
         return 1
     else:
-        return 0.05 * (specificity_score - 45)
+        return 1 / (high - low) * (specificity_score - low)
 
 
-def _dist_weight(hdr_dist: int, variance=55) -> float:
+def _dist_weight(hdr_dist: int) -> float:
     """
     >>> _dist_weight(0)
     1.0
@@ -56,6 +65,8 @@ def _dist_weight(hdr_dist: int, variance=55) -> float:
     >>> _dist_weight(-20)
     0.026347980814448734
     """
+    variance = _dist_weight_variance
+
     hdr_dist = abs(hdr_dist)  # make symmetric
     assert hdr_dist >= 0 and hdr_dist <= 100  # 100 is resonable upper bound
 

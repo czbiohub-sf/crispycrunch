@@ -344,6 +344,13 @@ class GuideSelectionView(CreatePlusView):
             guide_design=guide_design,
             selected_guides=selected_guides
         )
+
+        # TODO (gdingle): remove me when calibration done
+        from utils import manuscore
+        manuscore._specificity_weight_low = int(self.request.GET.get('sl', 45))
+        manuscore._specificity_weight_high = int(self.request.GET.get('sh', 65))
+        manuscore._dist_weight_variance = int(self.request.GET.get('dv', 55))
+
         sheet = samplesheet.from_guide_selection(guide_selection)
         sheet = sheet.loc[sheet['guide_score'] >= min_score, :]
         if not len(sheet):
