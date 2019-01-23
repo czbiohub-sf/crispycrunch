@@ -218,13 +218,17 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         if row_hdr.mutation_in_junction:
             return 'mutation in intron/exon junction: ' + mutated
 
+        if row['hdr_mutate_score'] > hdr.HDR.target_mutation_score:
+            return 'not enough mutations: ' + mutated
+
         return mutated
 
-    sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
-    # TODO (gdingle): still maintain this?
     sheet['hdr_mutate_score'] = sheet.apply(
         lambda row: round(_get_hdr_row(row)._mutated_score, 4),
         axis=1)
+
+    sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
+    # TODO (gdingle): still maintain this?
 
     def check_hdr_guide_match(row):
         if not row['guide_seq']:

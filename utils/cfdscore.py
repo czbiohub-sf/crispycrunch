@@ -445,3 +445,7 @@ def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+
+    import sys
+    if len(sys.argv) == 3:
+        print(cfd_score(sys.argv[1], sys.argv[2]))
