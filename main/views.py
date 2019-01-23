@@ -346,12 +346,12 @@ class GuideSelectionView(CreatePlusView):
         )
         sheet = samplesheet.from_guide_selection(guide_selection)
         sheet = sheet.loc[sheet['guide_score'] >= min_score, :]
-        sheet = sheet.loc[sheet['hdr_dist'] <= max_hdr_dist, :]
         if not len(sheet):
             # TODO (gdingle): handle zero guides case better
             raise ValueError('No good guides found for any targets')
 
         if guide_design.is_hdr:
+            sheet = sheet.loc[sheet['hdr_dist'] <= max_hdr_dist, :]
             sheet.sort_values('hdr_score', inplace=True, ascending=False)
         else:
             sheet.sort_values('guide_score', inplace=True, ascending=False)
