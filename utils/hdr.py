@@ -215,7 +215,7 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'TTT', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.inserted_mutated
-        'GCCATGTTTGCTGAGCTGGAcCCcTTCGGC'
+        'GCCATGTTcGCcGAatTaGAcCCcTTtGGC'
         """
         return self._mutate(do_insert=True)[0]
 
@@ -292,13 +292,13 @@ class HDR:
         >>> hdr.inserted
         'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
         >>> hdr._mutate()[0]
-        'GCCATGAAAGCTGAGCTGGATCCGTTCGGCTAT'
+        'GCCATGAAAGCTGAGCTGGATCCcTTCGGCTAT'
 
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.inserted
         'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
         >>> hdr._mutate()[0]
-        'GCCATGAAAGCTGAGCTGGATCCcTTCGGCTAT'
+        'GCCATGAAAGCTGAGCTGGAcCCcTTCGGCTAT'
 
         >> hdr.inserted_mutated # legacy function result
         'GCCATGaaaGCTGAGCTGGATCCcTTtGGCTAT'
@@ -307,7 +307,7 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.1
         >>> hdr._mutate()[0]
-        'GCCATGGCTGAGCTGGAcCCGTTCGGCTAT'
+        'GCCATGGCTGAaCTGGAcCCcTTCGGCTAT'
 
         # Mutates insert
         >>> hdr = HDR('GCCGCTGAGCTGGATCCGATGTTCGG', 'TTCGG', hdr_dist=-1)
@@ -317,13 +317,13 @@ class HDR:
         >>> hdr.inserted
         'GCCGCTGAGCTGGATCCGATGttcggTTCGG'
         >>> hdr._mutate()[0]
-        'GCCGCTGAGCTGGATCCcATGTTCGGTTCGG'
+        'GCCGCcGAGtTaGATCCcATGTTCGGTTCGG'
 
         # Test fallback, 21bp
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGG', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.01
         >>> hdr._mutate()[0]
-        'GCCATGGCTGAGCTGGAcCCcTTCGG'
+        'GCCATGGCcGAatTaGAcCCcTTtGG'
 
         # Mutate PAM only
         >>> hdr = HDR('CTCAGAAGATGATGACTGAAAGGGACTCGGGACT', 'atg', 'stop_codon', 9, True, 15)
@@ -367,7 +367,7 @@ class HDR:
         if self.use_cfd_score:
             hit_score_func = functools.partial(
                 cfdscore.cfd_score,
-                sg=self.guide_seq.upper(),
+                wt=self.guide_seq.upper(),
                 guide_strand_same=self.guide_strand_same)
         else:
             hit_score_func = functools.partial(
@@ -425,9 +425,9 @@ class HDR:
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.mutated
-        'GCCATGGCTGAGCTGGAcCCGTTCGGCTAT'
+        'GCCATGGCTGAaCTGGAcCCcTTCGGCTAT'
         >>> hdr._mutated_score
-        0.066666667
+        0.08348794069944342
         """
         if self.pam_outside_cds:
             return 0
@@ -882,7 +882,7 @@ def _best_mutation(
         else:
             mutated_test_seq = mutated.upper()
 
-        score = hit_score_func(mutated_test_seq)
+        score = hit_score_func(sg=mutated_test_seq)
 
         if score <= target_mutation_score:
             return mutated, score

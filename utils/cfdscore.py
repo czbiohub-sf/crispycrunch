@@ -298,8 +298,8 @@ def calc_cfd(wt: str, sg: str, pam: str) -> float:
     """
     # Disabled for perf. # TODO (gdingle): re-enable
     # assert len(pam) == 2, 'last two chars of PAM only'
-    # assert len(sg) == 20, len(sg)
-    # assert len(wt) == 23
+    assert len(sg) == 20, len(sg)
+    assert len(wt) == 20, len(wt)
     score = 1.0
     score *= pam_scores[pam]
 
@@ -323,7 +323,7 @@ def _key(r, sl, i) -> str:
 
 
 @lru_cache(maxsize=1024 * 1024 * 1024)
-def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> float:
+def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
     """
     Alternate calling of calc_cfd with common inputs.
 
@@ -397,10 +397,6 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
     >>> cfd_score('CCAAAAAGGAGAaATGGTcCTGG', 'CCAAAAAGGAGAGATGGTGCTGG')
     0.08152173912499999
 
-    WT PAM is not NGG.
-    >>> cfd_score('TGTGAATAGCCCGACAGTTCTGA', 'CtTGAATAGCCCGACAGTTCTGA'.upper(), guide_strand_same=False)
-    0.0
-
     WT PAM bug
     >>> cfd_score('CCAGGTAGTGCCGCGCTGCCTGC', 'CCAGGggtggcggattggaagtt'.upper(), guide_strand_same=False)
     0.0001810095144455036
@@ -416,39 +412,34 @@ def cfd_score(wt: str = '', sg: str = '', pam='NGG', guide_strand_same=True) -> 
     >>> cfd_score('CCAGGTAGTGCCGCGCTGCCTGC', 'CCAGCCAGTCCCACTCCAGCTCC', guide_strand_same=False)
     0.0
 
-    sub-optimal
-    >>> cfd_score('GAGCAGCATGGAGCCGGCGGCcG'.upper(), 'AGGAAGTGGTGAGCCGGCGGCGG')
-    0.01946858212975458
-
     problem case ENST00000368809
     >>> cfd_score('GTcGTcCACATGAAGCAGAAGGG', 'GTAGTACACATGAAGCAGAA')
     0.8047619054428573
+
+    >>> cfd_score('CATCCTCCTGGACTCAATCA', 'CATCCTCCTGGACTCAATCANGT')
+    0.016129031999999998
+
+    >>> cfd_score('CATCCTCCTGGACTCAATCANGT', 'CATCCTCCTGGACTCAATCA')
+    Traceback (most recent call last):
+    ...
+    AssertionError: wild type should end in NGG
     """
     if guide_strand_same is False:
         wt = _revcom(wt)
         sg = _revcom(sg)
         pam = _revcom(pam)
 
-    wt_pam = None
-    if len(wt) == 23:
-        wt, wt_pam = wt[:20], wt[20:]
-        pam = wt_pam
+    # assumed to end in NGG
+    if len(wt) >= 23:
+        assert wt[20:23].endswith('GG'), 'wild type should end in NGG'
+    wt = wt[:20]
 
-    sg_pam = None
     if len(sg) == 23:
-        sg, sg_pam = sg[:20], sg[20:]
-        pam = sg_pam
-
-    if wt_pam and sg_pam:
-        # wild type PAM may differ from NGG if it was broken up by HDR insertion
-        # In this case, we take the lower on the assumption that a match
-        # is even less likely to non-NGG.
-        return min(
-            calc_cfd(wt.upper(), sg.upper(), wt_pam[-2:].upper()),
-            calc_cfd(wt.upper(), sg.upper(), sg_pam[-2:].upper()),
-        )
+        sg, pam = sg[:20], sg[20:]
     else:
-        return calc_cfd(wt.upper(), sg.upper(), pam[-2:].upper())
+        sg = sg[:20]
+
+    return calc_cfd(wt.upper(), sg.upper(), pam[-2:].upper())
 
 
 if __name__ == '__main__':
