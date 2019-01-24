@@ -155,21 +155,21 @@ class GuideDesignView(CreatePlusView):
                 if not cds_indexes:
                     raise ValidationError('You must specify "N" or "C" for each target')
                 cds_lengths = guide_design.cds_length
-                with ThreadPoolExecutor() as pool:
+                with ThreadPoolExecutor(4) as pool:
                     return list(pool.map(func, targets, cds_indexes, cds_lengths))
             else:
                 func = functools.partial(
                     get_cds_chr_loc,
                     cds_index=guide_design.cds_index,
                     length=guide_design.cds_length)
-                with ThreadPoolExecutor() as pool:
+                with ThreadPoolExecutor(4) as pool:
                     return list(pool.map(func, targets))
 
         elif all(is_seq(t) for t in targets):
             func = functools.partial(
                 conversions.seq_to_chr_loc,
                 genome=genome)
-            with ThreadPoolExecutor() as pool:
+            with ThreadPoolExecutor(4) as pool:
                 return list(pool.map(func, targets))
 
         elif all(is_gene(t) or is_ensemble_transcript(t) for t in targets):
@@ -177,7 +177,7 @@ class GuideDesignView(CreatePlusView):
             func = functools.partial(
                 conversions.gene_to_chr_loc,
                 genome=genome)
-            with ThreadPoolExecutor() as pool:
+            with ThreadPoolExecutor(4) as pool:
                 return list(pool.map(func, targets))
 
         raise ValidationError('Targets must be all of one accepted type')
@@ -196,14 +196,14 @@ class GuideDesignView(CreatePlusView):
                 func = get_cds_seq
                 cds_indexes = guide_design.cds_index
                 cds_lengths = guide_design.cds_length
-                with ThreadPoolExecutor() as pool:
+                with ThreadPoolExecutor(4) as pool:
                     return list(pool.map(func, targets, cds_indexes, cds_lengths))
             else:
                 func = functools.partial(
                     get_cds_seq,
                     cds_index=guide_design.cds_index,
                     length=guide_design.cds_length)
-                with ThreadPoolExecutor() as pool:
+                with ThreadPoolExecutor(4) as pool:
                     return list(pool.map(func, targets))
 
         elif all(is_ensemble_transcript(t) for t in targets):
@@ -218,7 +218,7 @@ class GuideDesignView(CreatePlusView):
             func = functools.partial(
                 conversions.chr_loc_to_seq,
                 genome=genome)
-            with ThreadPoolExecutor() as pool:
+            with ThreadPoolExecutor(4) as pool:
                 return list(pool.map(func, targets))
 
         raise ValidationError('Targets must be all of one accepted type')
