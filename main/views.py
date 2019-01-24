@@ -251,9 +251,9 @@ class GuideDesignView(CreatePlusView):
         else:
             raise ValidationError('Targets must be all of one accepted type')
 
-        # More than 8 starts causing strange 404 errors from togows.org
+        # More than 4 starts causing strange 404 errors from togows.org
         # and it causes 'You have exceeded the limit' errors from UCSC :(
-        with ThreadPoolExecutor(8) as pool:
+        with ThreadPoolExecutor(4) as pool:
             return list(pool.map(func, targets))
 
     def plus(self, obj):
