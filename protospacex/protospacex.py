@@ -39,7 +39,9 @@ adapter = requests.adapters.HTTPAdapter(pool_connections=96 * 4, pool_maxsize=96
 _cached_session.mount('http://', adapter)
 _cached_session.mount('https://', adapter)
 
-
+# TODO (gdingle): use ratelimit intead of small number of threads
+# See https://github.com/tomasbasham/ratelimit
+# TODO (gdingle): why doesn't it work easy?
 @lru_cache(maxsize=1024)
 def fetch_ensembl_transcript(
         ensembl_transcript_id: str,
