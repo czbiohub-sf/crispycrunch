@@ -204,21 +204,41 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
     max_workers = 4
 
     @staticmethod
+    def _get_primer_product(row, analysis) -> str:
+        """
+        This is complicated because of HDR, non-HDR, and custom sheet name mangling.
+        """
+        if analysis.experiment.is_hdr or analysis.is_custom:
+            if '_primer_product_wt' in row and row['_primer_product_wt']:
+                return row['_primer_product_wt']
+            elif 'primer_product_wt' in row and row['primer_product_wt']:
+                return row['primer_product_wt']
+
+        return row['primer_product']
+
+    @staticmethod
+    def _get_primer_product_after_hdr(row, analysis) -> str:
+        if CrispressoBatchWebRequest._get_primer_product(row, analysis) == row['primer_product']:
+            return ''
+        else:
+            return row['primer_product']
+
+    @staticmethod
     def start_analysis(
             analysis: models.Model,
             records: Iterable[Mapping[str, str]]) -> None:
 
         batch = CrispressoBatchWebRequest(analysis)
         largs = [[
-            # "amplicon" in crispresso
-            # TODO (gdingle): rename primer_product in CC ?
-            row['primer_product_wt'] if analysis.experiment.is_hdr else row['primer_product'],
+            CrispressoBatchWebRequest._get_primer_product(row, analysis),
             row['guide_seq'],
             row['fastq_fwd'],
             row['fastq_rev'],
-            row['_primer_adapt_name'],
-            row['primer_product'] if analysis.experiment.is_hdr else '',
-            row['target_input'],
+            row['_primer_adapt_name'] if '_primer_adapt_name' in row else row['primer_adapt_name'],
+            # "amplicon" in crispresso
+            # TODO (gdingle): rename primer_product in CC ?
+            CrispressoBatchWebRequest._get_primer_product_after_hdr(row, analysis),
+            row['target_input'] if 'target_input' in row else 'asdf',
         ] for row in records]
         return batch.start(largs, [-1, 1])
 

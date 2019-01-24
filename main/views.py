@@ -521,6 +521,13 @@ class ExperimentSummaryView(View):
                                                   # TODO (gdingle): temp remove me,
                                                   float(ms) if ms else None,
                                                   False)
+        if request.GET.get('download') == 'xls':
+            # A couple of hidden cols needed for analysis
+            # TODO (gdingle): different name convention for analysis only fields?
+            sheet['primer_adapt_name'] = sheet['_primer_adapt_name']
+            if '_primer_product_wt' in sheet:
+                sheet['primer_product_wt'] = sheet['_primer_product_wt']
+
         sheet = self._prepare_sheet(sheet)
 
         primer_design = primer_selection.primer_design
@@ -665,8 +672,12 @@ class CustomAnalysisView(View):
                 'analysis': analysis,
             })
 
-        sheet['fastq_fwd'] = [pair[0] for pair in fastq_data]
-        sheet['fastq_rev'] = [pair[1] for pair in fastq_data]
+        file = form.cleaned_data['file']
+        sheet = samplesheet.from_excel(file)
+
+        fastq_data = analysis.fastq_data
+        sheet['fastq_fwd'] = fastq_data[0]
+        sheet['fastq_rev'] = fastq_data[0]
 
         # Save only after sheet is validated above
         analysis.fastq_data = fastq_data
@@ -947,6 +958,7 @@ class ExampleCustomAnalysisSheetView(View):
             # TODO (gdingle): rename to amplicon?
             # TODO (gdingle): add only if experiment is_hdr!!!
             ('F', 'primer_product_wt', 'GGAGGAATGAGCAGCAGACATGGGAGACGGATGAGTCTTTTAATAGAAAAACACACGTGCAACAGTATCAACACACATCTCTCGCAATCCTGACAGCGCTGAACTTCAGTTCTTCACCTTGGGGGGTGGCCTGTGAGAGGAAGATAGGTGATGAAGGAGGGTCCCCAGGATCATGGCACTCGGGGTGCAAGGGACAGAGATGTCTGTCTTGGTGTATTGCTGGGCCCCTGCTCACCTGTACACTCCCACGACCACGGCATGGTCTCTTTCATATGGCT'),
+            ('G', 'primer_adapt_name', 'TruSeq3-PE.fa',),
         ]
         for cell, header, value in headers:
             ws[cell + '1'] = header

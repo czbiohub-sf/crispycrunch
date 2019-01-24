@@ -238,7 +238,11 @@ class CrispressoRequest(AbstractScrapeRequest):
         logger.info('GET request to: {}'.format(report_url))
         report_response = _cached_session.get(report_url)
         soup = BeautifulSoup(report_response.text, 'html.parser')
-        return soup.find(id='log_params').get_text()
+        log_params = soup.find(id='log_params')
+        if not log_params:
+            raise ValueError('Bad Crispresso report: {}. Is the input valid?'.format(
+                report_url))
+        return log_params.get_text()
 
     def _check_report_status(self, report_id: str) -> bool:
         status_endpoint = CRISPRESSO_BASE_URL + '/status/'
