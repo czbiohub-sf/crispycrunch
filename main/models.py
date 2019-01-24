@@ -719,7 +719,7 @@ class PrimerDesign(BaseModel):
         max_length=160,
         verbose_name='Left adapter sequence',
         help_text="""The DNA sequence that is prepended to the left (forward)
-            primer in 5' to 3' direction for deep sequencing (NGS).""",
+            primer in 5' to 3' direction for deep sequencing (NGS). Default is TruSeq3 PE compatible.""",
         default='CTACACGACGCTCTTCCGATCT',
         validators=[validate_seq],
     )
@@ -727,9 +727,25 @@ class PrimerDesign(BaseModel):
         max_length=160,
         verbose_name='Right adapter sequence',
         help_text="""The DNA sequence that is prepended to the right (reverse)
-            primer in 5' to 3' direction for deep sequencing (NGS).""",
+            primer in 5' to 3' direction for deep sequencing (NGS). Default is TruSeq3 PE compatible.""",
         default='AGACGTGTGCTCTTCCGATCT',
         validators=[validate_seq],
+    )
+    adapter_name = models.CharField(
+        max_length=40,
+        verbose_name='Adapter name (for Trimmomatic)',
+        help_text="""What to tell Trimmomatic to trim from your FastQs
+        before analysis with Crispresso. This should be consistent with the sequences above.""",
+        default='TruSeq3-PE.fa',
+        choices=[
+            ('', 'No Trimming'),
+            ('NexteraPE-PE.fa', 'Nextera PE'),
+            ('TruSeq3-PE.fa', 'TruSeq3 PE'),
+            ('TruSeq3-SE.fa', 'TruSeq3 SE'),
+            ('TruSeq2-PE.fa', 'TruSeq2 PE'),
+            ('TruSeq2-SE.fa', 'TruSeq2 SE'),
+        ],
+        blank=True,
     )
 
     primer_data = JSONField(default=list, blank=True, help_text='Data returned by external service')

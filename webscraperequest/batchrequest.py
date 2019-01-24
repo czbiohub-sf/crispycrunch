@@ -216,6 +216,7 @@ class CrispressoBatchWebRequest(BaseBatchWebRequest):
             row['guide_seq'],
             row['fastq_fwd'],
             row['fastq_rev'],
+            row['_primer_adapt_name'],
             row['primer_product'] if analysis.experiment.is_hdr else '',
             row['target_input'],
         ] for row in records]

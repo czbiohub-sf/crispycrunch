@@ -82,7 +82,7 @@ class CrispressoRequest(AbstractScrapeRequest):
     >>> sgRNA = 'AATCGGTACAAGATGGCGGA'
     >>> fastq_r1 = '../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R1_001.fastq.gz'
     >>> fastq_r2 = '../crispresso/fastqs/A1-ATL2-N-sorted-180212_S1_L001_R2_001.fastq.gz'
-    >>> req = CrispressoRequest(amplicon, sgRNA, fastq_r1, fastq_r2)
+    >>> req = CrispressoRequest(amplicon, sgRNA, fastq_r1, fastq_r2, 'TruSeq3-PE.fa')
     >>> response = req.run()
 
     >>> len(response['report_files']) > 0
@@ -100,10 +100,13 @@ class CrispressoRequest(AbstractScrapeRequest):
                  sgRNA: str,
                  fastq_r1: str,
                  fastq_r2: str,
+                 trim: str,
                  amplicon_seq_after_hdr: str='',
                  optional_name: str='') -> None:
         self.endpoint = CRISPRESSO_BASE_URL + '/submit'
         self.optional_name = optional_name
+
+        assert trim.endswith('.fa'), trim
 
         # NOTE: all post vars are required, even if empty
         # 'amplicon': amplicon,
@@ -127,9 +130,7 @@ class CrispressoRequest(AbstractScrapeRequest):
             'optradio_qc': '0',
             'optradio_qn': '0',
             'optradio_qs': '0',
-            # TODO (gdingle): make option in analysis form
-            # Default of Biohub
-            'optradio_trim': 'TruSeq3-PE.fa',
+            'optradio_trim': trim,
             'optradio_wc': '-3',
             'optradio_ws': '1',
 
