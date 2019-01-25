@@ -757,7 +757,9 @@ class PrimerDesign(BaseModel):
     def crispor_urls(self):
         return dict(
             (p['target'], p['url'] + '#ontargetPcr')
-            for p in self.primer_data)
+            for p in self.primer_data
+            # PrimerSelection may happen in face of errors
+            if 'target' in p)
 
 
 class PrimerSelection(BaseModel):

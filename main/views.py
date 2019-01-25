@@ -453,9 +453,12 @@ class PrimerDesignProgressView(View):
         batch_status = webscraperequest.CrisporPrimerBatchWebRequest(
             primer_design).get_batch_status()
 
-        if not batch_status.is_successful:
+        if not batch_status.is_done:
             return render(request, self.template_name, locals())
         else:
+            if not batch_status.is_successful:
+                logger.warn('Advancing to PrimerSelectionView with errors')
+                # TODO (gdingle): remove errors
             # For unknown reason, redirecting too early causes 500 error
             time.sleep(1)
             return HttpResponseRedirect(
@@ -474,11 +477,15 @@ class PrimerSelectionView(CreatePlusView):
         not_founds = dict(
             (p['target'], p['ontarget_primers'])
             for p in primer_data
-            if p == [webscraperequest.NOT_FOUND])
+            if p == [webscraperequest.NOT_FOUND]
+            # PrimerSelection may happen in face of errors
+            if 'target' in p)
         primers = dict(
             (p['target'], p['ontarget_primers'])
             for p in primer_data
-            if p != [webscraperequest.NOT_FOUND])
+            if p != [webscraperequest.NOT_FOUND]
+            # PrimerSelection may happen in face of errors
+            and 'target' in p)
 
         return {
             'selected_primers': {
