@@ -350,6 +350,7 @@ class GuideSelectionView(CreatePlusView):
         manuscore._specificity_weight_low = int(self.request.GET.get('sl', 45))
         manuscore._specificity_weight_high = int(self.request.GET.get('sh', 65))
         manuscore._dist_weight_variance = int(self.request.GET.get('dv', 55))
+        manuscore._before_start_codon_penalty = float(self.request.GET.get('cp', 0.2))
 
         sheet = samplesheet.from_guide_selection(guide_selection)
         sheet = sheet.loc[sheet['guide_score'] >= min_score, :]

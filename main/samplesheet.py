@@ -158,7 +158,11 @@ def _set_hdr_scores(sheet: DataFrame, guide_design: GuideDesign, guides: DataFra
     sheet['hdr_score'] = sheet.apply(
         lambda row:
         '' if not row['guide_seq'] else
-        round(manuscore.manu_score(row['guide_score'], row['hdr_dist']) * 100),
+        round(manuscore.manu_score(
+            row['guide_score'],
+            row['hdr_dist'],
+            row['_hdr_tag']
+        ) * 100),
         axis=1,
     )
     return sheet
