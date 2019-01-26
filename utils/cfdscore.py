@@ -422,7 +422,7 @@ def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
     >>> cfd_score('CATCCTCCTGGACTCAATCANGT', 'CATCCTCCTGGACTCAATCA')
     Traceback (most recent call last):
     ...
-    AssertionError: wild type should end in NGG
+    ValueError: wild type should end in NGG
 
     >>> cfd_score('CCAATATGAAAAGGCCTAGTAAG', 'CCGATATGATGGGTGGCGGATTG', guide_strand_same=False)
     0.032817109477196474
@@ -433,8 +433,9 @@ def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
         pam = _revcom(pam)
 
     # assumed to end in NGG
-    if len(wt) >= 23:
-        assert wt[20:23].endswith('GG'), 'wild type should end in NGG'
+    if len(wt) >= 23 and not wt[20:23].endswith('GG'):
+        raise ValueError('wild type should end in NGG')
+
     wt = wt[:20]
 
     if len(sg) == 23:

@@ -886,6 +886,9 @@ def _best_mutation(
 
         score = hit_score_func(sg=mutated_test_seq)
 
+        # TODO (gdingle): also check rev comp?
+        # rmutated_test_seq = cfdscore._revcom(mutated_test_seq)
+
         if score <= target_mutation_score:
             return mutated, score
 
