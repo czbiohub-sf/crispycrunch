@@ -459,9 +459,11 @@ class HDR:
         """
         if all(u.isupper() for u in self.target_seq):
             return False
+        # we want only the lowercase intron/exons
+        inserted = self.inserted.replace(self.hdr_seq.lower(), self.hdr_seq.upper())
         # TODO (gdingle): another perf problem!!! :(
-        for i, c in enumerate(self.mutated):
-            u = self.target_seq[i]
+        for i, c in enumerate(self.inserted_mutated):
+            u = inserted[i]
             if u.islower() and u.upper() != c.upper():
                 return True
         return False
