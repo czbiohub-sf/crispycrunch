@@ -231,6 +231,11 @@ def _set_hdr_cols(sheet: DataFrame, guide_design: GuideDesign, guides: DataFrame
         lambda row: round(_get_hdr_row(row)._mutated_score, 4),
         axis=1)
 
+    # For testing
+    # sheet['hdr_mutate_max_seq'] = sheet.apply(
+    #     lambda row: _get_hdr_row(row)._mutated_score[2],
+    #     axis=1)
+
     sheet['hdr_mutated'] = sheet.apply(mutate, axis=1)
     # TODO (gdingle): still maintain this?
 

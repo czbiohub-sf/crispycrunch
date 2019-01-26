@@ -429,7 +429,7 @@ class HDR:
         >>> hdr._mutated_score
         0.08348794069944342
         """
-        if self.pam_outside_cds:
+        if self.pam_outside_cds and self.should_mutate:
             return 0
 
         return self._mutate()[1]

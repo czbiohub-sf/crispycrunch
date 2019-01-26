@@ -423,6 +423,9 @@ def cfd_score(wt: str, sg: str, pam='NGG', guide_strand_same=True) -> float:
     Traceback (most recent call last):
     ...
     AssertionError: wild type should end in NGG
+
+    >>> cfd_score('CCAATATGAAAAGGCCTAGTAAG', 'CCGATATGATGGGTGGCGGATTG', guide_strand_same=False)
+    0.032817109477196474
     """
     if guide_strand_same is False:
         wt = _revcom(wt)
