@@ -16,6 +16,23 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+class MutatedSeq(str):
+
+    # For mypy
+    max_score: float
+    max_seq: str
+
+    def __new__(cls, val, **attrs):
+        inst = super().__new__(cls, val)  # type: ignore
+        for a, v in attrs.items():
+            setattr(inst, a, v)
+        return inst
+
+    # For mypy
+    def __init__(self, val, **attrs) -> None:
+        pass
+
+
 class HDR:
     """
     Encapsulates all the HDR transformations of sequences described in
@@ -210,14 +227,14 @@ class HDR:
             self.target_seq[self.insert_at:])
 
     @property
-    def inserted_mutated(self) -> str:
+    def inserted_mutated(self) -> MutatedSeq:
         """
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGC', 'TTT', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.01
         >>> hdr.inserted_mutated
         'GCCATGTTcGCcGAatTaGAcCCcTTtGGC'
         """
-        return self._mutate(do_insert=True)[0]
+        return self._mutate(do_insert=True)
 
     @property
     def mutated(self) -> str:
@@ -248,7 +265,7 @@ class HDR:
         >>> hdr.mutated
         'TGATggCAAATTTGTCCATAGCTGAAG'
         """
-        return self._mutate(do_insert=False)[0]
+        return self._mutate(do_insert=False)
 
     @property
     def _pam_mutated(self) -> str:
@@ -280,7 +297,7 @@ class HDR:
         assert len(combined) == len(self.target_seq)
         return combined
 
-    def _mutate(self, do_insert: bool = True) -> tuple:
+    def _mutate(self, do_insert: bool = True) -> MutatedSeq:
         """
         Returns the target_seq with inserted hdr_seq after optimal mutation.
 
@@ -291,13 +308,13 @@ class HDR:
         >>> hdr.target_mutation_score = 0.5
         >>> hdr.inserted
         'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
-        >>> hdr._mutate()[0]
+        >>> hdr._mutate()
         'GCCATGAAAGCTGAGCTGGATCCcTTCGGCTAT'
 
         >>> hdr.target_mutation_score = 0.1
         >>> hdr.inserted
         'GCCATGaaaGCTGAGCTGGATCCGTTCGGCTAT'
-        >>> hdr._mutate()[0]
+        >>> hdr._mutate()
         'GCCATGAAAGCTGAGCTGGAcCCcTTCGGCTAT'
 
         >> hdr.inserted_mutated # legacy function result
@@ -306,7 +323,7 @@ class HDR:
         # No insert
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGGCTAT', '', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.1
-        >>> hdr._mutate()[0]
+        >>> hdr._mutate()
         'GCCATGGCTGAaCTGGAcCCcTTCGGCTAT'
 
         # Mutates insert
@@ -316,13 +333,13 @@ class HDR:
         'GCTGAGCTGGATCCGATGTTCGG'
         >>> hdr.inserted
         'GCCGCTGAGCTGGATCCGATGttcggTTCGG'
-        >>> hdr._mutate()[0]
+        >>> hdr._mutate()
         'GCCGCcGAGtTaGATCCcATGTTCGGTTCGG'
 
         # Test fallback, 21bp
         >>> hdr = HDR('GCCATGGCTGAGCTGGATCCGTTCGG', hdr_dist=14)
         >>> hdr.target_mutation_score = 0.01
-        >>> hdr._mutate()[0]
+        >>> hdr._mutate()
         'GCCATGGCcGAatTaGAcCCcTTtGG'
 
         # Mutate PAM only
@@ -334,7 +351,7 @@ class HDR:
         True
         >>> hdr.pam_outside_cds
         True
-        >>> hdr._mutate()[0]
+        >>> hdr._mutate()
         'CTCAGAAGATGATGAATGCTGAAAGGGACTCccGACT'
         """
         if self.pam_outside_cds and self.should_mutate:
@@ -344,7 +361,7 @@ class HDR:
                 seq = (seq[:self.insert_at]
                        + self.hdr_seq.upper()
                        + seq[self.insert_at:])
-            return seq, 0
+            return MutatedSeq(seq, max_score=0.0, max_seq='')
 
         length = self.guide_seq_aligned_length
 
@@ -417,7 +434,7 @@ class HDR:
             logger.warning('Unable to mutate enough. Max score {}, target score {}, max seq {}, guide seq {}'.format(
                 max_score, self.target_mutation_score, max_seq, self.guide_seq))
 
-        return ''.join(ret_seq), max_score, max_seq
+        return MutatedSeq(''.join(ret_seq), max_score=max_score, max_seq=max_seq)
 
     @property
     def _mutated_score(self) -> float:
@@ -432,7 +449,7 @@ class HDR:
         if self.pam_outside_cds and self.should_mutate:
             return 0
 
-        return self._mutate()[1]
+        return self._mutate().max_score
 
     @property
     def mutation_in_junction(self) -> bool:
