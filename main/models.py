@@ -322,7 +322,7 @@ class Experiment(BaseModel):
             view = '/main/experiment/{id}/guide-design/'
 
             obj = GuideDesign.objects.filter(experiment=self.id)[0]
-            view = '/main/guide-design/{id}/guide-selection/'
+            view = '/main/guide-design/{id}/progress/'
 
             obj = GuideSelection.objects.filter(
                 guide_design__experiment=self.id)[0]
@@ -330,7 +330,7 @@ class Experiment(BaseModel):
 
             obj = PrimerDesign.objects.filter(
                 guide_selection__guide_design__experiment=self.id)[0]
-            view = '/main/primer-design/{id}/primer-selection/'
+            view = '/main/primer-design/{id}/progress/'
 
             obj = PrimerSelection.objects.filter(
                 primer_design__guide_selection__guide_design__experiment=self.id)[0]
