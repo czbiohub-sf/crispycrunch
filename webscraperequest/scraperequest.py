@@ -375,7 +375,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         self.target = target or seq
         self.pre_filter = pre_filter
 
-    def run(self, retries: int=5) -> Dict[str, Any]:
+    def run(self, retries: int=7) -> Dict[str, Any]:
         # TODO (gdingle): temp for working on crispor
         # _cache.delete(self.cache_key)
         try:

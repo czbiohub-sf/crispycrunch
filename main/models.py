@@ -541,8 +541,13 @@ class GuideDesign(BaseModel):
         """
         parsed = [t.split(',') for t in self.targets_raw]
         targets_raw = [p[0].strip() for p in parsed]
-        target_tags = [self.TERMINUS_TO_TAG[p[1].strip().upper()]
-                       for p in parsed if len(p) > 1]
+
+        try:
+            target_tags = [self.TERMINUS_TO_TAG[p[1].strip().upper()]
+                           for p in parsed if len(p) > 1]
+        except KeyError as e:
+            raise ValueError('Bad terminus: {}. Must be in {}'.format(
+                e.args, list(self.TERMINUS_TO_TAG.keys())))
 
         if self.is_hdr:
             if self.hdr_tag != 'per_target' and target_tags:
