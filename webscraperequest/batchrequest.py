@@ -181,7 +181,7 @@ class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
     """
     requester = CrisporPrimerRequest
     field_name = 'primer_data'
-    max_workers = 8
+    max_workers = 4
 
 
 class CrispressoBatchWebRequest(BaseBatchWebRequest):

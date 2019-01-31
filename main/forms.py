@@ -113,6 +113,11 @@ class PrimerDesignForm(ModelForm):
         max_amplicon_length.initial = self._initial
         max_amplicon_length.help_text = self._help_text
         max_amplicon_length.disabled = self._disabled
+
+        # TODO (gdingle): make crispor.py more flexible
+        primer_temp = self.fields['primer_temp']
+        primer_temp.disabled = self._disabled
+
         # Only enforced for non-hdr
         max_amplicon_length.widget.attrs['step'] = 100
 

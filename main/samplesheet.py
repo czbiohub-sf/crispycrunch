@@ -306,6 +306,8 @@ def from_primer_selection(primer_selection: PrimerSelection,
     return sheet
 
 
+# TODO (gdingle): now that we modified crispor to
+# apply the same checks. remove?
 def _warn_primer_self_bind(row, primer_design: PrimerDesign) -> DataFrame:
     primer_product = row['primer_product']
 

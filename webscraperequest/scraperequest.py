@@ -375,7 +375,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         self.target = target or seq
         self.pre_filter = pre_filter
 
-    def run(self, retries: int=7) -> Dict[str, Any]:
+    def run(self, retries: int=10) -> Dict[str, Any]:
         # TODO (gdingle): temp for working on crispor
         # _cache.delete(self.cache_key)
         try:
@@ -389,6 +389,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # IMPORTANT: Delete cache of "waiting" page
             _cache.delete(self.cache_key)
             if retries:
+                self.request = requests.Request(  # type: ignore
+                    'GET', e.args[1]).prepare()
                 time.sleep(60 // (retries + 1))  # backoff
                 return self.run(retries - 1)
             else:
@@ -428,8 +430,8 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 self.target))
 
         if 'This page will refresh every 10 seconds' in soup.get_text():
-            raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry.'.format(
-                self.target))
+            raise TimeoutError('Crispor on {}: Stuck in job queue. Please retry at {}.'.format(
+                self.target, url), url)
 
         output_table = soup.find('table', {'id': 'otTable'})
         if not output_table:
