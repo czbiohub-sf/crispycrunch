@@ -104,6 +104,22 @@
     </a>
   </dd>
 
+  <dt class="col-sm-12">&nbsp;</dt>
+
+  <dt class="col-sm-3">
+    Edit
+  </dt>
+  <dd class="col-sm-9">
+    {# TODO (gdingle): do reverse urls #}
+    <a href="/main/experiment/{{ experiment.id }}/guide-design/">Guide Design</a>
+    &middot;
+    <a href="/main/guide-design/{{ guide_design.id }}/guide-selection/">Guide Selection</a>
+    &middot;
+    <a href="/main/guide-selection/{{ guide_selection.id }}/primer-design/">Primer Design</a>
+    &middot;
+    <a href="/main/primer-design/{{ primer_design.id }}/primer-selection/">Primer Selection</a>
+  </dd>
+
 </dl>
 
 <small>
@@ -129,7 +145,19 @@
     <tr>
       {% for cell in row %}
       <td title="{{ cell }}" style="word-break: break-all;">
+        {# Special case primers #}
+        {# TODO (gdingle): extract to template tag or something #}
+        {% if '://' in cell %}
+        <a href="{{ cell }}" target="_blank">
+          {% if 'primer-blast' in cell %}
+          Primer-BLAST
+          {% else %}
+          {{ cell|slice:'10:20'}}
+          {% endif %}
+        </a>
+        {% else %}
         {{ cell|truncatechars:show }}
+        {% endif %}
       </td>
       {% endfor %}
     </tr>

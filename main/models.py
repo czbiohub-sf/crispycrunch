@@ -349,6 +349,12 @@ class GuideDesign(BaseModel):
         'hg38': 'Human',
         'mm10': 'Mouse',
     }
+    # See https://www.ncbi.nlm.nih.gov/tools/primer-blast/index.cgi
+    GENOME_TO_NCBI_ORGANISM = {
+        'hg38': 'Homo sapiens',
+        # TODO (gdingle): test that mouse works correctly with primer-blast
+        'mm10': 'Mus musculus (taxid:10090)',
+    }
     HDR_TAG_TO_CDS_LENGTH = {
         'per_target': None,
         'start_codon': 96,
@@ -572,6 +578,10 @@ class GuideDesign(BaseModel):
     def organism(self):
         return self.GENOME_TO_ORGANISM[self.genome]
 
+    @property
+    def ncbi_organism(self):
+        return self.GENOME_TO_NCBI_ORGANISM[self.genome]
+
     @cached_property
     def genome_name(self):
         """
@@ -784,7 +794,7 @@ class PrimerSelection(BaseModel):
             functools.partial(validate_num_wells, max=96 * 12),
             _validate_selected_primers,
         ],
-        help_text='Primers returned by Crispor, grouped by guide, forward primer then reverse primer')
+        help_text='Primers returned by Crispor, grouped by guide')
 
     def __str__(self):
         return 'PrimerSelection({}, ...)'.format(self.selected_primers)

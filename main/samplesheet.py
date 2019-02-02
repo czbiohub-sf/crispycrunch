@@ -298,6 +298,17 @@ def from_primer_selection(primer_selection: PrimerSelection,
     sheet['primer_product'] = sheet.apply(
         lambda row: _warn_primer_self_bind(row, primer_selection.primer_design), axis=1)
 
+    # TODO (gdingle): keep this around? or just use same link in PrimerSelectionView
+    # sheet['_primer_blast'] = sheet.apply(
+    #     lambda row: _primer_blast_link(row, guide_design.ncbi_organism), # type: ignore
+    #     axis=1)
+    # Replace "not found" with links
+    # # sheet['primer_product'] = sheet.apply(lambda row:
+    # #     row['_primer_blast']
+    # #         if row['primer_product'] == NOT_FOUND
+    # #         else row['primer_product'],
+    # axis=1)
+
     # TODO (gdingle): is there a better way to make _guide_id to re-appear?
     sheet = sheet.reset_index()
     # TODO (gdingle): is this wanted?
@@ -305,9 +316,37 @@ def from_primer_selection(primer_selection: PrimerSelection,
 
     return sheet
 
+# TODO (gdingle): move me to display at primerselection step
+
+
+def _primer_blast_link(row, ncbi_organism):
+    if not row['primer_product'] == NOT_FOUND:
+        return ''
+
+    PRIMER_PRODUCT_MAX = 310
+
+    # TODO (gdingle): another instance of IO... how to avoid?
+    try:
+        # TODO (gdingle): rename get_ultramer_seq to get_extended_seq or something
+        ultramer_seq, _ = get_ultramer_seq(
+            row['target_input'],
+            row['_cds_index'],
+            # must be long enough to find primers
+            # TODO (gdingle): Jason said "we’d need to extract the -205 to +205 region around the insert site and put that into PCR template box"
+            PRIMER_PRODUCT_MAX + 100,
+        )
+    except ValueError:
+        return NOT_FOUND
+
+    # TODO (gdingle): refactor into url object
+    base_url = 'https://www.ncbi.nlm.nih.gov/tools/primer-blast/index.cgi'
+    return base_url + '?LINK_LOC=bookmark&PRIMER5_START=1&PRIMER5_END=100&PRIMER3_START=311&PRIMER3_END=410&PRIMER_PRODUCT_MIN=250&PRIMER_PRODUCT_MAX={}&ORGANISM={}&PRIMER_SPECIFICITY_DATABASE=refseq_representative_genomes&PRIMER_MIN_SIZE=15&PRIMER_OPT_SIZE=20&PRIMER_MAX_SIZE=25&INPUT_SEQUENCE={}'.format(
+        PRIMER_PRODUCT_MAX, ncbi_organism, ultramer_seq, ncbi_organism)
 
 # TODO (gdingle): now that we modified crispor to
 # apply the same checks. remove?
+
+
 def _warn_primer_self_bind(row, primer_design: PrimerDesign) -> DataFrame:
     primer_product = row['primer_product']
 
@@ -343,7 +382,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, primer_design: 
         anchor_seq = _get_hdr_row(row).anchor_seq(size).upper()
         assert len(anchor_seq) == size * 2, (anchor_seq, len(anchor_seq))
 
-        # Crispor returns primer products by strand. Normalize to positive strand.
+        # Crispor returns primer products on forward genomic strand. Normalize.
         if row['target_loc'].strand == '-':
             primer_product = reverse_complement(primer_product)
 

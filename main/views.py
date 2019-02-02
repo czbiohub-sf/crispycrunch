@@ -13,11 +13,12 @@ import copy
 import logging
 import os
 import time
+import urllib
 
 from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO, StringIO
 from itertools import islice
-from typing import Any
+from typing import Any, Optional
 
 import openpyxl  # type: ignore
 import sample_sheet as illumina  # type: ignore
@@ -33,9 +34,9 @@ from django.views.generic.edit import CreateView
 
 import webscraperequest
 
-from crispresso.fastqs import find_matching_pairs
+from crispresso.fastqs import find_matching_pairs, reverse_complement
 from crispresso.s3 import download_fastqs
-from protospacex import get_cds_chr_loc, get_cds_seq
+from protospacex import get_cds_chr_loc, get_cds_seq, get_ultramer_seq
 
 from main import samplesheet
 from main.forms import *
@@ -471,40 +472,142 @@ class PrimerSelectionView(CreatePlusView):
     form_class = PrimerSelectionForm
     success_url = '/main/primer-selection/{id}/experiment-summary/'
 
+    primer_product_min = 250
+    primer_product_max = 310
+
     def get_initial(self):
-        primer_data = PrimerDesign.objects.get(
-            owner=self.request.user, id=self.kwargs['id']).primer_data
+        return {'selected_primers': self._selected_primers()}
 
-        not_founds = dict(
-            (p['target'], p['ontarget_primers'])
-            for p in primer_data
-            if p == [webscraperequest.NOT_FOUND]
-            # PrimerSelection may happen in face of errors
-            if 'target' in p)
-        primers = dict(
-            (p['target'], p['ontarget_primers'])
-            for p in primer_data
-            if p != [webscraperequest.NOT_FOUND]
-            # PrimerSelection may happen in face of errors
-            and 'target' in p)
-
-        return {
-            'selected_primers': {
-                # Put "not found" on top for readability
-                **not_founds,
-                **primers,
-            }
-        }
+    def get_context_data(self, **kwargs):
+        primer_design = PrimerDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id'])
+        kwargs['crispor_urls'] = primer_design.crispor_urls
+        kwargs['primerblast_urls'] = self._primerblast_urls(
+            primer_design.guide_selection.guide_design)
+        return super().get_context_data(**kwargs)
 
     def plus(self, obj):
         obj.primer_design = PrimerDesign.objects.get(
             owner=self.request.user, id=self.kwargs['id'])
+
+        # Needed for primerblast
+        self._set_custom_primers(
+            obj.primer_design.guide_selection.guide_design,
+            obj,
+        )
+
         return obj
 
-    def get_context_data(self, **kwargs):
-        kwargs['crispor_urls'] = PrimerDesign.objects.get(
-            owner=self.request.user, id=self.kwargs['id']).crispor_urls
-        return super().get_context_data(**kwargs)
+    def _selected_primers(self) -> dict:
+        primer_data = PrimerDesign.objects.get(
+            owner=self.request.user, id=self.kwargs['id']).primer_data
+        return dict(
+            (p['target'], p['ontarget_primers'])
+            for p in primer_data
+            # PrimerSelection may happen in face of errors
+            if 'target' in p)
+
+    def _set_custom_primers(self, guide_design: GuideDesign, obj: PrimerSelection) -> None:
+        if not guide_design.is_hdr:
+            # TODO (gdingle): make it work for non-HDR
+            return None
+
+        ultramer_seqs = self._get_ultramer_seqs(guide_design)
+
+        for guide_id, ultramer_seq in zip(self._selected_primers(), ultramer_seqs):
+            primers = obj.selected_primers.get(guide_id)
+            if primers is None:
+                # TODO (gdingle): should we still allow removing whole primers elements from dict?
+                logging.warn('No primers for guide {}'.format(guide_id))
+                continue
+            assert len(primers), 'No primers for {}'.format(guide_id)
+            assert len(primers) <= 3, 'Too many primers for {}'.format(guide_id)
+            if len(primers) == 2:
+                obj.selected_primers[guide_id].append(
+                    self._get_primer_product(ultramer_seq, *primers))
+
+    def _get_primer_product(self, ultramer_seq: str, primer_seq_fwd: str, primer_seq_rev: str) -> str:
+        ultramer_seq = ultramer_seq.upper()
+        left = ultramer_seq.index(primer_seq_fwd)
+        right = ultramer_seq.rindex(reverse_complement(primer_seq_rev)) + len(primer_seq_rev)
+        assert right - left <= self.primer_product_max
+        assert right - left >= self.primer_product_min
+
+        primer_product = ultramer_seq[left:right]
+        assert primer_product.startswith(primer_seq_fwd)
+        assert primer_product.endswith(reverse_complement(primer_seq_rev))
+        return primer_product
+
+    def _get_ultramer_seqs(self, guide_design: GuideDesign) -> list:
+
+        def _get_ultramer_seq(target_input: str, cds_index: int, chr_loc: ChrLoc) -> Optional[str]:
+            try:
+                # TODO (gdingle): rename get_ultramer_seq to get_extended_seq or something
+                ultramer_seq = get_ultramer_seq(
+                    target_input,
+                    cds_index,
+                    # Must be long enough to find primers. Jason
+                    # said "we’d need to extract the -205 to +205 region around
+                    # the insert site and put that into PCR template box".
+                    self.primer_product_max + 100)[0]
+                if chr_loc.strand == '-':
+                    return reverse_complement(ultramer_seq)
+                else:
+                    return ultramer_seq
+            except Exception as e:
+                logger.warn(e)
+                return None
+
+        targets_cleaned, _ = guide_design.parse_targets_raw()
+
+        # TODO (gdingle): another instance of IO... how to avoid?
+        with ThreadPoolExecutor(4) as pool:
+            ultramer_seqs = list(pool.map(
+                lambda args: _get_ultramer_seq(*args),
+                zip(targets_cleaned, guide_design.cds_index, guide_design.target_locs),
+            ))
+        return ultramer_seqs
+
+    def _primerblast_urls(
+        self,
+        guide_design: GuideDesign,
+        base_url='https://www.ncbi.nlm.nih.gov/tools/primer-blast/index.cgi'
+    ) -> Optional[dict]:
+
+        if not guide_design.is_hdr:
+            # TODO (gdingle): implement for non-HDR, non-ENST
+            return None
+
+        ultramer_seqs = self._get_ultramer_seqs(guide_design)
+
+        not_founds = dict(
+            (p[0], ultramer_seqs[i])
+            for i, p in enumerate(self._selected_primers().items())
+            if p[1] == [webscraperequest.NOT_FOUND])
+
+        params = {
+            'LINK_LOC': 'bookmark',
+            'PRIMER5_START': 1,
+            'PRIMER5_END': 100,
+            'PRIMER3_START': 311,
+            'PRIMER3_END': 410,
+            'PRIMER_PRODUCT_MIN': self.primer_product_min,
+            'PRIMER_PRODUCT_MAX': self.primer_product_max,
+            'PRIMER_SPECIFICITY_DATABASE': 'refseq_representative_genomes',
+            'ORGANISM': guide_design.ncbi_organism,
+            'PRIMER_MIN_SIZE': 15,
+            'PRIMER_OPT_SIZE': 20,
+            'PRIMER_MAX_SIZE': 25,
+        }
+        return dict(
+            (target,
+             base_url + '?' + urllib.parse.urlencode({
+                 **params, **{'INPUT_SEQUENCE': ultramer_seq}
+             }))
+            for target, ultramer_seq in not_founds.items()
+            # Simply filter out errors for now
+            if ultramer_seq
+        )
 
 
 class ExperimentSummaryView(View):

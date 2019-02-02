@@ -5,6 +5,7 @@
 <ol>
   <li>Review
 
+    {# TODO (gdingle): add another set of links to primer-blast #}
     <a href="#collapsibleLinks" data-toggle="collapse">
       Crispor recommended primers
     </a>
@@ -19,9 +20,35 @@
         {% endfor %}
       </ul>
   </li>
+  {% if primerblast_urls %}
+  <li>
+    Optional: Replace any "<strong>not found</strong>" with
+
+    {# TODO (gdingle): how to get primer product here??? and what direction should primers and product be??? #}
+
+    <a href="#collapsibleLinks2" data-toggle="collapse">
+      primers from NCBI's Primer-BLAST
+  </a>. The format should be [
+    "<i>Forward Primer</i>",
+    "<i>Reverse Primer</i>"
+  ].
+      {# TODO: wrap into two cols #}
+      <ul id="collapsibleLinks2" class="small collapse">
+        {% for target, url in primerblast_urls.items %}
+        <li>
+          <a target="_blank" href="{{ url }}">
+            {{ target }}
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+  </li>
+  {% else %}
   <li>
     Optional: Replace any "<strong>not found</strong>" with custom primers
   </li>
+  {% endif %}
+
   <li>
     Note: Primers that could not be found because of an <strong>error</strong> are dropped.
   </li>
