@@ -42,6 +42,8 @@ _cached_session.mount('https://', adapter)
 # TODO (gdingle): use ratelimit intead of small number of threads
 # See https://github.com/tomasbasham/ratelimit
 # TODO (gdingle): why doesn't it work easy?
+
+
 @lru_cache(maxsize=1024)
 def fetch_ensembl_transcript(
         ensembl_transcript_id: str,
@@ -265,6 +267,12 @@ def get_cds_seq(
     Same intron/exon position as in get_ultramer_seq.
     >>> get_cds_seq('ENST00000258648', length=72)
     'CTCTGCgcgtgcgcCGGTGGCGGGACTCTGGGGAAAATGGCTGCGTCTTCGAGTGGTGAGAAGGAGAAGGAG'
+
+    Problem case.
+    >>> get_cds_seq('ENST00000640289', length=96)
+    Traceback (most recent call last):
+    ...
+    ValueError: Codon ['ATG'] not found in target region of ENST00000640289. Is the terminus correct? Is ENST00000640289 start or stop codon non-canonical?
     """
     return _get_cds_seq_and_codon_at(
         ensembl_transcript_id,
@@ -309,13 +317,18 @@ def _get_cds_seq_and_codon_at(
     else:
         cds_seq = record.seq[start:end]
 
-    # TODO (gdingle): verify this always works
-    cds_seq = _lowercase_exon_boundaries(cds_seq, record, start)
-
     if cds_index == 0:
         target_codons = ['ATG']
     elif cds_index == -1:
         target_codons = ['TAG', 'TGA', 'TAA']
+
+    if not any(t in cds_seq for t in target_codons):
+        raise ValueError('Codon {} not found in target region of {}. Is the terminus correct? Is {} start or stop codon non-canonical?'.format(
+            target_codons, ensembl_transcript_id, ensembl_transcript_id))
+
+    # TODO (gdingle): verify this always works
+    cds_seq = _lowercase_exon_boundaries(cds_seq, record, start)
+
     assert cds_seq[codon_at:codon_at + 3].upper() in target_codons, (
         str(cds_seq), codon_at)
 
