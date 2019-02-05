@@ -276,8 +276,6 @@ def from_primer_selection(primer_selection: PrimerSelection,
     sheet = sheet.join(ps_df, how='left')
     assert len(sheet) >= len(ps_df)
 
-    sheet['primer_product'] = sheet.apply(_transform_primer_product, axis=1)
-
     guide_design = guide_selection.guide_design
     if guide_design.is_hdr:
         # TODO (gdingle): temp remove me, or make a parameter of guide design
@@ -382,7 +380,8 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, primer_design: 
         anchor_seq = _get_hdr_row(row).anchor_seq(size).upper()
         assert len(anchor_seq) == size * 2, (anchor_seq, len(anchor_seq))
 
-        # Crispor returns primer products on forward genomic strand. Normalize.
+        # Crispor returns primer products on forward genomic strand. hdr.HDR
+        # expects gene strand.
         if row['target_loc'].strand == '-':
             primer_product = reverse_complement(primer_product)
 
@@ -416,7 +415,11 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, primer_design: 
         assert len(before) + len(hdr_primer_product) + len(after) == len(primer_product) + \
             len(row['_hdr_seq'])
 
-        return before + hdr_primer_product + after
+        # hdr.HDR works on gene strand. Revcomp back again.
+        if row['target_loc'].strand == '-':
+            return reverse_complement(before + hdr_primer_product + after)
+        else:
+            return before + hdr_primer_product + after
 
     def warn_hdr_primer(row) -> str:
         """
@@ -454,62 +457,6 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, primer_design: 
     sheet['primer_product'] = sheet.apply(warn_hdr_primer, axis=1)
 
     return sheet
-
-
-# TODO (gdingle): should not be needed anymore after crispor mods
-def _transform_primer_product(row) -> str:
-    """
-    This is only necessary because Crispor returns NNNs in primer product.
-
-    Max says: "I am masking repeats to N when sending the sequence to
-    primer3. This was a major request by some labs, as they found that the
-    primer3 primers were sometimes not specific at all. What I SHOULD do
-    one day would be to run the primers through bwa to check their
-    uniqueness, but since i'm not doing that right now, I simply mask the
-    repeats, which is at least something to reduce the amount of
-    nonspecific binding. "
-    """
-    if not row['guide_seq']:
-        return ' '  # one space as "warning"
-
-    if not isinstance(row['primer_product'], str):
-        return NOT_FOUND
-
-    # Only look up product from chr loc if crispor returns mysterious Ns
-    if 'N' not in row['primer_product']:
-        return row['primer_product']
-
-    if row['_guide_strand_same']:
-        guide_seq = row['guide_seq']
-    else:
-        guide_seq = reverse_complement(row['guide_seq'])
-
-    if guide_seq not in row['primer_product']:
-        # TODO (gdingle): use yellow highlighting of crispor to determine
-        # guide_seq location. See http://crispor.tefor.net/crispor.py?ampLen=400&tm=60&batchId=fL1KMBReetZZeDh1XBkm&pamId=s29-&pam=NGG
-        return 'too many repeat Ns: ' + row['primer_product']
-
-    logger.warning('Replacing Ns in primer product for {} guide {}'.format(
-        row['target_loc'], row['guide_seq']))
-
-    # TODO (gdingle): this is nearly the only IO in this file... do we really need it?
-    primer_loc = get_primer_loc(
-        row['primer_product'],
-        guide_seq,
-        row['guide_loc'])
-    # TODO (gdingle): this does not take into account strand!
-    converted = conversions.chr_loc_to_seq(
-        str(primer_loc),
-        row['_target_genome'])
-
-    if row['target_loc'].strand == '+':
-        assert row['primer_product'].startswith(row['primer_seq_fwd'])
-        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_rev']))
-    else:
-        assert row['primer_product'].startswith(row['primer_seq_rev'])
-        assert row['primer_product'].endswith(reverse_complement(row['primer_seq_fwd']))
-
-    return 'Ns converted: ' + converted
 
 
 def set_ultramer(row, hdr_homology_arm_length: int):
