@@ -375,7 +375,10 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         self.target = target or seq
         self.pre_filter = pre_filter
 
-    def run(self, retries: int=20) -> Dict[str, Any]:
+    def run(self, retries: int=6) -> Dict[str, Any]:
+        """
+        retries 6 should equal ~6min
+        """
         # TODO (gdingle): temp for working on crispor
         # _cache.delete(self.cache_key)
         try:
@@ -391,7 +394,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             if retries:
                 self.request = requests.Request(  # type: ignore
                     'GET', e.args[1]).prepare()
-                time.sleep(60 // (retries + 1))  # backoff
+                time.sleep(120 // (retries + 1))  # backoff
                 return self.run(retries - 1)
             else:
                 raise
