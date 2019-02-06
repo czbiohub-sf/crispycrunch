@@ -165,7 +165,7 @@ class CrisporGuideBatchWebRequest(BaseBatchWebRequest):
     field_name = 'guide_data'
     # More than 8 threads appears to cause a 'no output' Crispor error
     # TODO (gdingle): create global worker pool? somehow?
-    max_workers = 2
+    max_workers = 4
 
 
 class CrisporPrimerBatchWebRequest(BaseBatchWebRequest):
