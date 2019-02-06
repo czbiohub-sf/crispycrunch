@@ -392,8 +392,9 @@ class CrisporGuideRequest(AbstractScrapeRequest):
             # IMPORTANT: Delete cache of "waiting" page
             _cache.delete(self.cache_key)
             if retries:
-                self.request = requests.Request(  # type: ignore
-                    'GET', e.args[1]).prepare()
+                # TODO (gdingle): why doesn't this redirect from status page work?
+                # self.request = requests.Request(  # type: ignore
+                #     'GET', e.args[1]).prepare()
                 time.sleep(120 // (retries + 1))  # backoff
                 return self.run(retries - 1)
             else:
