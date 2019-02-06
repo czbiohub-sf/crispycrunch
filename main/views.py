@@ -306,6 +306,8 @@ class GuideDesignProgressView(View):
             owner=self.request.user, id=self.kwargs['id'])
         batch_status = webscraperequest.CrisporGuideBatchWebRequest(guide_design).get_batch_status()
 
+        other_recent_usage = guide_design.other_recent_usage
+
         if not batch_status.is_successful:
             return render(request, self.template_name, locals())
         else:
@@ -454,6 +456,7 @@ class PrimerDesignProgressView(View):
             owner=self.request.user, id=kwargs['id'])
         batch_status = webscraperequest.CrisporPrimerBatchWebRequest(
             primer_design).get_batch_status()
+        other_recent_usage = primer_design.other_recent_usage
 
         if not batch_status.is_done:
             return render(request, self.template_name, locals())
@@ -809,6 +812,8 @@ class AnalysisProgressView(View):
         analysis = Analysis.objects.get(
             owner=self.request.user, id=kwargs['id'])
         batch_status = webscraperequest.CrispressoBatchWebRequest(analysis).get_batch_status()
+
+        other_recent_usage = analysis.other_recent_usage
 
         if not batch_status.is_successful:
             return render(request, self.template_name, locals())

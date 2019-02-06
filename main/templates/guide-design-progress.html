@@ -7,6 +7,12 @@
 {% endblock head %}
 
 {% block content %}
+{% if other_recent_usage %}
+<div class="alert alert-warning" role="alert">
+  Warning: Concurrent usage ({{ other_recent_usage }}). Load may be high. Expect delays.
+</div>
+{% endif %}
+
 <p>
   <em>This page will refresh every second until all tasks are completed. If progress stops, go back and try again. Completed tasks will be cached. Errored tasks will be cleared from the cache. It may take up to 30 min to complete a full 96-well plate. If you have trouble, please email
   <a href="mailto:{{ settings.ADMIN_EMAIL }}?subject=CrispyCrunch%20Error">

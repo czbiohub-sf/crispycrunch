@@ -5,6 +5,7 @@ See SampleSheetTestCase for example data.
 """
 
 import functools
+from django.utils import timezone
 
 from pandas import DataFrame
 
@@ -247,10 +248,26 @@ class BaseModel(models.Model):
     class Meta:
         abstract = True
         ordering = ['-id']
+        get_latest_by = ['update_time']
 
     create_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def other_recent_usage(self, hours=1) -> int:
+        """
+        For providing load warnings. See:
+        https://stackoverflow.com/questions/10345147/django-query-datetime-for-objects-older-than-5-hours
+        """
+        # TODO (gdingle): modify query to use "success" in json... maybe total ongoing unfinished?
+        time_threshold = timezone.now() - timezone.timedelta(hours=hours)
+        gd_count = GuideDesign.objects.exclude(owner=self.owner).filter(
+            update_time__gt=time_threshold, guide_data__isnull=False).count()
+        pd_count = PrimerDesign.objects.exclude(owner=self.owner).filter(
+            update_time__gt=time_threshold, primer_data__isnull=False).count()
+        ad_count = Analysis.objects.exclude(owner=self.owner).filter(
+            update_time__gt=time_threshold, results_data__isnull=False).count()
+        return gd_count + pd_count + ad_count
 
 
 class ChrLocField(models.CharField):
