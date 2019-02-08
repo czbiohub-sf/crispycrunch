@@ -30,7 +30,7 @@ from django.views import View
 from django.views.generic import DetailView, ListView
 from django.views.generic.detail import SingleObjectMixin
 from django.views.generic.edit import CreateView
-
+from django.core.exceptions import ObjectDoesNotExist
 
 import webscraperequest
 
@@ -52,10 +52,13 @@ class IndexView(ListView):
     template_name = 'index.html'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['analyses'] = Analysis.objects.filter(owner=self.request.user)
-        context['experiments'] = Experiment.objects.filter(owner=self.request.user)
-        return context
+        try:
+            context = super().get_context_data(**kwargs)
+            context['analyses'] = Analysis.objects.filter(owner=self.request.user)
+            context['experiments'] = Experiment.objects.filter(owner=self.request.user)
+            return context
+        except ObjectDoesNotExist as e:
+            raise Http404(e)
 
 
 # TODO (gdingle): login automatically on first try?
@@ -75,9 +78,10 @@ class CreatePlusView(CreateView):
     """
 
     def form_valid(self, form: ModelForm) -> HttpResponse:
-        obj = form.save(commit=False)
-        obj.owner = self.request.user
         try:
+            obj = form.save(commit=False)
+            obj.owner = self.request.user
+
             obj = self.plus(obj)
             obj.full_clean()
         except (ValidationError, ValueError) as e:
@@ -91,6 +95,9 @@ class CreatePlusView(CreateView):
                 del e.error_dict
             form.add_error('__all__', e)
             return self.form_invalid(form)
+        # TODO (gdingle): test me
+        except ObjectDoesNotExist as e:
+            raise Http404(e)
         obj.save()
         self.object = obj
         return HttpResponseRedirect(self.get_success_url())
@@ -129,8 +136,12 @@ class GuideDesignView(CreatePlusView):
     success_url = '/main/guide-design/{id}/progress/'
 
     def get_form_class(self):
-        experiment = Experiment.objects.get(
-            owner=self.request.user, id=self.kwargs['id'])
+        try:
+            experiment = Experiment.objects.get(
+                owner=self.request.user, id=self.kwargs['id'])
+        except ObjectDoesNotExist as e:
+            raise Http404(e)
+
         # Filter irrelevant fields depending on is_hdr
         if experiment.is_hdr:
             return GuideDesignForm
@@ -392,11 +403,14 @@ class GuideSelectionView(CreatePlusView):
         return obj
 
     def get_context_data(self, **kwargs):
-        guide_design = GuideDesign.objects.get(
-            owner=self.request.user, id=self.kwargs['id'])
-        # TODO (gdingle): try to order these in the same way as _get_top_guides
-        kwargs['crispor_urls'] = guide_design.crispor_urls
-        return super().get_context_data(**kwargs)
+        try:
+            guide_design = GuideDesign.objects.get(
+                owner=self.request.user, id=self.kwargs['id'])
+            # TODO (gdingle): try to order these in the same way as _get_top_guides
+            kwargs['crispor_urls'] = guide_design.crispor_urls
+            return super().get_context_data(**kwargs)
+        except ObjectDoesNotExist as e:
+            raise Http404(e)
 
 
 class PrimerDesignView(CreatePlusView):
@@ -482,12 +496,15 @@ class PrimerSelectionView(CreatePlusView):
         return {'selected_primers': self._selected_primers()}
 
     def get_context_data(self, **kwargs):
-        primer_design = PrimerDesign.objects.get(
-            owner=self.request.user, id=self.kwargs['id'])
-        kwargs['crispor_urls'] = primer_design.crispor_urls
-        kwargs['primerblast_urls'] = self._primerblast_urls(
-            primer_design.guide_selection.guide_design)
-        return super().get_context_data(**kwargs)
+        try:
+            primer_design = PrimerDesign.objects.get(
+                owner=self.request.user, id=self.kwargs['id'])
+            kwargs['crispor_urls'] = primer_design.crispor_urls
+            kwargs['primerblast_urls'] = self._primerblast_urls(
+                primer_design.guide_selection.guide_design)
+            return super().get_context_data(**kwargs)
+        except ObjectDoesNotExist as e:
+            raise Http404(e)
 
     def plus(self, obj):
         obj.primer_design = PrimerDesign.objects.get(
@@ -695,13 +712,16 @@ class AnalysisView(CreatePlusView):
     success_url = '/main/analysis/{id}/progress/'
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        owner_exps = Experiment.objects.filter(owner=self.request.user)
-        special_exp = Experiment.objects.filter(id=1)
-        # TODO (gdingle): legacy... remove when id=1
-        legacy_exp = Experiment.objects.filter(name='No experiment -- Custom analysis')
-        context['form'].fields['experiment'].queryset = owner_exps | special_exp | legacy_exp
-        return context
+        try:
+            context = super().get_context_data(**kwargs)
+            owner_exps = Experiment.objects.filter(owner=self.request.user)
+            special_exp = Experiment.objects.filter(id=1)
+            # TODO (gdingle): legacy... remove when id=1
+            legacy_exp = Experiment.objects.filter(name='No experiment -- Custom analysis')
+            context['form'].fields['experiment'].queryset = owner_exps | special_exp | legacy_exp
+            return context
+        except ObjectDoesNotExist as e:
+            raise Http404(e)
 
     def plus(self, obj):
         # TODO (gdingle): use predetermined s3 location of fastq
