@@ -272,6 +272,8 @@ ADMINS = [
     ('Greg Dingle', 'gdingle@chanzuckerberg.com'),
 ]
 ADMIN_EMAIL = ADMINS[0][1]
+# https://docs.djangoproject.com/en/2.1/ref/settings/#std:setting-MANAGERS
+MANAGERS = ADMINS
 
 # Amazon SES requires a valid email address for sending.
 # SERVER_EMAIL = 'no-reply@crispycrunch.czbiohub.org'
