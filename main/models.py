@@ -126,123 +126,6 @@ VAR_TERMINUS_EXAMPLES = [
 ]
 
 
-N_TERMINUS_EXAMPLES = [
-    # TODO (gdingle): understand why all commented out are "not found"
-    # 'ENST00000066544',
-    # TODO (gdingle): why error during processing?
-    # 'ENST00000222990',
-    'ENST00000225728',
-    'ENST00000250498',
-    'ENST00000252992',
-    'ENST00000256474',
-    # TODO (gdingle): why does get_ultramer_seq not work for this?
-    # 'ENST00000258648',
-    'ENST00000264935',
-    'ENST00000264982',
-    'ENST00000268711',
-    'ENST00000269392',
-    'ENST00000275603',
-    'ENST00000278935',
-    'ENST00000283122',
-    'ENST00000286788',
-    'ENST00000292035',
-    'ENST00000293777',
-    'ENST00000295688',
-    'ENST00000295770',
-    'ENST00000309439',
-    'ENST00000313525',
-    'ENST00000321685',
-    # TODO (gdingle): why does get_ultramer_seq not work for this?
-    # 'ENST00000323927',
-    'ENST00000324817',
-    'ENST00000331821',
-    'ENST00000339839',
-    'ENST00000342382',
-    'ENST00000345519',
-    # 'ENST00000361564',
-    'ENST00000367607',
-    'ENST00000370277',
-    'ENST00000394903',
-    'ENST00000431606',
-    # TODO (gdingle): why does get_ultramer_seq not work for this?
-    # 'ENST00000455511',
-    # 'ENST00000529196',
-    'ENST00000579978',
-    'ENST00000610888',
-    # 'ENST00000615911',
-    'ENST00000621663',
-]
-C_TERMINUS_EXAMPLES = [
-    # TODO (gdingle): primer error: too many perfect matches
-    'ENST00000221138',
-    'ENST00000227618',
-    'ENST00000237380',
-    'ENST00000237530',
-    'ENST00000251871',
-    'ENST00000254950',
-    'ENST00000255764',
-    'ENST00000257287',
-    'ENST00000258091',
-    'ENST00000261819',
-    'ENST00000263205',
-    'ENST00000265350',
-    'ENST00000267935',
-    'ENST00000282892',
-    'ENST00000283195',
-    'ENST00000287598',
-    # TODO (gdingle): bad length... only 68
-    'ENST00000295682',
-    'ENST00000296255',
-    'ENST00000299300',
-    'ENST00000306467',
-    'ENST00000310955',
-    'ENST00000311832',
-    # TODO (gdingle): bad length... only 71
-    'ENST00000312865',
-    'ENST00000315368',
-    'ENST00000325542',
-    'ENST00000341068',
-    'ENST00000345046',
-    'ENST00000352035',
-    'ENST00000354910',
-    'ENST00000355801',
-    'ENST00000356221',
-    'ENST00000366542',
-    'ENST00000366999',
-    'ENST00000371485',
-    'ENST00000372457',
-    'ENST00000373842',
-    'ENST00000374080',
-    'ENST00000374206',
-    'ENST00000376227',
-    'ENST00000376300',
-    'ENST00000378230',
-    'ENST00000394128',
-    'ENST00000394440',
-    'ENST00000394886',
-    'ENST00000397527',
-    'ENST00000397786',
-    # TODO (gdingle): this is causing error in hdr guide_seq... bad codon?
-    'ENST00000424347',
-    'ENST00000430055',
-    'ENST00000456793',
-    'ENST00000473414',
-    'ENST00000481195',
-    'ENST00000503026',
-    'ENST00000506447',
-    'ENST00000556440',
-    'ENST00000602624',
-]
-
-# First 4 only
-RYAN_LEENAY_EXAMPLE = [
-    'chr2:136114360-136114419',
-    'chr2:136115613-136115672',
-    'chr2:136116738-136116797',
-    'chr2:136117544-136117603',
-]
-
-
 class BaseModel(models.Model):
 
     class Meta:
@@ -381,11 +264,11 @@ class GuideDesign(BaseModel):
         # See cds_length below
         # TODO (gdingle): need both start_codon and start_codon2?
         # ('start_codon', 'Within {} after start codon (N-terminus)'.format(self.HDR_TAG_TO_CDS_LENGTH['start_codon'])),
-        ('start_codon', 'Within {} before or after start codon (N-terminus)'.format(
+        ('start_codon', 'Within {}bp before or after start codon (N-terminus)'.format(
             HDR_TAG_TO_CDS_LENGTH['start_codon'])),
-        ('stop_codon', 'Within {} before or after stop codon (C-terminus)'.format(
+        ('stop_codon', 'Within {}bp before or after stop codon (C-terminus)'.format(
             HDR_TAG_TO_CDS_LENGTH['stop_codon'])),
-        ('per_target', 'Within {} before or after, terminus specified per target ("N" or "C")'.format(
+        ('per_target', 'Within {}bp before or after, terminus specified per target ("N" or "C")'.format(
             HDR_TAG_TO_CDS_LENGTH['start_codon'])),
     ]
     # TODO (gdingle): need to verify when each of these are appropriate
@@ -428,13 +311,13 @@ class GuideDesign(BaseModel):
     # TODO (gdingle): hide this or add more?
     genome = models.CharField(max_length=80, choices=GENOMES, default='hg38')
 
-    # TODO (gdingle): hide this or add more?
     pam = models.CharField(
         verbose_name='PAM',
         help_text='Protospacer Adjacent Motif',
         max_length=80,
         choices=[('NGG', '20bp-NGG (SpCas9, SpCas9-HF1, eSpCas9, ...)'), ],
-        default='NGG')
+        default='NGG',
+        editable=True,)
 
     # TODO (gdingle): enforce must be ENST for HDR,
     # explain ENST is always converted to forward strand
@@ -446,16 +329,8 @@ class GuideDesign(BaseModel):
         help_text="""Chromosome location, fasta sequence, ENST transcript ID, or
             gene name. One per line. Append ",N" or ",C" to a line to tag at N or
             C terminus.""",
-        # TODO (gdingle): temp default for testing
-        # default=['chr7:5569176-5569415', 'chr1:11,130,540-11,130,751'],
-        # default=['ENST00000330949'],
-        # default=['ATL2', 'ATL3'],
-        # default=JASON_LI_EXAMPLE,
-        # default=RYAN_LEENAY_EXAMPLE,
-        # default=ENST_EXAMPLE,
-        default=VAR_TERMINUS_EXAMPLES,
-        # default=N_TERMINUS_EXAMPLES,
-        # default=C_TERMINUS_EXAMPLES,
+        # No need for more than 4
+        default=VAR_TERMINUS_EXAMPLES[:4],
     )
 
     target_locs = fields.ArrayField(
@@ -498,7 +373,7 @@ class GuideDesign(BaseModel):
     hdr_tag = models.CharField(
         choices=HDR_TAG_TERMINUSES,
         # TODO (gdingle): how to make this possible?
-        # default='per_target',
+        default='per_target',
         max_length=40,
         verbose_name='HDR tag terminus',
         help_text='Where to insert the tag in each gene',
@@ -611,7 +486,7 @@ class GuideDesign(BaseModel):
         """
         This funky property will either return a scalar or a tuple.
         """
-        if not self.hdr_tag:
+        if not self.is_hdr:
             return None
         elif self.hdr_tag == 'per_target':
             return (self.hdr_start_codon_tag_seq, self.hdr_stop_codon_tag_seq)
@@ -625,7 +500,7 @@ class GuideDesign(BaseModel):
         """
         start_codon_choices = dict(self.HDR_TAG_TERMINUS_TO_HDR_SEQ['start_codon'])
         stop_codon_choices = dict(self.HDR_TAG_TERMINUS_TO_HDR_SEQ['stop_codon'])
-        if not self.hdr_tag:
+        if not self.is_hdr:
             return None
         else:
             choices = set([
@@ -661,7 +536,7 @@ class GuideDesign(BaseModel):
 
     @cached_property
     def cds_index(self):
-        if not self.hdr_tag:
+        if not self.is_hdr:
             return None
         elif self.hdr_tag == 'per_target':
             return tuple(self.HDR_TAG_TO_CDS_INDEX[tag] for tag in self.target_tags)
@@ -670,7 +545,7 @@ class GuideDesign(BaseModel):
 
     @cached_property
     def cds_length(self):
-        if not self.hdr_tag:
+        if not self.is_hdr:
             return None
         elif self.hdr_tag == 'per_target':
             return tuple(self.HDR_TAG_TO_CDS_LENGTH[tag] for tag in self.target_tags)
@@ -678,7 +553,7 @@ class GuideDesign(BaseModel):
 
     @cached_property
     def hdr_tag_verbose(self):
-        if not self.hdr_tag:
+        if not self.is_hdr:
             return None
         return dict(self.HDR_TAG_TERMINUSES)[self.hdr_tag]
 

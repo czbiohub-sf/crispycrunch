@@ -86,6 +86,16 @@ class GuideDesignForm2(ModelForm):
         ]
         field_classes = GuideDesignForm.Meta.field_classes
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        targets_raw = self.fields['targets_raw']
+        targets_raw.initial = [
+            'chr2:136114360-136114419',
+            'chr2:136115613-136115672',
+            'chr2:136116738-136116797',
+            'chr2:136117544-136117603',
+        ]
+
 
 class GuideSelectionForm(ModelForm):
     class Meta:
