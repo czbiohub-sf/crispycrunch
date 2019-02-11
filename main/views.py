@@ -580,11 +580,16 @@ class PrimerSelectionView(CreatePlusView):
 
         targets_cleaned, _ = guide_design.parse_targets_raw()
 
+        if guide_design.hdr_tag == 'per_target':
+            cds_indexes = guide_design.cds_index
+        else:
+            cds_indexes = [guide_design.cds_index] * len(targets_cleaned)
+
         # TODO (gdingle): another instance of IO... how to avoid?
         with ThreadPoolExecutor(4) as pool:
             ultramer_seqs = list(pool.map(
                 lambda args: _get_ultramer_seq(*args),
-                zip(targets_cleaned, guide_design.cds_index, guide_design.target_locs),
+                zip(targets_cleaned, cds_indexes, guide_design.target_locs),
             ))
         return ultramer_seqs
 
