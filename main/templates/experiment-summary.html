@@ -53,11 +53,11 @@
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ guide_selection.order_form_url }}">
       Download
     </a>
+    {% comment %}
     &rarr;
-    {# TODO (gdingle): consider removing reference to IDT #}
     <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/crispr">
       Upload
-    </a>
+    </a>{% endcomment %}
   </dd>
 
   <dt class="col-sm-3">
@@ -67,11 +67,12 @@
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.order_form_url }}">
       Download
     </a>
+    {% comment %}
     &rarr;
-    {# TODO (gdingle): consider removing reference to IDT #}
     <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/primermix/1799">
       Upload
     </a>
+   {% endcomment %}
   </dd>
 
   {% if experiment.is_hdr %}
@@ -82,11 +83,12 @@
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.hdr_order_form_url }}">
       Download
     </a>
+    {% comment %}
     &rarr;
-    {# TODO (gdingle): consider removing reference to IDT #}
     <a target="_blank" class="btn btn-outline-primary btn-sm" href="https://www.idtdna.com/site/order/plate/index/ultra/2683">
       Upload
     </a>
+   {% endcomment %}
   </dd>
   {% endif %}
 
@@ -97,11 +99,7 @@
     <a target="_blank" class="btn btn-primary btn-sm" href="{{ primer_selection.illumina_sheet_url }}">
       Download
     </a>
-    &rarr;
     {# TODO (gdingle): illumina_sheet_url upload URL #}
-    <a target="_blank" class="btn btn-outline-primary btn-sm" href="TODO">
-      Upload
-    </a>
   </dd>
 
   <dt class="col-sm-12">&nbsp;</dt>

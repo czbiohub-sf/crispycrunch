@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 """
 
 import os
+import re
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -299,6 +300,11 @@ INTERNAL_IPS = [
     'localhost',
     # Biohub HUBwifi
     '64.71.0.146',
+]
+
+IGNORABLE_404_URLS = [
+    re.compile(r'.*\.txt$'),
+    re.compile(r'.*\.php$'),
 ]
 
 # See https://django-debug-toolbar.readthedocs.io/en/latest/panels.html#non-default-built-in-panels
