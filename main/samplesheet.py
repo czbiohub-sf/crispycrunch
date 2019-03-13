@@ -20,7 +20,6 @@ from django.core.files.uploadedfile import UploadedFile
 
 from main.models import Analysis, GuideDesign, GuideSelection, PrimerDesign, PrimerSelection
 from protospacex import get_cds_codon_at, get_ultramer_seq
-from utils import conversions
 from utils import hdr
 from utils import manuscore
 from utils import primerchecks
@@ -492,7 +491,7 @@ def set_ultramer(row, hdr_homology_arm_length: int):
 
     # TODO (gdingle): non-IDT ultramers?
     # assert len(ultramer_mutated) <= 200, '200bp is max for IDT ultramer'
-    assert len(ultramer_mutated) >= 150, '150bp is min for IDT ultramer'
+    # assert len(ultramer_mutated) >= 150, '150bp is min for IDT ultramer'
 
     if not row['_guide_strand_same']:
         return reverse_complement(ultramer_mutated)

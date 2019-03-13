@@ -2,7 +2,8 @@ import boto3  # type: ignore # noqa
 import doctest
 import os
 
-from botocore.config import Config # type: ignore
+from botocore.config import Config  # type: ignore
+from botocore.exceptions import ClientError  # type: ignore
 
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -25,6 +26,11 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
     True
     >>> all(d.endswith(FASTQ_SUFFIX) for d in downloads)
     True
+
+    >>> downloads = download_fastqs('doesnotexist', 'JasonHDR/96wp1sorted-fastq/')
+    Traceback (most recent call last):
+    ...
+    ValueError: An error occurred (NoSuchBucket) when calling the ListObjects operation: The specified bucket does not exist
     """
 
     s3 = boto3.client(
@@ -36,7 +42,12 @@ def download_fastqs(bucket: str, prefix: str, overwrite=False) -> List[str]:
         # aws_access_key_id='',
         # aws_secret_access_key='',
     )
-    response = s3.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=1000)
+    try:
+        response = s3.list_objects(Bucket=bucket, Prefix=prefix, MaxKeys=1000)
+    except s3.exceptions.NoSuchBucket as e:
+        raise ValueError(e) from e
+    except ClientError as e:
+        raise ValueError(e) from e
     paths = []
     # Default size of boto thread pool is 10
     # Avoid "Connection pool is full, discarding connection"
@@ -74,6 +85,8 @@ def _get_fastqs(response) -> list:
 
 
 if __name__ == '__main__':
+    import os
+    os.environ['AWS_PROFILE'] = 'czbiohub'
     # aws s3 ls s3://jasonli-bucket/JasonHDR/96wp1sorted-fastq/
     # print(download_fastqs('jasonli-bucket', 'JasonHDR/96wp1sorted-fastq/', False))
     # print(download_fastqs('jasonli-bucket', 'CrispyCrunch/', False))

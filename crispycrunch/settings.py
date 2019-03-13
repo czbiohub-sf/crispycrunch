@@ -305,6 +305,7 @@ INTERNAL_IPS = [
 IGNORABLE_404_URLS = [
     re.compile(r'.*\.txt$'),
     re.compile(r'.*\.php$'),
+    re.compile(r'.*\.do$'),
 ]
 
 # See https://django-debug-toolbar.readthedocs.io/en/latest/panels.html#non-default-built-in-panels
