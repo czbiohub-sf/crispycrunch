@@ -113,6 +113,7 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     gd_df = guide_selection.guide_design.to_df()
     if not len(gd_df):
         return gd_df
+
     dupes = gd_df['_guide_id'][gd_df['_guide_id'].duplicated()]
     assert not len(dupes), dupes
 
@@ -123,6 +124,9 @@ def _join_guide_data(guide_selection: GuideSelection) -> DataFrame:
     guides_df = gd_df.set_index('_guide_id').join(
         gs_df.set_index('_guide_id'), how='inner')
     assert len(guides_df) >= len(gs_df), (len(guides_df), len(gs_df))
+
+    # TODO: (gdingle): re-enable not found guides so we can track them
+    guides_df = guides_df.dropna(subset=['guide_seq'])
 
     return guides_df
 

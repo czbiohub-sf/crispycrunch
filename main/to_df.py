@@ -63,7 +63,7 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
                 '_scores': list(gd['scores'].values()),  # list of lists
             }))
 
-    if not len(df_guides):  # Edge case
+    if not len(df_guides) or not 'guide_seq' in df_guides.columns:  # Edge case
         # TODO (gdingle): handle zero guides case better
         raise ValueError('No guides found for any targets')
 
