@@ -337,7 +337,9 @@ class GuideDesign(BaseModel):
         verbose_name='Target chromosome locations',
     )
     target_seqs = fields.ArrayField(
-        models.CharField(max_length=65536, validators=[validate_seq]),
+        models.CharField(max_length=65536, validators=[
+            # Crispor requires at least 23bp to find a match
+            validate_seq, MinLengthValidator(23)]),
         validators=[validate_unique_set],
         verbose_name='Target sequences',
     )
