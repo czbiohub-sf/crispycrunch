@@ -42,6 +42,7 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
     })
 
     df_guides = DataFrame()
+    assert len(gd.guide_data), 'Zero guides?!'
     for gd in gd.guide_data:
         if NOT_FOUND in gd['guide_seqs']:
             df_guides = df_guides.append(DataFrame(data={
@@ -62,10 +63,6 @@ def gd_to_df(gd: 'models.GuideDesign') -> DataFrame:
                 'guide_seq': list(gd['guide_seqs'].values()),
                 '_scores': list(gd['scores'].values()),  # list of lists
             }))
-
-    if not len(df_guides) or not 'guide_seq' in df_guides.columns:  # Edge case
-        # TODO (gdingle): handle zero guides case better
-        raise ValueError('No guides found for any targets')
 
     return df_targets.set_index('target_loc', drop=False).join(
         df_guides.set_index('target_loc'), how='inner')

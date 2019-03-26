@@ -353,6 +353,10 @@ class GuideSelectionView(CreatePlusView):
             for g in guide_design.guide_data
             if webscraperequest.NOT_FOUND in g.get('guide_seqs'))
 
+        if not selected_guides:
+            # Early exit for edge case
+            return not_founds
+
         # Make temp obj for samplesheet
         guide_selection = GuideSelection(
             guide_design=guide_design,
@@ -553,7 +557,7 @@ class PrimerSelectionView(CreatePlusView):
         assert right - left <= self.primer_product_max
         assert right - left >= self.primer_product_min
 
-        primer_product = ultramer_seq[left:right]
+        primer_product = ultramer_seq[left: right]
         assert primer_product.startswith(primer_seq_fwd)
         assert primer_product.endswith(reverse_complement(primer_seq_rev))
         return primer_product
