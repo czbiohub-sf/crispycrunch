@@ -392,7 +392,7 @@ def _set_hdr_primer(sheet: DataFrame, guide_design: GuideDesign, primer_design: 
 
         if anchor_offset == -1:
             logger.warning('Could not find anchor {} in primer {} for target {}'.format(
-                row['anchor_seq'], primer_product, row['target_loc']))
+                anchor_seq, primer_product, row['target_loc']))
             return 'anchor not found: ' + primer_product
 
         before, primer_product_aligned, after = \

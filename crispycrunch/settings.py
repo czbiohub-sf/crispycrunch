@@ -12,9 +12,25 @@ https://docs.djangoproject.com/en/2.0/ref/settings/
 
 import os
 import re
+from django.views.debug import technical_500_response
+import sys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+# See https://gist.github.com/svetlyak40wt/3607315
+class UserBasedExceptionMiddleware:
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        return self.get_response(request)
+
+    def process_exception(self, request, exception):
+        if request.user.is_superuser:
+            return technical_500_response(request, *sys.exc_info())
 
 
 if 'RDS_DB_NAME' in os.environ:  # prod
@@ -143,6 +159,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Start crispycrunch
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'crispycrunch.settings.UserBasedExceptionMiddleware',
     # ENd crispycrunch
 ]
 
