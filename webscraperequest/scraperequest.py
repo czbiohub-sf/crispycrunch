@@ -453,7 +453,7 @@ class CrisporGuideRequest(AbstractScrapeRequest):
                 return dict(
                     target=self.target,
                     guide_seqs={
-                        'invalid chromosome range': 'invalid chromosome range',
+                        NOT_FOUND: 'invalid chromosome range',
                     },
                     url=url,
                 )
@@ -509,6 +509,9 @@ class CrisporGuideRequest(AbstractScrapeRequest):
         primer_urls = OrderedDict((t[0],
                                    primers_url.format(batch_id, urllib.parse.quote(t[0])))
                                   for t in rows)
+
+        if not guide_seqs:
+            guide_seqs = OrderedDict([(NOT_FOUND, NOT_FOUND)])
 
         return dict(
             target=self.target,
