@@ -90,6 +90,10 @@ def seq_to_chr_loc(seq: str, genome: str = 'hg38') -> str:
     Mouse.
     >>> seq_to_chr_loc('CTGAGAAGCCAAAAGTGGTTACAACTCGACCC', 'mm10')
     'chr7:28179081-28179112:+'
+
+    >>> seq_to_chr_loc('CCGGGTGTACAGGATTGTTCCAG', 'mm10')
+
+    >>> seq_to_chr_loc('GGGTGTACAGGATTGTTCCAG', 'mm10')
     """
 
     url = 'http://gggenome.dbcls.jp/{}/0/{}.json'.format(
@@ -138,10 +142,12 @@ def gene_to_chr_loc(gene: str, genome: str ='hg38') -> str:
 
     >>> gene_to_chr_loc('ATL2')
     'chr2:38295901-38377273'
-    >>> gene_to_chr_loc('XXXX')
+
+    >>> gene_to_chr_loc('BBBABB')
     Traceback (most recent call last):
     ...
-    ValueError: No chr location for XXXX
+    ValueError: No chr location for BBBABB
+
     >>> gene_to_chr_loc('cxcr4')
     'chr2:136114349-136116243'
 
