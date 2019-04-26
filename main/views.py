@@ -280,6 +280,12 @@ class GuideDesignView(CreatePlusView):
             targets_cleaned,
             obj
         )
+
+        # Convert seq targets that contain wildcard N to chr_loc
+        if all(is_seq(t) for t in targets_cleaned) \
+                and any('N' in t for t in targets_cleaned):
+            targets_cleaned = obj.target_locs
+
         logger.info('Getting target sequences...')
         obj.target_seqs = self._get_target_seqs(
             targets_cleaned,
