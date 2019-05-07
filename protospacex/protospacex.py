@@ -67,7 +67,7 @@ def fetch_ensembl_transcript(
       features are relative to the sequence fragment.
 
     >>> fetch_ensembl_transcript('ENST00000398844').description
-    'chromosome:GRCh38:5:134648789:134727823:1'
+    'chromosome:GRCh38:5:134648785:134727909:1'
 
     >>> fetch_ensembl_transcript('ATL3').description
     'Reverse complement of chromosome:GRCh38:11:63624087:63671612:-1'
@@ -296,7 +296,8 @@ def _get_cds_seq_and_codon_at(
         length: int = 36) -> tuple:
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
-    assert len(cds)
+    if not len(cds):
+        raise ValueError('No CDS features found for transcript {}'.format(ensembl_transcript_id))
 
     cds_seq = _get_cds_seq(record, cds, cds_index)
 
@@ -453,10 +454,17 @@ def get_cds_chr_loc(
     'chr12:56687982-56688017:-'
     >>> get_cds_chr_loc('ENST00000054666', length=36)
     'chr1:7771366-7771401:+'
+
+    Failed example.
+    >>> get_cds_chr_loc('ENST00000309050', 0, length=96)
+    Traceback (most recent call last):
+    ...
+    ValueError: No CDS features found for transcript ENST00000309050
     """
     record = fetch_ensembl_transcript(ensembl_transcript_id)
     cds = [f for f in record.features if f.type == 'cds']
-    assert len(cds)
+    if not len(cds):
+        raise ValueError('No CDS features found for transcript {}'.format(ensembl_transcript_id))
     cds_location = cds[cds_index].location
 
     species = record.annotations['reference_species']
@@ -721,6 +729,6 @@ def _get_cds_seq(record, cds: list, cds_index: int) -> str:
 
 if __name__ == '__main__':
     import doctest
-    doctest.testmod()
+    doctest.testmod(optionflags=doctest.FAIL_FAST)
     # fetch_ensembl_transcript('ENST00000398844').description
     # print(get_ultramer_seq('ENST00000221801', -1)[0])
