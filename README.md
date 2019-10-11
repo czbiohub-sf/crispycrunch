@@ -19,8 +19,8 @@ CrispyCrunch calls out to several bioinformatics web services.
 * [GGGenome](http://gggenome.dbcls.jp)
 
 Currently, CrispyCrunch calls out to mirrors for Crispor and Crispresso:
-* [Crispor mirror](http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py)
-* [Crispresso mirror](http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com:81/)
+* [Crispor mirror](http://ec2-34-223-54-242.us-west-2.compute.amazonaws.com/crispor.py)
+* [Crispresso mirror](http://ec2-34-223-54-242.us-west-2.compute.amazonaws.com:81/)
 
 *NOTE:* The Crispor mirror is modified to support HDR primer design. See [this PR](https://github.com/maximilianh/crisporWebsite/pull/21).
 

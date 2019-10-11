@@ -45,10 +45,9 @@ _cache = _cached_session.cache
 urllib3.filepost.choose_boundary = lambda: 'crispycrunch_super_special_form_boundary'
 
 # CRISPOR_BASE_URL = 'http://crispor.tefor.net/crispor.py'
-CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
+CRISPOR_BASE_URL = 'http://ec2-34-223-54-242.us-west-2.compute.amazonaws.com/crispor.py'
 
-CRISPRESSO_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com:81'
-# CRISPRESSO_BASE_URL = 'http://ec2-52-12-22-81.us-west-2.compute.amazonaws.com'
+CRISPRESSO_BASE_URL = 'http://ec2-34-223-54-242.us-west-2.compute.amazonaws.com:81'
 # CRISPRESSO_BASE_URL = 'http://crispresso.pinellolab.partners.org'
 
 
@@ -549,7 +548,7 @@ class CrisporPrimerRequest(AbstractScrapeRequest):
     NOTE: Crispor uses Primer3 under the covers.
 
     NOTE: These test came from
-    CRISPOR_BASE_URL = 'http://ec2-34-219-237-20.us-west-2.compute.amazonaws.com/crispor.py'
+    CRISPOR_BASE_URL = 'http://ec2-34-223-54-242.us-west-2.compute.amazonaws.com/crispor.py'
 
     >>> req = CrisporPrimerRequest('gYvicTzp9e5VPFC9YwLR', 's45-')
     >>> data = req.run()

@@ -119,7 +119,7 @@ ALLOWED_HOSTS = [
     # 'crispycrunch.us-west-2.elasticbeanstalk.com',
     # 'crispycrunch.czbiohub.org',
     # '54.218.30.243',
-    # 'ec2-54-218-30-243.us-west-2.compute.amazonaws.com',
+    # 'ec2-34-223-54-242.us-west-2.compute.amazonaws.com',
 ]
 
 # Application definition
