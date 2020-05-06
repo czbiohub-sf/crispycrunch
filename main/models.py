@@ -162,7 +162,7 @@ class ChrLocField(models.CharField):
     def get_db_prep_value(self, value, connection, prepared):
         return str(value)
 
-    def from_db_value(self, item, expression, connection, context):
+    def from_db_value(self, item, expression, connection):
         return ChrLoc(item)
 
 
