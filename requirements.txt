@@ -1,5 +1,5 @@
 beautifulsoup4
-biopython
+biopython==1.77
 boto3
 django-bootstrap4
 django-debug-toolbar
