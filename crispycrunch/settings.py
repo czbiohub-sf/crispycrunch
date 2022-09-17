@@ -210,10 +210,11 @@ else:  # local dev with remote
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'postgres',
-            'USER': 'postgres',
+            'NAME': 'crispycrunchdb',
+            'USER': 'crispycrunch',
+            'PASSWORD': 'password',
             'HOST': 'localhost',
-            'PORT': '5432',
+            'PORT': '5435',
         }
     }
 
