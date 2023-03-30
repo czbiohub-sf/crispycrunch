@@ -3,6 +3,8 @@ Web app for CRISPR experiment setup and analysis. Fill in a 96-well plate and an
 
 See it live at https://crispycrunch.czbiohub.org.
 
+For more details, please refer to our [2022 OpenCell paper](https://www.science.org/doi/10.1126/science.abi6983) (preprint [here](https://www.biorxiv.org/content/10.1101/2021.03.29.437450v2)).
+
 ## Background
 
 This app was developed by Greg Dingle starting in July 2018 for the genome engineering group in the CZ Biohub. The intention was to streamline the CRISPR experimentation process of researchers in the Biohub and provide a permanent record of experiments and results.
