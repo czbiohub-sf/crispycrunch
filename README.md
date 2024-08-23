@@ -1,4 +1,10 @@
+# CrispyCrunch has been deprecated. Please use the new [protoSpaceJAM application](https://protospacejam.czbiohub.org/)!
+
 # CrispyCrunch
+
+> [!CAUTION]
+> CrispyCrunch has been deprecated. Please use the new [protoSpaceJAM application](https://protospacejam.czbiohub.org/)!
+
 Web app for CRISPR experiment setup and analysis. Fill in a 96-well plate and analyze it as a whole.
 
 See it live at https://crispycrunch.czbiohub.org.
